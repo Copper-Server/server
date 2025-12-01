@@ -25,6 +25,11 @@ namespace copper_server::api::ecs {
     using component_id = uint32_t;
     struct entity_recipe;
     struct entity;
+    struct world;
+
+    struct wildcard_t {};
+
+    inline constexpr wildcard_t wildcard{};
 
     template <class... components>
     struct dependent {};
@@ -37,6 +42,9 @@ namespace copper_server::api::ecs {
     };
 
     namespace detail {
+        void report_fault_destruction(const std::type_info&);
+        void report_fault_destruction(const std::exception& ex, const std::type_info&);
+
         template <class T>
         concept has_relation_discovery = requires(T& it, std::vector<ecs::entity>& res) {
             res = it.get_flat_relations();
@@ -81,7 +89,6 @@ namespace copper_server::api::ecs {
 
         template <class T>
             requires std::is_constructible_v<T>
-                     && std::is_nothrow_destructible_v<T>
                      && std::is_nothrow_move_constructible_v<T>
                      && std::is_nothrow_move_assignable_v<T>
                      && std::is_copy_assignable_v<T>
@@ -95,12 +102,26 @@ namespace copper_server::api::ecs {
 
                 if (component_info_registry[id].size == 0) {
                     component_info_registry[id] = {
-                        .size = sizeof(T),
-                        .alignment = alignof(T),
+                        .size = std::is_empty_v<T> ? sizeof(T) : 0,
+                        .alignment = std::is_empty_v<T> ? alignof(T) : 1,
                         .construct = [](void* mem) { new (mem) T(); },
                         .move_construct = [](void* dest, void* src) { new (dest) T(std::move(*static_cast<T*>(src))); },
                         .copy_assign = [](void* dest, void* src) { *static_cast<T*>(dest) = *static_cast<T*>(src); },
-                        .destroy = [](void* mem) { static_cast<T*>(mem)->~T(); },
+                        .destroy = [](void* mem) {
+                            if constexpr (std::is_trivially_destructible_v<T>) {
+                                //ignore
+                            } else if constexpr (std::is_nothrow_destructible_v<T>)
+                                static_cast<T*>(mem)->~T();
+                            else {
+                                try {
+                                    static_cast<T*>(mem)->~T();
+                                } catch (...) {
+                                    report_fault_destruction(typeid(T));
+                                } catch (const std::exception& ex) {
+                                    report_fault_destruction(ex, typeid(T));
+                                }
+                            } //
+                        },
                         .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); },
                         .reset = [](void* mem) { static_cast<T*>(mem)->~T(); new (mem) T(); }
                     };
@@ -207,19 +228,24 @@ namespace copper_server::api::ecs {
 
         std::vector<ecs::entity> request_flat_childs(uint32_t id, uint32_t generation);
 
-        fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, std::unique_ptr<components_holder> components);
-        fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, const entity_recipe& recipe, std::unique_ptr<components_holder> components);
-        fast_task::future_ptr<std::optional<entity>> copy_entity(std::optional<int32_t> world_id, const api::ecs::entity& base_entity);
+        fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, std::unique_ptr<components_holder> components);
+        fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, const entity_recipe& recipe, std::unique_ptr<components_holder> components);
+        fast_task::future_ptr<std::optional<entity>> copy_entity(std::optional<world*> world_opt, const api::ecs::entity& base_entity);
         fast_task::task_rw_mutex& immediate_lock();
 
-        entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream, std::optional<int32_t> world_id = std::nullopt);
+        entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream, std::optional<world*> world_opt);
         void store_ecs_entity(const std::string& named_id, util::nbt_write_stream& stream, entity);
 
         template <class... components>
-        fast_task::future_ptr<entity> create_entity__cc(std::optional<int32_t> world_id, components&&... args);
+        fast_task::future_ptr<entity> create_entity__cc(std::optional<world*> world_opt, components&&... args);
         template <class... components>
-        fast_task::future_ptr<entity> create_entity_r_cc(std::optional<int32_t> world_id, const entity_recipe& recipe, components&&... args);
+        fast_task::future_ptr<entity> create_entity_r_cc(std::optional<world*> world_opt, const entity_recipe& recipe, components&&... args);
 
+
+        int32_t get_world_id(world*);
+        world* get_world_by_id(int32_t);
+        world* register_world(int32_t);
+        void unregister_world(world*);
 
         struct iteration_handle {
             struct iteration_data;
@@ -267,7 +293,9 @@ namespace copper_server::api::ecs {
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
             std::span<component_id> with_changes,
-            std::span<std::pair<component_id, entity>> with_relation
+            std::span<std::pair<component_id, entity>> with_relation,
+            std::span<component_id> wildcard_relation,
+            std::span<entity> with_wild_relation
         );
 
         iteration_handle iterate_components_global(
@@ -278,7 +306,9 @@ namespace copper_server::api::ecs {
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
             std::span<component_id> with_changes,
-            std::span<std::pair<component_id, entity>> with_relation
+            std::span<std::pair<component_id, entity>> with_relation,
+            std::span<component_id> wildcard_relation,
+            std::span<entity> with_wild_relation
         );
 
         template <class... components>
@@ -302,6 +332,9 @@ namespace copper_server::api::ecs {
         template <class... components>
         struct query_with_changes {};
 
+        template <class... components>
+        struct query_relation_wildcard {};
+
         template <class... _>
         struct has_relation_query {};
 
@@ -318,6 +351,8 @@ namespace copper_server::api::ecs {
         struct filter_without {};
 
         struct filter_with {};
+
+        struct filter_relation_wildcard {};
 
         template <typename T>
         using strip_const_t = std::remove_const_t<T>;
@@ -358,6 +393,11 @@ namespace copper_server::api::ecs {
         template <typename... Comps>
         struct process_single_param<query_with_changes<Comps...>> {
             using type = std::tuple<std::pair<strip_const_t<Comps>, filter_with_changes>...>;
+        };
+
+        template <typename Comp>
+        struct process_single_param<query_relation_wildcard<Comp>> {
+            using type = std::tuple<std::pair<Comp, filter_relation_wildcard>>;
         };
 
         template <typename... Comps>
@@ -806,6 +846,11 @@ namespace copper_server::api::ecs {
                 return ids;
             }
 
+            static std::span<component_id> get_wildcard_ids() {
+                static std::vector<component_id> ids = compute_component_ids<filter_relation_wildcard>();
+                return ids;
+            }
+
         private:
             template <typename... AccessFilters>
             static std::vector<component_id> compute_component_ids() {
@@ -821,6 +866,40 @@ namespace copper_server::api::ecs {
             static void add_if_access_match(std::vector<component_id>& ids, std::pair<T, Access>) {
                 if constexpr ((std::is_same_v<Access, AccessFilters> || ...)) {
                     ids.push_back(detail::get_component_id<T>());
+                }
+            }
+        };
+
+        template <class Func, class Query>
+        class lambda_system_adapter : public system_interface {
+        public:
+            using extractor = detail::query_dependency_extractor<Query>;
+            using reads = typename extractor::reads_t;
+            using writes = typename extractor::writes_t;
+
+        private:
+            Func function;
+            Query query_prototype;
+            std::string name;
+
+        public:
+            lambda_system_adapter(Func&& f, Query&& q, std::string n)
+                : function(std::move(f)), query_prototype(std::move(q)), name(std::move(n)) {}
+
+            virtual ~lambda_system_adapter() {}
+
+            void tick(world_local_registry& world) override {
+                Query local_query = query_prototype;
+                local_query.set_world_id(world.get_id());
+
+                if constexpr (std::is_invocable_r_v<void, Func, Query&>)
+                    function(local_query);
+                else {
+                    auto task = function(local_query);
+                    if constexpr (requires { task.await_task(); })
+                        task.await_task();
+                    else
+                        task->await_task();
                 }
             }
         };

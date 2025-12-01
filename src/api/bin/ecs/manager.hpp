@@ -21,11 +21,11 @@ namespace copper_server::api::ecs {
     struct chunk;
     struct world;
 
-    struct entity_record {
+    struct alignas(std::hardware_destructive_interference_size) entity_record {
+        std::atomic<archetype*> archetype_before_mutation = nullptr;
         archetype* type;
         chunk* chunk;
         world* world_owner;
-        std::atomic<archetype*> archetype_before_mutation = nullptr;
         int32_t chunk_index = 0;
         uint32_t generation = 0;
 
@@ -353,7 +353,7 @@ namespace copper_server::api::ecs {
         std::unordered_map<int32_t, world> worlds;
 
         std::vector<entity_record> records;
-        list_array<uint32_t> free_entity_ids;
+        moodycamel::ConcurrentQueue<uint32_t> free_entity_ids;
 
 
         fast_task::task_rw_mutex relation_mutex;
@@ -371,6 +371,7 @@ namespace copper_server::api::ecs {
 
         //internal, should be used only by implementation
         //transfers the entity across archetypes and/or worlds
+        //requires lock
         void move_entity(uint32_t id, archetype* to, world* w) {
             auto& record = records.at(id);
             archetype* old_type = record.type;
@@ -415,6 +416,7 @@ namespace copper_server::api::ecs {
 
         //internal, should be used only by implementation
         //removes entity data, but keeps the record for reuse
+        //requires lock
         void deallocate_entity(uint32_t id) {
             auto& record = records.at(id);
             bool was_full = (record.chunk->entity_count == CHUNK_CAPACITY);
@@ -431,7 +433,7 @@ namespace copper_server::api::ecs {
             } else if (was_full && record.chunk->entity_count == CHUNK_CAPACITY - 1)
                 record.type->add_to_free_list(record.chunk);
 
-            free_entity_ids.push_back(id);
+            free_entity_ids.enqueue(id);
 
             fast_task::shared_lock guard(relation_mutex);
             for (auto& relations : defined_relations[id]) {
@@ -457,16 +459,25 @@ namespace copper_server::api::ecs {
         }
 
         //internal, should be used only by implementation
+        //locks on allocation, there's no locks if there free record
         entity allocate_entity(archetype* in, world* w) {
             uint32_t id;
-            if (free_entity_ids.empty()) {
+            if (!free_entity_ids.try_dequeue(id)) {
+                fast_task::unique_lock lock(manager_mutex);
                 if (records.size() >= UINT32_MAX)
                     return {UINT32_MAX, UINT32_MAX}; //return invalid entity
 
-                id = uint32_t(records.size());
-                records.resize(records.size() + 1);
-            } else
-                id = free_entity_ids.take_front();
+                size_t old_size = records.size();
+                size_t new_size = std::max<size_t>(records.size() + 1000, UINT32_MAX);
+                records.resize(new_size);
+
+                std::vector<uint32_t> batch_creation;
+                batch_creation.reserve(new_size - old_size);
+                for (size_t i = old_size + 1; i < new_size; ++i)
+                    batch_creation.push_back(uint32_t(i));
+                free_entity_ids.enqueue_bulk(batch_creation.data(), batch_creation.size());
+                id = uint32_t(old_size);
+            }
             auto& record = records.at(id);
             record.type = in;
             record.world_owner = w;
@@ -544,7 +555,49 @@ namespace copper_server::api::ecs {
                 });
             }
 
+            std::sort(candidates.begin(), candidates.end());
             return candidates;
+        }
+
+        std::vector<uint32_t> get_wildcard_relations(component_id component) {
+            std::vector<uint32_t> results;
+
+            auto it = relation_index.find(component);
+            if (it == relation_index.end())
+                return results;
+
+            const auto& parent_map = it->second;
+            results.reserve(parent_map.size());
+
+            for (const auto& kv : parent_map)
+                results.push_back(kv.first);
+
+            std::sort(results.begin(), results.end());
+            return results;
+        }
+
+        std::vector<uint32_t> get_entity_wildcard_relations(uint32_t target_id) {
+            std::vector<uint32_t> results;
+
+            auto it = reverse_relation_index.find(target_id);
+            if (it == reverse_relation_index.end())
+                return results;
+
+            const auto& comp_map = it->second;
+
+            size_t estimated_size = 0;
+            for (const auto& pair : comp_map)
+                estimated_size += pair.second.size();
+            results.reserve(estimated_size);
+
+            for (const auto& kv : comp_map) {
+                const auto& parents = kv.second;
+                results.insert(results.end(), parents.begin(), parents.end());
+            }
+
+            std::sort(results.begin(), results.end());
+            results.erase(std::unique(results.begin(), results.end()), results.end());
+            return results;
         }
 
         bool has_entity(uint32_t id, uint32_t generation) {
@@ -554,11 +607,17 @@ namespace copper_server::api::ecs {
             return false;
         }
 
-        void enable_world(int32_t id) {
+        world* get_world(int32_t id) {
+            std::lock_guard guard(manager_mutex);
+            return &worlds.at(id);
+        }
+
+        world* enable_world(int32_t id) {
             std::lock_guard guard(manager_mutex);
             auto& world = worlds[id];
             world.id = id;
             ++world.usages;
+            return &world;
         }
 
         void disable_world(int32_t id) {

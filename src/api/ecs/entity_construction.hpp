@@ -41,9 +41,8 @@ namespace copper_server::api::ecs {
         void set(component&& move) {
             auto id = detail::get_component_id<component>();
 
-            if (auto it = components.find(id); it != components.end()){
+            if (auto it = components.find(id); it != components.end())
                 *static_cast<component*>(it->second) = std::move(move);
-            }
             else {
                 auto res = std::make_unique<component>(std::move(move));
                 components[id] = res.release();
@@ -57,13 +56,12 @@ namespace copper_server::api::ecs {
 
         template <class component>
         void remove() {
-            if (auto it = components.find(id); it != components.end()){
+            if (auto it = components.find(id); it != components.end()) {
                 delete static_cast<component*>(it->second);
                 components.erase(it);
             }
         }
 
-        // Type-erased remove for internal use
         void remove_by_id(component_id id) {
             if (auto it = components.find(id); it != components.end()) {
                 const auto& info = detail::component_info_registry.at(id);
@@ -73,16 +71,12 @@ namespace copper_server::api::ecs {
             }
         }
 
-        // Helper for dynamic deserialization access
         void* get_raw_or_create(component_id id) {
-            if (auto it = components.find(id); it != components.end()) {
+            if (auto it = components.find(id); it != components.end())
                 return it->second;
-            }
 
             const auto& info = detail::component_info_registry.at(id);
-            // Allocate memory using global new with correct alignment
             void* ptr = ::operator new(info.size, std::align_val_t(info.alignment));
-            // Construct default
             info.construct(ptr);
 
             components[id] = ptr;
@@ -94,28 +88,28 @@ namespace copper_server::api::ecs {
             return components.contains(detail::get_component_id<component>());
         }
 
-        entity create_and_wait(std::optional<int32_t> world_id = std::nullopt) && {
+        entity create_and_wait(std::optional<world*> world_opt = std::nullopt) && {
             auto req = std::make_unique<detail::components_holder>();
             req->components_reference.reserve(components.size());
             for (auto& [id, ptr] : components)
                 req->components_reference.emplace_back(id, ptr);
 
-            return detail::create_entity(world_id, std::move(req))->take();
+            return detail::create_entity(world_opt, std::move(req))->take();
         }
 
-        entity create_and_wait(const entity_recipe& base_recipe, std::optional<int32_t> world_id = std::nullopt) && {
+        entity create_and_wait(const entity_recipe& base_recipe, std::optional<world*> world_opt = std::nullopt) && {
             auto req = std::make_unique<detail::components_holder>();
             req->components_reference.reserve(components.size());
             for (auto& [id, ptr] : components)
                 req->components_reference.emplace_back(id, ptr);
 
-            return detail::create_entity(world_id, base_recipe, std::move(req))->take();
+            return detail::create_entity(world_opt, base_recipe, std::move(req))->take();
         }
 
         entity_construction() = default;
 
-        entity_construction(entity_construction&& other) noexcept : components(std::move(other.components)) {
-        }
+        entity_construction(entity_construction&& other) noexcept
+            : components(std::move(other.components)) {}
 
         entity_construction& operator=(entity_construction&& other) noexcept {
             if (this != &other) {

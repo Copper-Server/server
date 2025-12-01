@@ -227,57 +227,78 @@ namespace copper_server::api::ecs {
     struct query {
         query() : id() {}
 
-        query(query&& mov) : id(mov.id), with_relations(std::move(mov.with_relations)) {}
+        query(query&& mov) noexcept : id(mov.id), with_relations(std::move(mov.with_relations)), with_wild_relations(std::move(mov.with_wild_relations)) {}
+
+        query(const query& copy) : id(copy.id), with_relations(copy.with_relations), with_wild_relations(copy.with_wild_relations) {}
 
         query(int32_t world_id) : id(world_id) {}
 
-        query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations) : id(id), with_relations(std::move(with_relations)) {}
+        query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations, list_array<entity>&& with_wild_relations)
+            : id(id), with_relations(std::move(with_relations)), with_wild_relations(std::move(with_wild_relations)) {}
 
-        query& operator=(query&& mov) {
+        query& operator=(query&& mov) noexcept {
             id = mov.id;
             with_relations = std::move(mov.with_relations);
+            with_wild_relations = std::move(mov.with_wild_relations);
+            return *this;
+        }
+
+        query& operator=(const query& copy) {
+            id = copy.id;
+            with_relations = copy.with_relations;
+            with_wild_relations = copy.with_wild_relations;
             return *this;
         }
 
         template <class... with_components>
-        [[nodiscard]] query<params..., detail::query_with<with_components...>> with() {
-            return query<params..., detail::query_with<with_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_with<with_components...>> with() && {
+            return query<params..., detail::query_with<with_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class... without_components>
-        [[nodiscard]] query<params..., detail::query_without<without_components...>> without() {
-            return query<params..., detail::query_without<without_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_without<without_components...>> without() && {
+            return query<params..., detail::query_without<without_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class... reads_components>
-        [[nodiscard]] query<params..., detail::query_reads<reads_components...>> reads() {
-            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_reads<reads_components...>> reads() && {
+            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class... writes_components>
-        [[nodiscard]] query<params..., detail::query_writes<writes_components...>> writes() {
-            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_writes<writes_components...>> writes() && {
+            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class... with_dirty_components>
-        [[nodiscard]] query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() {
-            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() && {
+            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class... with_clear_components>
-        [[nodiscard]] query<params..., detail::query_with_clear<with_clear_components...>> with_clear() {
-            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_with_clear<with_clear_components...>> with_clear() && {
+            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class... with_changed_components>
-        [[nodiscard]] query<params..., detail::query_with_changes<with_changed_components...>> with_changes() {
-            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations)};
+        [[nodiscard]] query<params..., detail::query_with_changes<with_changed_components...>> with_changes() && {
+            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         template <class tag_component>
-        [[nodiscard]] query<params..., detail::has_relation_query<tag_component>> with_relation(entity child) {
+        [[nodiscard]] query<params..., detail::has_relation_query<tag_component>> with_relation(entity child) && {
             with_relations.emplace_back(detail::get_component_id<tag_component>(), child);
-            return query<params..., detail::has_relation_query<tag_component>>{id, std::move(with_relations)};
+            return query<params..., detail::has_relation_query<tag_component>>{id, std::move(with_relations), std::move(with_wild_relations)};
+        }
+
+        template <class tag_component>
+        [[nodiscard]] query<params..., detail::query_relation_wildcard<tag_component>> with_relation(wildcard_t) && {
+            return query<params..., detail::query_relation_wildcard<tag_component>>{id, std::move(with_relations), std::move(with_wild_relations)};
+        }
+
+        [[nodiscard]] query with_any_relation(entity target) && {
+            with_wild_relations.emplace_back(target);
+            return query{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
         //this operation marks all written components as dirty,
@@ -330,6 +351,14 @@ namespace copper_server::api::ecs {
             begin().chunk_iterate_parallel_view(std::forward<FN>(fn));
         }
 
+        void set_world_id(int32_t world_id) {
+            id = world_id;
+        }
+
+        void reset_world_id() {
+            id = std::nullopt;
+        }
+
     private:
         template <bool explicit_marking>
         auto begin_impl() {
@@ -340,6 +369,7 @@ namespace copper_server::api::ecs {
             auto dirty_ids = traits::get_dirty_ids();
             auto clean_ids = traits::get_clear_ids();
             auto changes_ids = traits::get_with_changes_ids();
+            auto wildcard_ids = traits::get_wildcard_ids();
 
             std::span<component_id> writes_ids;
             if constexpr (explicit_marking)
@@ -356,7 +386,9 @@ namespace copper_server::api::ecs {
                             dirty_ids,
                             clean_ids,
                             changes_ids,
-                            {with_relations.data(), with_relations.size()}
+                            {with_relations.data(), with_relations.size()},
+                            wildcard_ids,
+                            {with_wild_relations.data(), with_wild_relations.size()},
                         )
                       : detail::iterate_components_global(
                             all_ids,
@@ -366,7 +398,9 @@ namespace copper_server::api::ecs {
                             dirty_ids,
                             clean_ids,
                             changes_ids,
-                            {with_relations.data(), with_relations.size()}
+                            {with_relations.data(), with_relations.size()},
+                            wildcard_ids,
+                            {with_wild_relations.data(), with_wild_relations.size()},
                         );
 
             return typename detail::apply_tuple_to_iter<
@@ -378,6 +412,7 @@ namespace copper_server::api::ecs {
 
         std::optional<int32_t> id;
         list_array<std::pair<component_id, entity>> with_relations;
+        list_array<entity> with_wild_relations;
     };
 
     struct world_local_registry {
@@ -391,12 +426,12 @@ namespace copper_server::api::ecs {
 
         template <class... components>
         fast_task::future_ptr<entity> create_entity_async(components&&... args) {
-            return detail::create_entity__cc(id, std::forward<components>(args)...);
+            return detail::create_entity__cc(world_ptr, std::forward<components>(args)...);
         }
 
         template <class... components>
         fast_task::future_ptr<entity> create_entity_with_recipe_async(const entity_recipe& recipe, components&&... args) {
-            return detail::create_entity_r_cc(id, recipe, std::forward<components>(args)...);
+            return detail::create_entity_r_cc(world_ptr, recipe, std::forward<components>(args)...);
         }
 
         [[nodiscard]] bool register_entity_and_block(entity& entity);
@@ -406,45 +441,37 @@ namespace copper_server::api::ecs {
 
         template <class... components>
         entity create_entity_and_wait(components&&... args) {
-            return detail::create_entity__cc(id, std::forward<components>(args)...)->take();
+            return detail::create_entity__cc(world_ptr, std::forward<components>(args)...)->take();
         }
 
         template <class... components>
         entity create_entity_with_recipe_and_wait(const entity_recipe& recipe, components&&... args) {
-            return detail::create_entity_r_cc(id, recipe, std::forward<components>(args)...)->take();
+            return detail::create_entity_r_cc(world_ptr, recipe, std::forward<components>(args)...)->take();
         }
 
         [[nodiscard]] query<> view() {
-            return query<>{id};
+            return query<>{get_id()};
         }
 
         int32_t get_id() const {
-            return id;
+            return detail::get_world_id(world_ptr);
         }
 
         //note for yourself, you need to parse the stream twice to get the entity, first one before calling this function to get id and second one to get result from load_ecs_entity
         entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity(named_id, stream, id);
-        }
-
-        entity load_item(const std::string& named_id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity("@item:" + named_id, stream, id);
+            return detail::load_ecs_entity(named_id, stream, world_ptr);
         }
 
         entity load_entity(const std::string& named_id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity("@entity:" + named_id, stream, id);
+            return detail::load_ecs_entity("@entity:" + named_id, stream, world_ptr);
         }
 
         entity load_block_entity(const std::string& named_id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity("@block_entity:" + named_id, stream, id);
+            return detail::load_ecs_entity("@block_entity:" + named_id, stream, world_ptr);
         }
 
         void store_ecs_entity(const std::string& id, util::nbt_write_stream& stream, entity ecs_e) {
             detail::store_ecs_entity(id, stream, ecs_e);
-        }
-
-        void store_item(const std::string& id, util::nbt_write_stream& stream, entity item) {
-            detail::store_ecs_entity("@item:" + id, stream, item);
         }
 
         void store_entity(const std::string& id, util::nbt_write_stream& stream, entity e) {
@@ -455,8 +482,12 @@ namespace copper_server::api::ecs {
             detail::store_ecs_entity("@block_entity:" + id, stream, block_e);
         }
 
+        world* get_ecs_world_ref() const noexcept {
+            return world_ptr;
+        }
+
     private:
-        int32_t id;
+        world* world_ptr;
     };
 
     namespace global_registry {
@@ -503,27 +534,19 @@ namespace copper_server::api::ecs {
         }
 
         entity load_ecs_entity(const std::string& id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity(id, stream);
-        }
-
-        entity load_item(const std::string& id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity("@item:" + id, stream);
+            return detail::load_ecs_entity(id, stream, std::nullopt);
         }
 
         entity load_entity(const std::string& id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity("@entity:" + id, stream);
+            return detail::load_ecs_entity("@entity:" + id, stream, std::nullopt);
         }
 
         entity load_block_entity(const std::string& id, util::nbt_read_stream& stream) {
-            return detail::load_ecs_entity("@block_entity:" + id, stream);
+            return detail::load_ecs_entity("@block_entity:" + id, stream, std::nullopt);
         }
 
         void store_ecs_entity(const std::string& id, util::nbt_write_stream& stream, entity ecs_e) {
             detail::store_ecs_entity(id, stream, ecs_e);
-        }
-
-        void store_item(const std::string& id, util::nbt_write_stream& stream, entity item) {
-            detail::store_ecs_entity("@item:" + id, stream, item);
         }
 
         void store_entity(const std::string& id, util::nbt_write_stream& stream, entity e) {
@@ -554,12 +577,88 @@ namespace copper_server::api::ecs {
     };
 
     struct scheduler {
+        template <class... params>
+        struct system_builder {
+            system_builder() = default;
+
+            system_builder(scheduler& sched, query<params...>&& q) : sched(sched), prototype(std::move(q)) {}
+
+            template <class... with_components>
+            [[nodiscard]] system_builder<params..., detail::query_with<with_components...>> with() && {
+                return {sched, std::move(prototype).template with<with_components...>()};
+            }
+
+            template <class... without_components>
+            [[nodiscard]] system_builder<params..., detail::query_without<without_components...>> without() && {
+                return {sched, std::move(prototype).template without<without_components...>()};
+            }
+
+            template <class... reads_components>
+            [[nodiscard]] system_builder<params..., detail::query_reads<reads_components...>> reads() && {
+                return {sched, std::move(prototype).template reads<reads_components...>()};
+            }
+
+            template <class... writes_components>
+            [[nodiscard]] system_builder<params..., detail::query_writes<writes_components...>> writes() && {
+                return {sched, std::move(prototype).template writes<writes_components...>()};
+            }
+
+            template <class... with_dirty_components>
+            [[nodiscard]] system_builder<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() && {
+                return {sched, std::move(prototype).template with_dirty<with_dirty_components...>()};
+            }
+
+            template <class... with_clear_components>
+            [[nodiscard]] system_builder<params..., detail::query_with_clear<with_clear_components...>> with_clear() && {
+                return {sched, std::move(prototype).template with_clear<with_clear_components...>()};
+            }
+
+            template <class... with_changed_components>
+            [[nodiscard]] system_builder<params..., detail::query_with_changes<with_changed_components...>> with_changes() && {
+                return {sched, std::move(prototype).template with_changes<with_changed_components...>()};
+            }
+
+            template <class tag_component>
+            [[nodiscard]] system_builder<params..., detail::has_relation_query<tag_component>> with_relation(entity child) && {
+                return {sched, std::move(prototype).template with_relation<tag_component>(child)};
+            }
+
+            template <class tag_component>
+            [[nodiscard]] system_builder<params..., detail::query_relation_wildcard<tag_component>> with_relation(wildcard_t) && {
+                return {sched, std::move(prototype).template with_relation<tag_component>(wildcard_t)};
+            }
+
+            template <class Func>
+            void finish(std::string name, tick_phase phase, Func&& f) && {
+                using Adapter = detail::lambda_system_adapter<std::decay_t<Func>, query<params...>>;
+
+                auto ptr = std::make_unique<Adapter>(
+                    std::forward<Func>(f),
+                    std::move(prototype),
+                    std::move(name)
+                );
+
+                // We use the static get_system_info which reads the 'reads'/'writes' aliases we defined in Adapter
+                const auto& info = detail::get_system_info<Adapter>();
+
+                sched.add_system_impl(std::move(ptr), info, phase);
+            }
+
+        private:
+            scheduler& sched;
+            query<params...> prototype;
+        };
+
         scheduler();
         ~scheduler();
 
         template <typename T>
         void add_system(tick_phase phase) {
             add_system_impl(std::make_unique<T>(), detail::get_system_info<T>(), phase);
+        }
+
+        system_builder<> build() { //builds system to be used in lambda
+            return system_builder{*this, query<>{}};
         }
 
         // Called each tick to run all systems in parallel

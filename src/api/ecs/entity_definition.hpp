@@ -260,7 +260,7 @@ namespace copper_server::api::ecs {
         }
 
         void to_nbt(util::nbt_write_stream& stream, entity entity) const;
-        entity from_nbt(util::nbt_read_stream& stream, std::optional<int32_t> world) const;
+        entity from_nbt(util::nbt_read_stream& stream, std::optional<world*> world_opt = std::nullopt) const;
 
         void finish();
     };
