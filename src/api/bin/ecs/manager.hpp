@@ -276,14 +276,9 @@ namespace copper_server::api::ecs {
             records.at(last_entity_id).chunk_index = old_pos;
         }
 
-        std::vector<ecs::entity> request_flat_relation(entity_record& record) {
-            list_array<ecs::entity> entities;
-            for (auto& [component_offset, size, fn] : component_calculate_relations) {
-                auto* component = record.chunk->memory_block.get() + component_offset + (record.chunk_index * size);
-                auto res = fn(component);
-                entities.push_back(res.data(), res.size());
-            }
-            return entities.to_container<std::vector>();
+        void request_all_relations(entity_record& record, relation_visitor& visitor) {
+            for (auto& [component_offset, size, fn] : component_calculate_relations)
+                fn(record.chunk->memory_block.get() + component_offset + (record.chunk_index * size), visitor);
         }
     };
 
@@ -354,12 +349,6 @@ namespace copper_server::api::ecs {
 
         std::vector<entity_record> records;
         moodycamel::ConcurrentQueue<uint32_t> free_entity_ids;
-
-
-        fast_task::task_rw_mutex relation_mutex;
-        std::unordered_map<component_id, std::unordered_map<uint32_t, std::vector<uint32_t>>> relation_index;         //component -> parent -> child
-        std::unordered_map<uint32_t, std::unordered_map<component_id, std::vector<uint32_t>>> reverse_relation_index; //child -> component -> parent
-        std::unordered_map<uint32_t, std::unordered_set<component_id>> defined_relations;                             //entity -> component
 
         static void swap_remove(std::vector<uint32_t>& arr, uint32_t value) {
             auto it = std::find(arr.begin(), arr.end(), value);
@@ -435,21 +424,6 @@ namespace copper_server::api::ecs {
 
             free_entity_ids.enqueue(id);
 
-            fast_task::shared_lock guard(relation_mutex);
-            for (auto& relations : defined_relations[id]) {
-                relation_index[relations].erase(id);
-                if (relation_index[relations].empty())
-                    relation_index.erase(relations);
-            }
-            defined_relations.erase(id);
-            for (auto& relations : reverse_relation_index[id]) {
-                relation_index[relations.first].erase(id);
-                if (relation_index[relations.first].empty())
-                    relation_index.erase(relations.first);
-            }
-            reverse_relation_index.erase(id);
-            guard.unlock();
-
             for (auto& [component, pos] : record.type->component_index_map) {
                 const auto& type_info = detail::component_info_registry[component];
                 size_t offset = record.type->layout.component_offsets[pos];
@@ -497,107 +471,6 @@ namespace copper_server::api::ecs {
 
             record.generation = 0;
             return {id, record.generation};
-        }
-
-        //internal, should be used only by implementation
-        void add_entity_relation(uint32_t parent, uint32_t child, component_id component) {
-            relation_index[component][parent].push_back(child);
-            reverse_relation_index[child][component].push_back(parent);
-            defined_relations[parent].insert(component);
-        }
-
-        //internal, should be used only by implementation
-        void remove_entity_relation(uint32_t parent, uint32_t child, component_id component) {
-            auto& relation = relation_index[component][parent];
-            swap_remove(relation, child);
-            auto& reverse_relation = reverse_relation_index[child][component];
-            swap_remove(reverse_relation, parent);
-
-            if (relation.empty())
-                relation_index.erase(component);
-            if (reverse_relation.empty())
-                reverse_relation_index.erase(child);
-
-            defined_relations[parent].erase(component);
-            if (defined_relations[parent].empty())
-                defined_relations.erase(parent);
-        }
-
-        //internal, should be used only by implementation
-        std::vector<uint32_t> get_relation_query(std::span<std::pair<component_id, entity>> relations) {
-            if (relations.empty())
-                return {};
-
-            auto& first_rel = relations[0];
-            auto it_comp = relation_index.find(first_rel.first);
-            if (it_comp == relation_index.end())
-                return {};
-            auto it_parent = it_comp->second.find(first_rel.second.id);
-            if (it_parent == it_comp->second.end())
-                return {};
-
-            std::vector<uint32_t> candidates = it_parent->second;
-
-            for (size_t i = 1; i < relations.size(); ++i) {
-                if (candidates.empty())
-                    break;
-
-                auto& rel = relations[i];
-                std::unordered_set<int32_t> children_of_current_relation;
-                if (auto it_c = relation_index.find(rel.first); it_c != relation_index.end()) {
-                    if (auto it_p = it_c->second.find(rel.second.id); it_p != it_c->second.end()) {
-                        children_of_current_relation.insert(it_p->second.begin(), it_p->second.end());
-                    }
-                }
-
-                std::erase_if(candidates, [&](int32_t candidate_id) {
-                    return children_of_current_relation.find(candidate_id) == children_of_current_relation.end();
-                });
-            }
-
-            std::sort(candidates.begin(), candidates.end());
-            return candidates;
-        }
-
-        std::vector<uint32_t> get_wildcard_relations(component_id component) {
-            std::vector<uint32_t> results;
-
-            auto it = relation_index.find(component);
-            if (it == relation_index.end())
-                return results;
-
-            const auto& parent_map = it->second;
-            results.reserve(parent_map.size());
-
-            for (const auto& kv : parent_map)
-                results.push_back(kv.first);
-
-            std::sort(results.begin(), results.end());
-            return results;
-        }
-
-        std::vector<uint32_t> get_entity_wildcard_relations(uint32_t target_id) {
-            std::vector<uint32_t> results;
-
-            auto it = reverse_relation_index.find(target_id);
-            if (it == reverse_relation_index.end())
-                return results;
-
-            const auto& comp_map = it->second;
-
-            size_t estimated_size = 0;
-            for (const auto& pair : comp_map)
-                estimated_size += pair.second.size();
-            results.reserve(estimated_size);
-
-            for (const auto& kv : comp_map) {
-                const auto& parents = kv.second;
-                results.insert(results.end(), parents.begin(), parents.end());
-            }
-
-            std::sort(results.begin(), results.end());
-            results.erase(std::unique(results.begin(), results.end()), results.end());
-            return results;
         }
 
         bool has_entity(uint32_t id, uint32_t generation) {

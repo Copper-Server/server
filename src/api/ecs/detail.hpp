@@ -46,8 +46,13 @@ namespace copper_server::api::ecs {
         void report_fault_destruction(const std::exception& ex, const std::type_info&);
 
         template <class T>
-        concept has_relation_discovery = requires(T& it, std::vector<ecs::entity>& res) {
-            res = it.get_flat_relations();
+        concept has_relation_discovery = requires(T& it, relation_visitor& v) {
+            it.get_relations(v);
+        };
+
+        template <class T>
+        concept has_relation_unlink = requires(T& it, entity self, entity target) {
+            it.on_unlink(self, target);
         };
 
         struct archetype_layout {
@@ -64,7 +69,8 @@ namespace copper_server::api::ecs {
             using move_fn = void (*)(void* destination, void* source);
             using reset_fn = void (*)(void* memory);
 
-            using get_relations_fn = std::vector<ecs::entity> (*)(void* memory);
+            using get_relations_fn = void (*)(void* memory, relation_visitor& visitor);
+            using on_unlink_fn = void (*)(void* memory, entity self, entity target);
 
             size_t size = 0;
             size_t alignment = 0;
@@ -75,6 +81,7 @@ namespace copper_server::api::ecs {
             move_fn move = nullptr;
             reset_fn reset = nullptr;
             get_relations_fn get_flat_relations = nullptr;
+            on_unlink_fn on_unlink = nullptr;
         };
 
         struct system_info {
@@ -101,7 +108,7 @@ namespace copper_server::api::ecs {
                     component_info_registry.resize(id + 1);
 
                 if (component_info_registry[id].size == 0) {
-                    component_info_registry[id] = {
+                    auto& info = component_info_registry[id] = {
                         .size = std::is_empty_v<T> ? sizeof(T) : 0,
                         .alignment = std::is_empty_v<T> ? alignof(T) : 1,
                         .construct = [](void* mem) { new (mem) T(); },
@@ -125,8 +132,22 @@ namespace copper_server::api::ecs {
                         .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); },
                         .reset = [](void* mem) { static_cast<T*>(mem)->~T(); new (mem) T(); }
                     };
+
+                    if constexpr (has_relation_unlink<T>)
+                        info.on_unlink = [](void* mem, entity self, entity target) {
+                            static_cast<T*>(mem)->on_unlink(self, target);
+                        };
+
                     if constexpr (has_relation_discovery<T>)
-                        component_info_registry[id].get_flat_relations = [](void* mem) { return static_cast<T*>(mem)->get_flat_relations(); };
+                        info.get_flat_relations = [](void* mem, relation_visitor& v) {
+                            if constexpr (has_relation_unlink<T>) {
+                                v.context.on_unlink = info.on_unlink;
+                                v.context.component = mem;
+                            } else
+                                v.context.component = nullptr;
+
+                            static_cast<T*>(mem)->get_flat_relations(v);
+                        };
                 }
             }
             return id;
@@ -219,14 +240,11 @@ namespace copper_server::api::ecs {
 
         void queue_destroy_entity(uint32_t id, uint32_t generation);
         void queue_mark_dirty(uint32_t id, uint32_t generation, component_id component_id);
-        bool queue_add_relation(component_id component_id, entity parent, entity child);
-        bool queue_remove_relation(component_id component_id, entity parent, entity child);
-        bool has_relation(component_id component_id, entity parent, entity child);
         bool has_entity_component(uint32_t id, uint32_t generation, component_id component_id);
         bool is_valid(uint32_t id, uint32_t generation);
         std::optional<int32_t> get_entity_assigned_to_world(uint32_t id, uint32_t generation);
 
-        std::vector<ecs::entity> request_flat_childs(uint32_t id, uint32_t generation);
+        std::vector<ecs::entity> request_all_childs(uint32_t id, uint32_t generation, relation_visitor& visitor);
 
         fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, std::unique_ptr<components_holder> components);
         fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, const entity_recipe& recipe, std::unique_ptr<components_holder> components);
@@ -249,20 +267,15 @@ namespace copper_server::api::ecs {
 
         struct iteration_handle {
             struct iteration_data;
-            struct relational_iteration_data;
-            std::variant<iteration_data*, relational_iteration_data*, std::nullptr_t> data = nullptr;
+            std::unique_ptr<iteration_data> data;
+
             iteration_handle() = default;
             iteration_handle(const iteration_handle&) = delete;
-
             iteration_handle(iteration_handle&& other) noexcept;
+            ~iteration_handle();
 
             iteration_handle& operator=(const iteration_handle&) = delete;
-
-            iteration_handle& operator=(iteration_handle&& other) noexcept {
-                data = std::move(other.data);
-            }
-
-            ~iteration_handle();
+            iteration_handle& operator=(iteration_handle&& other) noexcept;
 
             std::pair<size_t, void**> next(); //no op if data == nullptr, returns the chunk
             bool is_end() const;
@@ -292,10 +305,7 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes,
-            std::span<std::pair<component_id, entity>> with_relation,
-            std::span<component_id> wildcard_relation,
-            std::span<entity> with_wild_relation
+            std::span<component_id> with_changes
         );
 
         iteration_handle iterate_components_global(
@@ -305,10 +315,7 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes,
-            std::span<std::pair<component_id, entity>> with_relation,
-            std::span<component_id> wildcard_relation,
-            std::span<entity> with_wild_relation
+            std::span<component_id> with_changes
         );
 
         template <class... components>
@@ -332,12 +339,6 @@ namespace copper_server::api::ecs {
         template <class... components>
         struct query_with_changes {};
 
-        template <class... components>
-        struct query_relation_wildcard {};
-
-        template <class... _>
-        struct has_relation_query {};
-
         struct read_operation_query {};
 
         struct write_operation_query {};
@@ -351,8 +352,6 @@ namespace copper_server::api::ecs {
         struct filter_without {};
 
         struct filter_with {};
-
-        struct filter_relation_wildcard {};
 
         template <typename T>
         using strip_const_t = std::remove_const_t<T>;
@@ -393,16 +392,6 @@ namespace copper_server::api::ecs {
         template <typename... Comps>
         struct process_single_param<query_with_changes<Comps...>> {
             using type = std::tuple<std::pair<strip_const_t<Comps>, filter_with_changes>...>;
-        };
-
-        template <typename Comp>
-        struct process_single_param<query_relation_wildcard<Comp>> {
-            using type = std::tuple<std::pair<Comp, filter_relation_wildcard>>;
-        };
-
-        template <typename... Comps>
-        struct process_single_param<has_relation_query<Comps...>> {
-            using type = std::tuple<>;
         };
 
         template <class... Params>
@@ -622,9 +611,6 @@ namespace copper_server::api::ecs {
 
         template <class... T, class... TArgs>
         struct is_requires_shifting<query_with_changes<T...>, TArgs...> : std::true_type {};
-
-        //template <class... T, class... TArgs>
-        //struct is_requires_shifting<has_relation_query<T...>, TArgs...> : std::true_type {};
 
         template <class T, class... TArgs>
         struct is_requires_shifting<T, TArgs...> : is_requires_shifting<TArgs...> {};
@@ -846,11 +832,6 @@ namespace copper_server::api::ecs {
                 return ids;
             }
 
-            static std::span<component_id> get_wildcard_ids() {
-                static std::vector<component_id> ids = compute_component_ids<filter_relation_wildcard>();
-                return ids;
-            }
-
         private:
             template <typename... AccessFilters>
             static std::vector<component_id> compute_component_ids() {
@@ -879,18 +860,16 @@ namespace copper_server::api::ecs {
 
         private:
             Func function;
-            Query query_prototype;
             std::string name;
 
         public:
-            lambda_system_adapter(Func&& f, Query&& q, std::string n)
-                : function(std::move(f)), query_prototype(std::move(q)), name(std::move(n)) {}
+            lambda_system_adapter(Func&& f, std::string n)
+                : function(std::move(f)), name(std::move(n)) {}
 
             virtual ~lambda_system_adapter() {}
 
             void tick(world_local_registry& world) override {
-                Query local_query = query_prototype;
-                local_query.set_world_id(world.get_id());
+                Query local_query{world.get_id()};
 
                 if constexpr (std::is_invocable_r_v<void, Func, Query&>)
                     function(local_query);

@@ -268,12 +268,24 @@ namespace copper_server::api::ecs::com {
             list_array<api::ecs::entity_ref> ride_by;
         };
 
-        struct attached_to {
-            std::optional<api::ecs::entity_ref> follow;
-        };
-
         struct attached {
             list_array<api::ecs::entity_ref> followers;
+        };
+
+        struct attached_to { //TODO allow multiple follows
+            std::optional<api::ecs::entity_ref> follow;
+
+            void get_relations(ecs::relation_visitor& visitor) {
+                if (follow.has_value())
+                    if (follow.value().is_resolved())
+                        if (follow.value().is_valid())
+                            visitor.push(follow.value().get_entity(), ecs::relation_type::weak);
+            }
+
+            void on_unlink(ecs::entity self, ecs::entity target_holder) {
+                if (auto fence_state = target_holder.try_modify<attached>())
+                    fence_state.value()->followers.remove(ecs::entity_ref(self));
+            }
         };
 
         struct effects {

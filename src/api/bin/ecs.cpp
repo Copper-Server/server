@@ -55,18 +55,10 @@ namespace copper_server::api::ecs {
         bool success = false;
     };
 
-    struct relation_change_item {
-        component_id component;
-        entity parent;
-        entity child;
-        bool is_add;
-    };
-
     moodycamel::ConcurrentQueue<entity_allocation_request*> allocation_queue;
     moodycamel::ConcurrentQueue<entity_creation_request*> creation_queue;
     moodycamel::ConcurrentQueue<entity_copy_request*> copy_queue;
     moodycamel::ConcurrentQueue<entity_transfer_request*> transfer_queue;
-    moodycamel::ConcurrentQueue<relation_change_item> relation_change_queue;
 
     world_local_registry::world_local_registry(int32_t id) : world_ptr(manager::instance().enable_world(id)) {
     }
@@ -368,20 +360,6 @@ namespace copper_server::api::ecs {
             while (queue.try_dequeue(item))
                 res.emplace_back(std::move(item));
             return res;
-        }
-
-        void process_relation_changes() {
-            std::lock_guard guard(manager::instance().relation_mutex);
-            consume_all_(relation_change_queue, [](relation_change_item&& item) {
-                if (!manager::instance().has_entity(item.parent.id, item.parent.generation))
-                    return;
-                if (!manager::instance().has_entity(item.child.id, item.child.generation))
-                    return;
-                if (item.is_add)
-                    manager::instance().add_entity_relation(item.parent.id, item.child.id, item.component);
-                else
-                    manager::instance().remove_entity_relation(item.parent.id, item.child.id, item.component);
-            });
         }
 
         void process_destruction_queue(world& w) {
@@ -693,7 +671,6 @@ namespace copper_server::api::ecs {
         }
 
         void proceed_mutations(fast_task::unique_lock<fast_task::task_rw_mutex>& world_guard) {
-            process_relation_changes();
             process_transfers();
             process_allocation(prepare_allocation_requests(), world_guard);
             process_creation(prepare_creation_requests(), world_guard);
@@ -825,25 +802,6 @@ namespace copper_server::api::ecs {
                 throw std::bad_alloc();
         }
 
-        bool queue_add_relation(component_id component_id, entity parent, entity child) {
-            return relation_change_queue.enqueue({component_id, parent, child, true});
-        }
-
-        bool queue_remove_relation(component_id component_id, entity parent, entity child) {
-            return relation_change_queue.enqueue({component_id, parent, child, false});
-        }
-
-        bool has_relation(component_id component_id, entity parent, entity child) {
-            fast_task::shared_lock lock(manager::instance().manager_mutex);
-            if (!manager::instance().has_entity(parent.id, parent.generation) || !manager::instance().has_entity(child.id, child.generation))
-                return false;
-            if (auto com = manager::instance().relation_index.find(component_id); com != manager::instance().relation_index.end())
-                if (auto it = com->second.find(parent.id); it != com->second.end())
-                    if (auto item = std::find(it->second.begin(), it->second.end(), child.id); item != it->second.end())
-                        return true;
-            return false;
-        }
-
         bool has_entity_component(uint32_t id, uint32_t generation, component_id component_id) {
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation)
@@ -867,12 +825,10 @@ namespace copper_server::api::ecs {
                 return std::nullopt;
         }
 
-        std::vector<ecs::entity> request_flat_childs(uint32_t id, uint32_t generation) {
+        void request_all_childs(uint32_t id, uint32_t generation, relation_visitor& visitor) {
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation && record.world_owner != &manager::instance().limbo)
-                return record.type->request_flat_relation(record);
-            else
-                return {};
+                record.type->request_all_relations(record, visitor);
         }
 
         size_t get_entity_archetype_id(uint32_t id, uint32_t generation) { //this function returns pointer as integer instead of hash, because the hash could collide with other types. better be safe than oops
@@ -1192,368 +1148,87 @@ namespace copper_server::api::ecs {
             }
         };
 
-        struct iteration_handle::relational_iteration_data {
-            fast_task::shared_lock<fast_task::task_rw_mutex> main_lock;
-
-            struct item {
-                std::vector<void*> component_pointers;
-                archetype* source_archetype;
-                entity e;
-            };
-
-            std::vector<component_id> auto_mark_dirty;
-
-            std::vector<item> matched_entities;
-            size_t current_index = 0;
-
-            void calculate_data(
-                std::span<component_id> components,
-                std::span<component_id> with_components,
-                std::span<component_id> without_components,
-                std::span<component_id> writes_components,
-                std::span<component_id> with_dirty_components,
-                std::span<component_id> with_clean_components,
-                std::span<component_id> with_changes,
-                std::span<std::pair<component_id, entity>> relations,
-                std::span<component_id> wildcard_relation,
-                std::span<entity> with_wild_relation,
-                std::optional<int32_t> world_id = std::nullopt
-            ) {
-                fast_task::shared_lock guard(manager::instance().relation_mutex);
-                std::vector<uint32_t> candidate_ids;
-                bool is_first_set = true;
-                auto_mark_dirty = {writes_components.begin(), writes_components.end()};
-
-                auto intersect_with = [&](std::vector<uint32_t>&& next_set) {
-                    if (is_first_set) {
-                        candidate_ids = std::move(next_set);
-                        is_first_set = false;
-                    } else {
-                        std::vector<uint32_t> intersection;
-                        intersection.reserve(std::min(candidate_ids.size(), next_set.size()));
-
-                        std::set_intersection(
-                            candidate_ids.begin(),
-                            candidate_ids.end(),
-                            next_set.begin(),
-                            next_set.end(),
-                            std::back_inserter(intersection)
-                        );
-                        candidate_ids = std::move(intersection);
-                    }
-                };
-
-                if (!relations.empty()) {
-                    intersect_with(manager::instance().get_relation_query(relations));
-                    if (candidate_ids.empty())
-                        return;
-                }
-
-                for (component_id rel : wildcard_relation) {
-                    auto matches = manager::instance().get_wildcard_relations(rel);
-                    intersect_with(std::move(matches));
-                    if (candidate_ids.empty())
-                        return;
-                }
-
-                for (auto target : with_wild_relation) {
-                    if (target.is_valid()) {
-                        auto matches = manager::instance().get_entity_wildcard_relations(target.id);
-                        intersect_with(std::move(matches));
-                        if (candidate_ids.empty())
-                            return;
-                    }
-                }
-
-                for (uint32_t entity_id : candidate_ids) {
-                    auto& record = manager::instance().records.at(entity_id);
-                    if (world_id)
-                        if (record.world_owner->id != *world_id)
-                            continue;
-                    archetype* arch = record.type;
-
-                    if (!arch->matches_query(components, with_components, without_components))
-                        continue;
-
-                    bool dirty_check_passed = true;
-                    for (auto cid : with_dirty_components) {
-                        if (!arch->is_dirty(record.chunk, arch->component_index_map.at(cid), record.chunk_index)) {
-                            dirty_check_passed = false;
-                            break;
-                        }
-                    }
-                    if (!dirty_check_passed)
-                        continue;
-                    bool clean_check_passed = true;
-                    for (auto cid : with_clean_components) {
-                        if (arch->is_dirty(record.chunk, arch->component_index_map.at(cid), record.chunk_index)) {
-                            clean_check_passed = false;
-                            break;
-                        }
-                    }
-                    if (!clean_check_passed)
-                        continue;
-
-                    if (with_changes.size()) {
-                        bool changes_check_passed = false;
-
-                        archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
-                        if (record.archetype_before_mutation.load(std::memory_order_relaxed) != nullptr) {
-                            for (auto component_id_ : with_changes) {
-                                bool existed_before = before_arch->component_index_map.contains(component_id_);
-                                bool exists_after = record.type->component_index_map.contains(component_id_);
-
-                                if (!existed_before && exists_after) {
-                                    changes_check_passed = true;
-                                    break;
-                                } else if (existed_before && !exists_after) {
-                                    changes_check_passed = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!changes_check_passed)
-                            continue;
-                    }
-
-                    item new_item;
-                    new_item.e = {entity_id, record.generation};
-                    new_item.source_archetype = arch;
-                    new_item.component_pointers.reserve(components.size());
-
-                    for (auto cid : components)
-                        new_item.component_pointers.push_back(get_entity_component(entity_id, record.generation, cid));
-                    matched_entities.push_back(std::move(new_item));
-                }
-            }
-
-            std::pair<size_t, void**> next() {
-                if (is_end())
-                    return {0, nullptr};
-                return {1, matched_entities[current_index++].component_pointers.data()};
-            }
-
-            bool is_end() const {
-                return current_index >= matched_entities.size();
-            }
-
-            void mark_component_dirty(component_id component, size_t entity_index) {
-                mark_component_dirty(0, current_index - 1, component, entity_index);
-            }
-
-            bool is_entity_match(size_t entity_index) const {
-                return true;
-            }
-
-            std::pair<uint32_t, uint32_t> get_current_entity(size_t entity_index) {
-                return get_current_entity(0, current_index - 1, entity_index);
-            }
-
-            structural_changes get_component_change_state(size_t entity_index, component_id cid) {
-                return get_component_change_state(0, current_index - 1, entity_index, cid);
-            }
-
-            void mark_component_dirty(size_t archetype_index, size_t chunk_index, component_id component, size_t entity_index) {
-                archetype* archetype = matched_entities[chunk_index].source_archetype;
-                auto chunk = manager::instance().records.at(matched_entities[chunk_index].e.id).chunk;
-                auto it = archetype->component_index_map.find(component);
-                if (it != archetype->component_index_map.end()) {
-                    uint32_t component_index_in_archetype = it->second;
-                    archetype->mark_dirty(chunk, component_index_in_archetype, entity_index);
-                }
-            }
-
-            bool is_entity_match(size_t archetype_index, size_t chunk_index, size_t entity_index) const {
-                return true;
-            }
-
-            std::pair<uint32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index) {
-                auto& e = matched_entities[chunk_index].e;
-                return {e.id, e.generation};
-            }
-
-            structural_changes get_component_change_state(size_t archetype_index, size_t chunk_index, size_t entity_index, component_id cid) {
-                auto& record = manager::instance().records.at(matched_entities[chunk_index].e.id);
-                auto& active_chunk = record.chunk;
-
-                archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
-                if (before_arch == nullptr) {
-                    auto it = record.type->component_index_map.find(cid);
-                    if (it != record.type->component_index_map.end()) {
-                        uint32_t component_index_in_archetype = it->second;
-                        if (record.type->is_dirty(active_chunk, component_index_in_archetype, entity_index))
-                            return structural_changes::modified;
-                    }
-                    return structural_changes::no_changes;
-                }
-
-                archetype* after_arch = record.type;
-
-                bool existed_before = before_arch->component_index_map.contains(cid);
-                bool exists_after = after_arch->component_index_map.contains(cid);
-
-                if (!existed_before && exists_after)
-                    return structural_changes::added;
-                else if (existed_before && !exists_after) {
-                    return structural_changes::removed;
-                } else if (existed_before && exists_after) {
-                    auto it = record.type->component_index_map.find(cid);
-                    if (it != record.type->component_index_map.end()) {
-                        uint32_t component_index_in_archetype = it->second;
-                        if (record.type->is_dirty(active_chunk, component_index_in_archetype, entity_index))
-                            return structural_changes::modified;
-                    }
-                    return structural_changes::no_changes;
-                } else
-                    return structural_changes::no_changes;
-            }
-
-            preserved_state preserve_state() const {
-                return {0, current_index - 1};
-            }
-        };
-
         iteration_handle::iteration_handle(iteration_handle&& other) noexcept {
-            data = other.data;
+            data = std::move(other.data);
             other.data = nullptr;
         }
 
-        iteration_handle::~iteration_handle() {
-            std::visit(
-                []<class T>(T& ptr) {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        delete ptr;
-                },
-                data
-            );
+        iteration_handle::~iteration_handle() = default;
+
+        iteration_handle& iteration_handle::operator=(iteration_handle&& other) noexcept {
+            data = std::move(other.data);
         }
 
+
         std::pair<size_t, void**> iteration_handle::next() {
-            return std::visit(
-                []<class T>(T& ptr) -> std::pair<size_t, void**> {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->next();
-                    else
-                        return {0, nullptr};
-                },
-                data
-            );
+            if (data)
+                return data->next();
+            else
+                return {0, nullptr};
         }
 
         bool iteration_handle::is_end() const {
-            return std::visit(
-                []<class T>(const T& ptr) -> bool {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->is_end();
-                    else
-                        return true;
-                },
-                data
-            );
+            if (data)
+                data->is_end();
         }
 
         void iteration_handle::mark_component_dirty(component_id component, size_t index) {
-            std::visit(
-                [&]<class T>(T& ptr) {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->mark_component_dirty(component, index);
-                },
-                data
-            );
+            if (data)
+                data->mark_component_dirty(component, index);
         }
 
         bool iteration_handle::is_entity_match(size_t entity_index) const {
-            return std::visit(
-                [entity_index]<class T>(const T& ptr) -> bool {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->is_entity_match(entity_index);
-                    else
-                        return false;
-                },
-                data
-            );
+            if (data)
+                return data->is_entity_match(entity_index);
+            else
+                return false;
         }
 
         std::pair<uint32_t, uint32_t> iteration_handle::get_current_entity(size_t entity_index) {
-            return std::visit(
-                [entity_index]<class T>(T& ptr) -> std::pair<uint32_t, uint32_t> {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->get_current_entity(entity_index);
-                    else
-                        return {0, -1};
-                },
-                data
-            );
+            if (data)
+                return data->get_current_entity(entity_index);
+            else
+                return {0, -1};
         }
 
         structural_changes iteration_handle::get_component_change_state(size_t entity_index, component_id cid) {
-            return std::visit(
-                [entity_index, cid]<class T>(T& ptr) -> structural_changes {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->get_component_change_state(entity_index, cid);
-                    else
-                        return structural_changes::no_changes;
-                },
-                data
-            );
+            if (data)
+                return data->get_component_change_state(entity_index, cid);
+            else
+                return structural_changes::no_changes;
         }
 
         void iteration_handle::preserved_state::mark_component_dirty(iteration_handle& handle, component_id cid, size_t index) {
-            std::visit(
-                [this, cid, index]<class T>(T& ptr) {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        ptr->mark_component_dirty(archetype_index, chunk_index, cid, index);
-                },
-                handle.data
-            );
+            if (handle.data)
+                handle.data->mark_component_dirty(archetype_index, chunk_index, cid, index);
         }
 
         bool iteration_handle::preserved_state::is_entity_match(iteration_handle& handle, size_t current_index_in_chunk) const {
-            return std::visit(
-                [this, current_index_in_chunk]<class T>(T& ptr) -> bool {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->is_entity_match(archetype_index, chunk_index, current_index_in_chunk);
-                    else
-                        return false;
-                },
-                handle.data
-            );
+            if (handle.data)
+                return handle.data->is_entity_match(archetype_index, chunk_index, current_index_in_chunk);
+            else
+                return false;
         }
 
         std::pair<uint32_t, uint32_t> iteration_handle::preserved_state::get_current_entity(iteration_handle& handle, size_t current_index_in_chunk) {
-            return std::visit(
-                [this, current_index_in_chunk]<class T>(T& ptr) -> std::pair<uint32_t, uint32_t> {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->get_current_entity(archetype_index, chunk_index, current_index_in_chunk);
-                    else
-                        return {0, -1};
-                },
-                handle.data
-            );
+            if (handle.data)
+                return handle.data->get_current_entity(archetype_index, chunk_index, current_index_in_chunk);
+            else
+                return {0, -1};
         }
 
         structural_changes iteration_handle::preserved_state::get_component_change_state(iteration_handle& handle, size_t entity_index, component_id cid) {
-            return std::visit(
-                [this, entity_index, cid]<class T>(T& ptr) -> structural_changes {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->get_component_change_state(archetype_index, chunk_index, entity_index, cid);
-                    else
-                        return structural_changes::no_changes;
-                },
-                handle.data
-            );
+            if (handle.data)
+                return handle.data->get_component_change_state(archetype_index, chunk_index, entity_index, cid);
+            else
+                return structural_changes::no_changes;
         }
 
         iteration_handle::preserved_state iteration_handle::preserve_state() {
-            return std::visit(
-                []<class T>(T& ptr) -> iteration_handle::preserved_state {
-                    if constexpr (!std::is_same_v<T, std::nullptr_t>)
-                        return ptr->preserve_state();
-                    else
-                        return {0, 0};
-                },
-                data
-            );
+            if (data)
+                return data->preserve_state();
+            else
+                return {0, 0};
         }
 
         entity iterator_view::current_entity() {
@@ -1595,28 +1270,19 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes,
-            std::span<std::pair<component_id, entity>> with_relation,
-            std::span<component_id> wildcard_relation,
-            std::span<entity> with_wild_relation
+            std::span<component_id> with_changes
         ) {
             iteration_handle handle;
-            if (with_relation.size() || wildcard_relation.size()) {
-                auto data = std::make_unique<iteration_handle::relational_iteration_data>(manager::instance().manager_mutex);
-                data->calculate_data(components, with_components, without_components, writes_components, with_dirty_components, with_clean_components, with_changes, with_relation, wildcard_relation, with_wild_relation, world_id);
-                handle.data = data.release();
-            } else {
-                auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
+            auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
 
-                if (auto it = manager::instance().worlds.find(world_id); it != manager::instance().worlds.end())
-                    for (const auto& archetype_ptr : it->second.archetypes)
-                        if (archetype_ptr->matches_query(components, with_components, without_components))
-                            data->arch_data.push_back(archetype_ptr.get());
+            if (auto it = manager::instance().worlds.find(world_id); it != manager::instance().worlds.end())
+                for (const auto& archetype_ptr : it->second.archetypes)
+                    if (archetype_ptr->matches_query(components, with_components, without_components))
+                        data->arch_data.push_back(archetype_ptr.get());
 
-                data->calculate_data(components, with_clean_components, with_dirty_components, writes_components, with_changes);
-                data->component_arrays.resize(components.size());
-                handle.data = data.release();
-            }
+            data->calculate_data(components, with_clean_components, with_dirty_components, writes_components, with_changes);
+            data->component_arrays.resize(components.size());
+            handle.data = std::move(data);
             return handle;
         }
 
@@ -1627,34 +1293,24 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes,
-            std::span<std::pair<component_id, entity>> with_relation,
-            std::span<component_id> wildcard_relation,
-            std::span<entity> with_wild_relation
+            std::span<component_id> with_changes
         ) {
             iteration_handle handle;
+            auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
 
-            if (with_relation.size() || wildcard_relation.size()) {
-                auto data = std::make_unique<iteration_handle::relational_iteration_data>(manager::instance().manager_mutex);
-                data->calculate_data(components, with_components, without_components, writes_components, with_dirty_components, with_clean_components, with_changes, with_relation, wildcard_relation, with_wild_relation);
-                handle.data = data.release();
-            } else {
-                auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
+            for (const auto& archetype_ptr : manager::instance().limbo.archetypes)
+                if (archetype_ptr->matches_query(components, with_components, without_components))
+                    data->arch_data.push_back(archetype_ptr.get());
 
-                for (const auto& archetype_ptr : manager::instance().limbo.archetypes)
+            for (const auto& [id, world] : manager::instance().worlds)
+                for (const auto& archetype_ptr : world.archetypes)
                     if (archetype_ptr->matches_query(components, with_components, without_components))
                         data->arch_data.push_back(archetype_ptr.get());
 
-                for (const auto& [id, world] : manager::instance().worlds)
-                    for (const auto& archetype_ptr : world.archetypes)
-                        if (archetype_ptr->matches_query(components, with_components, without_components))
-                            data->arch_data.push_back(archetype_ptr.get());
 
-
-                data->calculate_data(components, with_clean_components, with_dirty_components, writes_components, with_changes);
-                data->component_arrays.resize(components.size());
-                handle.data = data.release();
-            }
+            data->calculate_data(components, with_clean_components, with_dirty_components, writes_components, with_changes);
+            data->component_arrays.resize(components.size());
+            handle.data = std::move(data);
             return handle;
         }
     }

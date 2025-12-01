@@ -17,6 +17,45 @@
 
 //entity component system
 namespace copper_server::api::ecs {
+    enum class relation_type : uint8_t {
+        strong,
+        weak
+    };
+
+    struct relation_entry {
+        ecs::entity target;
+        relation_type type;
+
+        relation_entry(ecs::entity e, relation_type t = relation_type::strong)
+            : target(e), type(t) {}
+    };
+
+    struct relation_visitor {
+        struct context_t {
+            void (*on_unlink)(void*, ecs::entity self, ecs::entity target_holder);
+            void* component;
+
+            void make_unlink(ecs::entity self, ecs::entity target_holder) const {
+                on_unlink(component, self, target_holder);
+            }
+        };
+
+        std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)> callback;
+        context_t context;
+
+        relation_visitor(std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)>&& callback)
+            : callback(std::move(callback)) {}
+
+        relation_visitor(const relation_visitor&) = delete;
+        relation_visitor(relation_visitor&&) = delete;
+        relation_visitor& operator=(const relation_visitor&) = delete;
+        relation_visitor& operator=(relation_visitor&&) = delete;
+
+        void push(entity e, relation_type type) {
+            callback(e, type, context);
+        }
+    };
+
     struct entity_recipe {
         entity_recipe();
         ~entity_recipe();
@@ -137,21 +176,6 @@ namespace copper_server::api::ecs {
         }
 
         template <class component>
-        void add_relation(entity child) {
-            detail::queue_add_relation(detail::get_component_id<component>(), *this, child);
-        }
-
-        template <class component>
-        void remove_relation(entity child) {
-            detail::queue_remove_relation(detail::get_component_id<component>(), *this, child);
-        }
-
-        template <class component>
-        bool has_relation(entity child) {
-            return detail::has_relation(detail::get_component_id<component>(), *this, child);
-        }
-
-        template <class component>
         [[nodiscard]] bool has() const {
             return detail::has_entity_component(id, generation, detail::get_component_id<component>());
         }
@@ -167,8 +191,8 @@ namespace copper_server::api::ecs {
             return detail::get_entity_assigned_to_world(id, generation);
         }
 
-        std::vector<entity> get_flat_relation() const {
-            return detail::request_flat_childs(id, generation);
+        void get_all_relations(relation_visitor& visitor) const {
+            detail::request_all_childs(id, generation, visitor);
         }
 
         bool operator==(const entity& other) const {
@@ -285,22 +309,6 @@ namespace copper_server::api::ecs {
             return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
         }
 
-        template <class tag_component>
-        [[nodiscard]] query<params..., detail::has_relation_query<tag_component>> with_relation(entity child) && {
-            with_relations.emplace_back(detail::get_component_id<tag_component>(), child);
-            return query<params..., detail::has_relation_query<tag_component>>{id, std::move(with_relations), std::move(with_wild_relations)};
-        }
-
-        template <class tag_component>
-        [[nodiscard]] query<params..., detail::query_relation_wildcard<tag_component>> with_relation(wildcard_t) && {
-            return query<params..., detail::query_relation_wildcard<tag_component>>{id, std::move(with_relations), std::move(with_wild_relations)};
-        }
-
-        [[nodiscard]] query with_any_relation(entity target) && {
-            with_wild_relations.emplace_back(target);
-            return query{id, std::move(with_relations), std::move(with_wild_relations)};
-        }
-
         //this operation marks all written components as dirty,
         // this only viable when the query definitely modifies ALL written items in query
         // using mindlessly would lead to system overload with too much unnecessary updates
@@ -369,7 +377,6 @@ namespace copper_server::api::ecs {
             auto dirty_ids = traits::get_dirty_ids();
             auto clean_ids = traits::get_clear_ids();
             auto changes_ids = traits::get_with_changes_ids();
-            auto wildcard_ids = traits::get_wildcard_ids();
 
             std::span<component_id> writes_ids;
             if constexpr (explicit_marking)
@@ -385,10 +392,7 @@ namespace copper_server::api::ecs {
                             writes_ids,
                             dirty_ids,
                             clean_ids,
-                            changes_ids,
-                            {with_relations.data(), with_relations.size()},
-                            wildcard_ids,
-                            {with_wild_relations.data(), with_wild_relations.size()},
+                            changes_ids
                         )
                       : detail::iterate_components_global(
                             all_ids,
@@ -397,10 +401,7 @@ namespace copper_server::api::ecs {
                             writes_ids,
                             dirty_ids,
                             clean_ids,
-                            changes_ids,
-                            {with_relations.data(), with_relations.size()},
-                            wildcard_ids,
-                            {with_wild_relations.data(), with_wild_relations.size()},
+                            changes_ids
                         );
 
             return typename detail::apply_tuple_to_iter<
@@ -411,8 +412,6 @@ namespace copper_server::api::ecs {
         }
 
         std::optional<int32_t> id;
-        list_array<std::pair<component_id, entity>> with_relations;
-        list_array<entity> with_wild_relations;
     };
 
     struct world_local_registry {
@@ -581,51 +580,41 @@ namespace copper_server::api::ecs {
         struct system_builder {
             system_builder() = default;
 
-            system_builder(scheduler& sched, query<params...>&& q) : sched(sched), prototype(std::move(q)) {}
+            system_builder(scheduler& sched) : sched(sched) {}
 
             template <class... with_components>
             [[nodiscard]] system_builder<params..., detail::query_with<with_components...>> with() && {
-                return {sched, std::move(prototype).template with<with_components...>()};
+                return {sched};
             }
 
             template <class... without_components>
             [[nodiscard]] system_builder<params..., detail::query_without<without_components...>> without() && {
-                return {sched, std::move(prototype).template without<without_components...>()};
+                return {sched};
             }
 
             template <class... reads_components>
             [[nodiscard]] system_builder<params..., detail::query_reads<reads_components...>> reads() && {
-                return {sched, std::move(prototype).template reads<reads_components...>()};
+                return {sched};
             }
 
             template <class... writes_components>
             [[nodiscard]] system_builder<params..., detail::query_writes<writes_components...>> writes() && {
-                return {sched, std::move(prototype).template writes<writes_components...>()};
+                return {sched};
             }
 
             template <class... with_dirty_components>
             [[nodiscard]] system_builder<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() && {
-                return {sched, std::move(prototype).template with_dirty<with_dirty_components...>()};
+                return {sched};
             }
 
             template <class... with_clear_components>
             [[nodiscard]] system_builder<params..., detail::query_with_clear<with_clear_components...>> with_clear() && {
-                return {sched, std::move(prototype).template with_clear<with_clear_components...>()};
+                return {sched};
             }
 
             template <class... with_changed_components>
             [[nodiscard]] system_builder<params..., detail::query_with_changes<with_changed_components...>> with_changes() && {
-                return {sched, std::move(prototype).template with_changes<with_changed_components...>()};
-            }
-
-            template <class tag_component>
-            [[nodiscard]] system_builder<params..., detail::has_relation_query<tag_component>> with_relation(entity child) && {
-                return {sched, std::move(prototype).template with_relation<tag_component>(child)};
-            }
-
-            template <class tag_component>
-            [[nodiscard]] system_builder<params..., detail::query_relation_wildcard<tag_component>> with_relation(wildcard_t) && {
-                return {sched, std::move(prototype).template with_relation<tag_component>(wildcard_t)};
+                return {sched};
             }
 
             template <class Func>
@@ -634,19 +623,15 @@ namespace copper_server::api::ecs {
 
                 auto ptr = std::make_unique<Adapter>(
                     std::forward<Func>(f),
-                    std::move(prototype),
                     std::move(name)
                 );
 
-                // We use the static get_system_info which reads the 'reads'/'writes' aliases we defined in Adapter
                 const auto& info = detail::get_system_info<Adapter>();
-
                 sched.add_system_impl(std::move(ptr), info, phase);
             }
 
         private:
             scheduler& sched;
-            query<params...> prototype;
         };
 
         scheduler();
@@ -658,7 +643,7 @@ namespace copper_server::api::ecs {
         }
 
         system_builder<> build() { //builds system to be used in lambda
-            return system_builder{*this, query<>{}};
+            return system_builder<>{*this};
         }
 
         // Called each tick to run all systems in parallel
@@ -691,8 +676,7 @@ namespace std {
 //Small self doc:
 //This ecs been created specifically for copper_server to archive some features:
 // like tick_phase
-// global relation for leashed entities
-// "flat" relation for simple relations to reduce contention
+// "flat" relations using components
 // compile time query builder
 // non pod components
 //      (with some limitations:
@@ -707,10 +691,13 @@ namespace std {
 //
 //
 //The flat relation is dynamically calculated for each component that declares special member function:
-//      std::vector<api::ecs::entity> get_flat_relations();
+//      void get_relations(api::ecs::relation_visitor& visitor);
+//  to notify the weak childs about removed relation use optional member function:
+//      void on_unlink(ecs::entity self, ecs::entity target_holder);
 //
 //To remove entity, just add com::dead_mark
-// this component is used by the deletion_system to remove its child entities
+// this component is used by the deletion_system to remove it's owned child entities
+// for weak relations system calls on_unlink
 // the deletion_system is automatically registered for all worlds and could not be removed
 
 #endif /* SRC_API_ECS */
