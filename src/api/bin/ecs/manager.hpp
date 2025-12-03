@@ -93,6 +93,100 @@ namespace copper_server::api::ecs {
         detail::component_type_info::get_relations_fn fn;
     };
 
+    struct construction_plan {
+        struct step {
+            size_t offset;
+            size_t size;
+            detail::component_type_info::constructor_fn construct_fn;
+        };
+
+        std::vector<step> steps;
+
+        void execute(char* dst_block, size_t dst_index) {
+            for (const auto& op : steps) {
+                void* d_ptr = dst_block + op.offset + (dst_index * op.size);
+                op.construct_fn(d_ptr);
+            }
+        }
+    };
+
+    struct migration_plan {
+        struct step {
+            size_t src_offset;
+            size_t dst_offset;
+            size_t size;
+            detail::component_type_info::move_constructor_fn move_fn;
+        };
+
+        std::vector<step> steps;
+
+        struct construct_step {
+            size_t dst_offset;
+            size_t size;
+            detail::component_type_info::constructor_fn construct_fn;
+        };
+
+        std::vector<construct_step> missing_steps;
+
+        void execute(char* src_block, char* dst_block, size_t src_index, size_t dst_index) {
+            for (const auto& op : steps) {
+                void* s_ptr = src_block + op.src_offset + (src_index * op.size);
+                void* d_ptr = dst_block + op.dst_offset + (dst_index * op.size);
+
+                if (op.move_fn) [[unlikely]] {
+                    op.move_fn(d_ptr, s_ptr);
+                } else
+                    std::memcpy(d_ptr, s_ptr, op.size);
+            }
+        }
+
+        void execute_defaults(char* dst_block, size_t dst_index) {
+            for (const auto& op : missing_steps) {
+                void* d_ptr = dst_block + op.dst_offset + (dst_index * op.size);
+                op.construct_fn(d_ptr);
+            }
+        }
+    };
+
+    struct destruction_plan {
+        struct step {
+            size_t offset;
+            size_t size;
+            detail::component_type_info::destructor_fn destruct_fn;
+        };
+
+        std::vector<step> steps;
+
+        void execute(char* dst_block, size_t dst_index) {
+            for (const auto& op : steps) {
+                void* d_ptr = dst_block + op.offset + (dst_index * op.size);
+                op.destruct_fn(d_ptr);
+            }
+        }
+    };
+
+    struct move_plan {
+        struct step {
+            size_t offset;
+            size_t size;
+            detail::component_type_info::move_constructor_fn move_fn;
+        };
+
+        std::vector<step> steps;
+
+        void execute(char* src_block, char* dst_block, size_t src_index, size_t dst_index) {
+            for (const auto& op : steps) {
+                void* s_ptr = src_block + op.offset + (src_index * op.size);
+                void* d_ptr = dst_block + op.offset + (dst_index * op.size);
+
+                if (op.move_fn) [[unlikely]] {
+                    op.move_fn(d_ptr, s_ptr);
+                } else
+                    std::memcpy(d_ptr, s_ptr, op.size);
+            }
+        }
+    };
+
     struct archetype {
         std::vector<whole_component_id> whole_component_ids; //used for archetype indexing
         std::vector<component_id> component_ids;             //used for serializing
@@ -115,6 +209,76 @@ namespace copper_server::api::ecs {
 
         chunk_layout layout;
         fast_task::task_rw_mutex arch_mutex;
+        construction_plan construction_cache;
+        destruction_plan destruction_cache;
+        move_plan move_cache;
+        std::unordered_map<archetype*, std::unique_ptr<migration_plan>> migration_cache;
+
+        construction_plan& get_construction_plan() {
+            if (construction_cache.steps.size())
+                return construction_cache;
+
+            for (size_t i = 0; i < component_ids.size(); ++i) {
+                component_id cid = component_ids[i];
+                const auto& info = detail::component_info_registry[cid];
+
+                construction_cache.steps.push_back({.offset = layout.component_offsets[i], .size = info.size, .construct_fn = info.construct});
+            }
+            return construction_cache;
+        }
+
+        destruction_plan& get_destruction_plan() {
+            if (destruction_cache.steps.size())
+                return destruction_cache;
+
+            for (auto& [component, pos] : component_index_map) {
+                const auto& type_info = detail::component_info_registry[component];
+                size_t offset = layout.component_offsets[pos];
+
+                destruction_cache.steps.push_back({.offset = offset, .size = type_info.size, .destruct_fn = type_info.destroy});
+            }
+
+            return destruction_cache;
+        }
+
+        move_plan& get_move_plan() {
+            if (move_cache.steps.size())
+                return move_cache;
+
+            for (auto& [component, pos] : component_index_map) {
+                const auto& type_info = detail::component_info_registry[component];
+                size_t offset = layout.component_offsets[pos];
+                move_cache.steps.push_back({.offset = offset, .size = type_info.size, .move_fn = type_info.move_construct});
+            }
+
+            return move_cache;
+        }
+
+        migration_plan& get_migration_plan(archetype* to) {
+            auto it = migration_cache.find(to);
+            if (it != migration_cache.end())
+                return *it->second.get();
+
+            auto plan = std::make_unique<migration_plan>();
+
+            for (size_t i = 0; i < to->component_ids.size(); ++i) {
+                component_id cid = to->component_ids[i];
+                const auto& info = detail::component_info_registry[cid];
+
+                auto it_src = component_index_map.find(cid);
+
+                if (it_src != component_index_map.end()) {
+                    size_t src_comp_idx = it_src->second;
+
+                    plan->steps.push_back({.src_offset = layout.component_offsets[src_comp_idx], .dst_offset = to->layout.component_offsets[i], .size = info.size, .move_fn = info.is_trivial ? nullptr : info.move_construct});
+                } else
+                    plan->missing_steps.push_back({.dst_offset = to->layout.component_offsets[i], .size = info.size, .construct_fn = info.construct});
+            }
+
+            migration_plan* ptr = plan.get();
+            migration_cache[to] = std::move(plan);
+            return *ptr;
+        }
 
         std::span<std::atomic_uint64_t> dirty_flags(chunk* chunk, size_t component_index) {
             auto atomics = reinterpret_cast<std::atomic_uint64_t*>(chunk->memory_block.get() + layout.dirty_flags_offsets[component_index]);
@@ -276,18 +440,7 @@ namespace copper_server::api::ecs {
             int32_t last_entity_id = chunk->entities()[index];
 
             chunk->entities()[old_pos] = last_entity_id;
-            for (size_t i = 0; i < component_ids.size(); ++i) {
-                component_id id_to_process = component_ids[i];
-                const auto& type_info = detail::component_info_registry[id_to_process];
-                size_t offset = layout.component_offsets[i];
-
-                void* dest_ptr = chunk->memory_block.get() + offset + (old_pos * type_info.size);
-                void* src_ptr = chunk->memory_block.get() + offset + (index * type_info.size);
-
-                type_info.move(dest_ptr, src_ptr);
-            }
-
-            records.at(last_entity_id).chunk_index = old_pos;
+            get_move_plan().execute(chunk->memory_block.get(), chunk->memory_block.get(), index, old_pos);
         }
 
         void request_all_relations(entity_record& record, relation_visitor& visitor) {
@@ -350,7 +503,7 @@ namespace copper_server::api::ecs {
             return arch;
         }
 
-        archetype* map_new_archetype(archetype* old, whole_component_id new_id) {
+        archetype* map_new_archetype_with(archetype* old, whole_component_id new_id) {
             std::vector<whole_component_id> next_key = old->whole_component_ids;
             next_key.push_back(new_id);
             std::sort(next_key.begin(), next_key.end());
@@ -361,6 +514,30 @@ namespace copper_server::api::ecs {
             next_archetype->remove_transition_cache[new_id] = old;
             return next_archetype;
         }
+
+        archetype* map_new_archetype_without(archetype* old, whole_component_id old_id) {
+            std::vector<whole_component_id> next_key = old->whole_component_ids;
+            if (auto it = std::find(next_key.begin(), next_key.end(), old_id); next_key.end() != it) {
+                next_key.erase(it);
+                archetype* next_archetype = map_get_archetype(next_key);
+                old->remove_transition_cache[old_id] = next_archetype;
+                next_archetype->add_transition_cache[old_id] = old;
+                return next_archetype;
+            } else
+                return old;
+        }
+    };
+
+    struct local_entity_id_cache {
+        std::vector<uint32_t> ids;
+        static constexpr inline size_t ID_CACHE_SIZE = 128;
+
+        local_entity_id_cache() = default;
+        ~local_entity_id_cache();
+
+        static local_entity_id_cache& get_local();
+        uint32_t get_next_id();
+        void recycle_id(uint32_t id);
     };
 
     struct manager {
@@ -397,23 +574,17 @@ namespace copper_server::api::ecs {
             uint32_t new_index = target_chunk->entity_count;
 
             target_chunk->entities()[new_index] = id;
-            for (size_t i = 0; i < to->component_ids.size(); ++i) {
-                component_id id_to_process = to->component_ids[i];
-                const auto& type_info = detail::component_info_registry[id_to_process];
-
-                size_t new_offset = to->layout.component_offsets[i];
-                void* dest_ptr = target_chunk->memory_block.get() + new_offset + (new_index * type_info.size);
-
-                auto it = old_type->component_index_map.find(id_to_process);
-                if (it != old_type->component_index_map.end()) {
-                    uint32_t old_component_index = it->second;
-                    size_t old_offset = old_type->layout.component_offsets[old_component_index];
-                    void* src_ptr = old_chunk->memory_block.get() + old_offset + (old_index * type_info.size);
-
-                    type_info.move_construct(dest_ptr, src_ptr);
-                } else
-                    type_info.construct(dest_ptr);
-            }
+            migration_plan& plan = old_type->get_migration_plan(to);
+            plan.execute(
+                old_chunk->memory_block.get(),
+                target_chunk->memory_block.get(),
+                old_index,
+                new_index
+            );
+            plan.execute_defaults(
+                target_chunk->memory_block.get(),
+                new_index
+            );
 
             record.type = to;
             record.world_owner = w;
@@ -432,11 +603,11 @@ namespace copper_server::api::ecs {
             auto& record = records.at(id);
             bool was_full = (record.chunk->entity_count == CHUNK_CAPACITY);
 
-            --record.chunk->entity_count;
             ++record.generation;
+            --record.chunk->entity_count;
 
             record.type->compact_chunk(records, record.chunk, record.chunk_index);
-
+            record.type->get_destruction_plan().execute(record.chunk->memory_block.get(), record.chunk_index);
 
             if (record.chunk->entity_count == 0) {
                 record.type->release_empty_chunk_swap_pop(record.chunk->global_index);
@@ -445,35 +616,14 @@ namespace copper_server::api::ecs {
                 record.type->add_to_free_list(record.chunk);
 
             free_entity_ids.enqueue(id);
-
-            for (auto& [component, pos] : record.type->component_index_map) {
-                const auto& type_info = detail::component_info_registry[component];
-                size_t offset = record.type->layout.component_offsets[pos];
-                void* dest_ptr = record.chunk->memory_block.get() + offset + (record.chunk_index * type_info.size);
-                type_info.destroy(dest_ptr);
-            }
         }
 
         //internal, should be used only by implementation
         //locks on allocation, there's no locks if there free record
         entity allocate_entity(archetype* in, world* w) {
-            uint32_t id;
-            if (!free_entity_ids.try_dequeue(id)) {
-                fast_task::unique_lock lock(manager_mutex);
-                if (records.size() >= UINT32_MAX)
-                    return {UINT32_MAX, UINT32_MAX}; //return invalid entity
-
-                size_t old_size = records.size();
-                size_t new_size = std::max<size_t>(records.size() + 1000, UINT32_MAX);
-                records.resize(new_size);
-
-                std::vector<uint32_t> batch_creation;
-                batch_creation.reserve(new_size - old_size);
-                for (size_t i = old_size + 1; i < new_size; ++i)
-                    batch_creation.push_back(uint32_t(i));
-                free_entity_ids.enqueue_bulk(batch_creation.data(), batch_creation.size());
-                id = uint32_t(old_size);
-            }
+            uint32_t id = local_entity_id_cache::get_local().get_next_id();
+            if (id == UINT32_MAX)
+                return {UINT32_MAX, UINT32_MAX};
             auto& record = records.at(id);
             record.type = in;
             record.world_owner = w;
@@ -484,14 +634,8 @@ namespace copper_server::api::ecs {
             if (record.chunk->entity_count == CHUNK_CAPACITY)
                 in->remove_from_free_list(record.chunk);
 
-            for (auto& [component, pos] : in->component_index_map) {
-                const auto& type_info = detail::component_info_registry[component];
-                size_t offset = in->layout.component_offsets[pos];
-                void* dest_ptr = record.chunk->memory_block.get() + offset + (record.chunk_index * type_info.size);
-                type_info.construct(dest_ptr);
-            }
-
-            record.generation = 0;
+            in->get_construction_plan().execute(record.chunk->memory_block.get(), record.chunk_index);
+            record.generation++;
             return {id, record.generation};
         }
 
@@ -533,6 +677,51 @@ namespace copper_server::api::ecs {
         }
 
         static manager& instance();
+
+        void bulk_release_ids(const std::vector<uint32_t>& ids) {
+            if (ids.empty())
+                return;
+            free_entity_ids.enqueue_bulk(ids.data(), ids.size());
+        }
+
+        size_t bulk_acquire_ids(std::vector<uint32_t>& out_ids, size_t count) {
+            size_t acquired = free_entity_ids.try_dequeue_bulk(std::back_inserter(out_ids), count);
+
+            if (acquired >= count)
+                return acquired;
+
+            fast_task::unique_lock lock(manager_mutex);
+            if (records.size() >= UINT32_MAX)
+                return acquired;
+
+            size_t old_size = records.size();
+            size_t growth = std::max<size_t>(1000, count - acquired);
+            size_t new_size = std::min<size_t>(static_cast<size_t>(records.size()) + growth, UINT32_MAX);
+
+            if (new_size == old_size)
+                return acquired;
+
+            records.resize(new_size);
+
+            size_t current_id = old_size;
+            size_t needed = count - acquired;
+
+            while (needed > 0 && current_id < new_size) {
+                out_ids.push_back(static_cast<uint32_t>(current_id++));
+                needed--;
+                acquired++;
+            }
+
+            if (current_id < new_size) {
+                std::vector<uint32_t> batch_creation;
+                batch_creation.reserve(new_size - current_id);
+                for (; current_id < new_size; ++current_id)
+                    batch_creation.push_back(static_cast<uint32_t>(current_id));
+                free_entity_ids.enqueue_bulk(batch_creation.data(), batch_creation.size());
+            }
+
+            return acquired;
+        }
     };
 }
 

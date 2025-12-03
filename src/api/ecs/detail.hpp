@@ -233,10 +233,11 @@ namespace copper_server::api::ecs {
             uint32_t entity_id;
             uint32_t generation;
             component_id component;
-            std::vector<char> data; //if nullptr the component will be removed
+            bool remove = false;
+            std::vector<char> data;
 
             ~mutation_queue_item() noexcept {
-                if (data.size())
+                if (!remove && data.size())
                     detail::component_info_registry[component].destroy(data.data());
             }
         };
@@ -270,7 +271,7 @@ namespace copper_server::api::ecs {
         bool is_valid(uint32_t id, uint32_t generation);
         std::optional<int32_t> get_entity_assigned_to_world(uint32_t id, uint32_t generation);
 
-        std::vector<ecs::entity> request_all_childs(uint32_t id, uint32_t generation, relation_visitor& visitor);
+        void request_all_childs(uint32_t id, uint32_t generation, relation_visitor& visitor);
 
         fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, std::unique_ptr<components_holder> components);
         fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, const entity_recipe& recipe, std::unique_ptr<components_holder> components);

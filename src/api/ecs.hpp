@@ -56,6 +56,7 @@ namespace copper_server::api::ecs {
         }
     };
 
+    //Low level api, use entity_definition instead of this
     struct entity_recipe {
         entity_recipe();
         ~entity_recipe();
@@ -209,6 +210,7 @@ namespace copper_server::api::ecs {
             return detail::has_entity_component(id, generation, detail::get_tag_entry(value));
         }
 
+        void destroy();
 
         //could throw depending on components
         std::optional<entity> copy_and_wait() const;
