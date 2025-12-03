@@ -215,7 +215,7 @@ namespace copper_server::api::ecs {
         whole_component_id get_tag_entry(uint32_t id) {
             if (id > INT32_MAX)
                 throw std::runtime_error("Tag entry id is too big. Expected uint31_t entry, got uint32_t.");
-            return get_component_id<tag_mask<T>>() | (static_cast<uint64_t>(id) << 32) & (1ui64 << 63);
+            return get_component_id<tag_mask<T>>() | (static_cast<uint64_t>(id) << 32) | (1ui64 << 63);
         }
 
         template <class T>
