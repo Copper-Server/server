@@ -1,10 +1,37 @@
 #include <src/api/bin/ecs/manager.hpp>
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/ecs/entity_construction.hpp>
 #include <src/api/ecs/entity_definition.hpp>
 #include <src/util/nbt_stream.hpp>
-#include <src/api/ecs/base_components.hpp>
 
 namespace copper_server::api::ecs {
+
+    entity_definition::entity_definition(const std::string& id) : identifier(id) {
+        add_locked(ecs::com::type_definition(this));
+    }
+
+    entity_definition::entity_definition(std::string&& id) : identifier(std::move(id)) {
+        add_locked(ecs::com::type_definition(this));
+    }
+
+    const std::string& entity_definition::get_identifier() const {
+        return identifier;
+    }
+
+    auto entity_definition::get_remove_action(component_id id) const -> component_remove_act {
+        if (rule_lookup.contains(id))
+            return rules[rule_lookup.at(id)].remove_action;
+        return component_remove_act::optional;
+    }
+
+    const entity_recipe& entity_definition::get_recipe() const {
+        return base_recipe;
+    }
+
+    const entity_recipe& entity_definition::get_stripped_recipe() const {
+        return stripped_recipe;
+    }
+
     static std::vector<std::string> parse_path(std::string_view path) {
         std::vector<std::string> parts;
         if (path.empty())
@@ -218,7 +245,7 @@ namespace copper_server::api::ecs {
         }
     }
 
-    entity entity_definition::from_nbt(util::nbt_read_stream& stream, std::optional<int32_t> world) const {
+    entity entity_definition::from_nbt(util::nbt_read_stream& stream, std::optional<world*> world) const {
         assert(base_recipe.is_frozen() && "entity_definition was used before finish() was called.");
         entity_construction construct;
         deserialize_recursive(construct, schema_root.get(), stream);
@@ -226,11 +253,34 @@ namespace copper_server::api::ecs {
         return std::move(construct).create_and_wait(base_recipe, world);
     }
 
-    void entity_definition::finish() {
-        if (!rule_lookup.contains(detail::get_component_id<com::type_definition>())) 
-            add_locked<com::type_definition>();
+    void entity_definition::strip(entity entity) {
+        if (!entity.is_valid())
+            return;
+        for (auto& it : stripped_ids)
+            detail::queue_remove_entity_component(entity.id, entity.generation, it);
+    }
 
+    void entity_definition::unstrip(entity entity) {
+        if (!entity.is_valid())
+            return;
+
+        auto& defaults = base_recipe.get_defaults();
+        for (auto& it : stripped_ids) {
+            auto& info = detail::component_info_registry.at(it);
+            detail::mutation_queue_item queue{entity.id, entity.generation, it};
+            queue.data.resize(info.size);
+            if (auto default_it = defaults.find(it); defaults.end() != default_it) {
+                info.construct(queue.data.data());
+                info.copy_assign(queue.data.data(), default_it->second);
+            } else
+                info.construct(queue.data.data());
+            detail::queue_command(std::move(queue));
+        }
+    }
+
+    void entity_definition::finish() {
         base_recipe.freeze();
+        stripped_recipe.freeze();
     }
 
     static auto& get_entity_definitions() {
@@ -251,7 +301,7 @@ namespace copper_server::api::ecs {
     }
 
     namespace initialization {
-        entity_definition& make_ecs_entity_definition(const std::string& id){
+        entity_definition& make_ecs_entity_definition(const std::string& id) {
             auto res = get_entity_definitions().emplace(id, id);
             return res.first->second;
         }

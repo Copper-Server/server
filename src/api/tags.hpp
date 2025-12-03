@@ -61,7 +61,6 @@ namespace copper_server::api::tags {
 
         ~tag_handle();
 
-
         tag_handle& operator=(const tag_handle& copy) {
             value = detail::copy(copy.value);
             return *this;
@@ -84,6 +83,7 @@ namespace copper_server::api::tags {
             return (bool)value;
         }
     };
+
     tag_handle get_tag_handle(builtin_entry entry, std::string_view tag);
     tag_handle get_tag_handle(std::string_view custom_entry, std::string_view tag);
     bool contains(const tag_handle&, int32_t id);
@@ -94,7 +94,8 @@ namespace copper_server::api::tags {
     const std::string& get_namespace(const tag_handle&);
     const std::string& get_full_name(const tag_handle&);
     const std::string& get_entry(const tag_handle&);
-
+    int32_t get_entry_id(const tag_handle&);
+    int32_t get_tag_id(const tag_handle&);
 
     void loading_stage_begin(); //clear entries
     void add_tag(builtin_entry entry, std::string_view tag, const list_array<std::string>& items, bool allow_override = true);

@@ -55,14 +55,14 @@ namespace copper_server::api::ecs {
     struct archetype_hash {
         static constexpr inline auto golden_ratio = 0x9e3779b9;
 
-        size_t operator()(const std::vector<component_id>& ids) const {
+        size_t operator()(const std::vector<whole_component_id>& ids) const {
             size_t seed = ids.size();
             for (auto id : ids)
                 seed ^= id + golden_ratio + (seed << 6) + (seed >> 2);
             return seed;
         }
 
-        size_t operator()(component_id* ids, size_t size) const {
+        size_t operator()(whole_component_id* ids, size_t size) const {
             size_t seed = size;
             for (size_t i = 0; i < size; i++)
                 seed ^= ids[i] + golden_ratio + (seed << 6) + (seed >> 2);
@@ -94,7 +94,8 @@ namespace copper_server::api::ecs {
     };
 
     struct archetype {
-        std::vector<component_id> component_ids;
+        std::vector<whole_component_id> whole_component_ids; //used for archetype indexing
+        std::vector<component_id> component_ids;             //used for serializing
         size_t hash;
         std::vector<std::unique_ptr<chunk>> chunks;
 
@@ -103,6 +104,7 @@ namespace copper_server::api::ecs {
         std::unordered_map<component_id, archetype*> add_transition_cache;
         std::unordered_map<component_id, archetype*> remove_transition_cache;
         std::unordered_map<component_id, uint32_t> component_index_map;
+        std::unordered_set<whole_component_id> whole_component_presence_helper;
         std::vector<flat_relation_data> component_calculate_relations;
 
         struct chunk_layout {
@@ -158,7 +160,7 @@ namespace copper_server::api::ecs {
                 layout.dirty_flags_offsets.resize(component_ids.size());
                 size_t current_offset = sizeof(int32_t) * CHUNK_CAPACITY;
                 for (uint32_t i = 0; i < component_ids.size(); ++i) {
-                    component_id id = component_ids[i];
+                    whole_component_id id = component_ids[i];
                     const auto& info = detail::component_info_registry[id];
 
                     current_offset = (current_offset + info.alignment - 1) & ~(info.alignment - 1);
@@ -193,7 +195,13 @@ namespace copper_server::api::ecs {
             }
         }
 
-        bool matches_query(std::span<component_id> components, std::span<component_id> with_components, std::span<component_id> without_components) {
+        bool matches_query(
+            std::span<component_id> components,
+            std::span<component_id> with_components,
+            std::span<component_id> without_components,
+            std::span<whole_component_id> with_tag_components,
+            std::span<whole_component_id> without_tag_components
+        ) {
             for (auto component : components)
                 if (!component_index_map.contains(component))
                     return false;
@@ -202,6 +210,12 @@ namespace copper_server::api::ecs {
                     return false;
             for (auto component : without_components)
                 if (component_index_map.contains(component))
+                    return false;
+            for (auto component : with_tag_components)
+                if (!whole_component_presence_helper.contains(component))
+                    return false;
+            for (auto component : without_tag_components)
+                if (whole_component_presence_helper.contains(component))
                     return false;
             return true;
         }
@@ -306,18 +320,26 @@ namespace copper_server::api::ecs {
         moodycamel::ConcurrentQueue<entity_dirty_mark_item> marking_queue;
         moodycamel::ConcurrentQueue<uint32_t> arch_type_changes;
 
-        archetype* map_get_archetype(const std::vector<component_id>& sorted_ids) {
+        archetype* map_get_archetype(const std::vector<whole_component_id>& sorted_ids) {
             auto hash = archetype_hash()(sorted_ids);
             auto bucket_it = archetype_lookup.find(hash);
             if (bucket_it != archetype_lookup.end()) {
                 for (archetype* arch : bucket_it->second) {
-                    if (arch->component_ids == sorted_ids)
+                    if (arch->whole_component_ids == sorted_ids)
                         return arch;
                 }
             }
 
             auto new_archetype_ptr = std::make_unique<archetype>();
-            new_archetype_ptr->component_ids = sorted_ids;
+            new_archetype_ptr->whole_component_ids = sorted_ids;
+            {
+                auto& component_ids = new_archetype_ptr->component_ids;
+                component_ids.reserve(sorted_ids.size());
+                for (auto component : sorted_ids)
+                    if (component <= UINT32_MAX)
+                        component_ids.push_back(component);
+                component_ids.shrink_to_fit();
+            }
             new_archetype_ptr->hash = hash;
             new_archetype_ptr->component_index_map.reserve(sorted_ids.size());
             new_archetype_ptr->calculate_layout();
@@ -328,8 +350,8 @@ namespace copper_server::api::ecs {
             return arch;
         }
 
-        archetype* map_new_archetype(archetype* old, component_id new_id) {
-            std::vector<component_id> next_key = old->component_ids;
+        archetype* map_new_archetype(archetype* old, whole_component_id new_id) {
+            std::vector<whole_component_id> next_key = old->whole_component_ids;
             next_key.push_back(new_id);
             std::sort(next_key.begin(), next_key.end());
 
@@ -501,7 +523,7 @@ namespace copper_server::api::ecs {
                         while (arch->chunks.size()) {
                             auto& chunk = arch->chunks.back();
                             auto entities = chunk->entities();
-                            move_entity(entities[0], limbo.map_get_archetype(arch->component_ids), &limbo);
+                            move_entity(entities[0], limbo.map_get_archetype(arch->whole_component_ids), &limbo);
                         }
                     }
                 }

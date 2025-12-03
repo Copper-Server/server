@@ -528,9 +528,9 @@ namespace copper_server::api::ecs {
                     if (record.generation == transfer->generation) {
 
                         if (transfer->world_id)
-                            res.emplace_back(transfer, transfer->world_id.value()->map_get_archetype(record.type->component_ids), *transfer->world_id);
+                            res.emplace_back(transfer, transfer->world_id.value()->map_get_archetype(record.type->whole_component_ids), *transfer->world_id);
                         else
-                            res.emplace_back(transfer, manager::instance().limbo.map_get_archetype(record.type->component_ids), &manager::instance().limbo);
+                            res.emplace_back(transfer, manager::instance().limbo.map_get_archetype(record.type->whole_component_ids), &manager::instance().limbo);
                     }
                 }
             });
@@ -777,7 +777,13 @@ namespace copper_server::api::ecs {
                 case entity_definition::component_remove_act::locked:
                     throw std::runtime_error("Removing this component is not allowed");
                 case entity_definition::component_remove_act::reset_on_remove: {
-                    component_info_registry.at(component_id).reset(get_entity_component(id, generation, component_id));
+                    auto& defaults = check_comp->type->get_recipe().get_defaults();
+                    auto component = get_entity_component(id, generation, component_id);
+                    if (auto it = defaults.find(component_id); defaults.end() != it) {
+                        auto& info = component_info_registry.at(component_id);
+                        info.copy_assign(component, it->second);
+                    } else
+                        component_info_registry.at(component_id).reset(component);
                     queue_mark_dirty(id, generation, component_id);
                     return;
                 }
@@ -802,10 +808,10 @@ namespace copper_server::api::ecs {
                 throw std::bad_alloc();
         }
 
-        bool has_entity_component(uint32_t id, uint32_t generation, component_id component_id) {
+        bool has_entity_component(uint32_t id, uint32_t generation, whole_component_id component_id) {
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation)
-                return record.type->component_index_map.contains(component_id);
+                return record.type->whole_component_presence_helper.contains(component_id);
             else
                 return false;
         }
@@ -1270,14 +1276,16 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes
+            std::span<component_id> with_changes,
+            std::span<whole_component_id> with_tag_components,
+            std::span<whole_component_id> without_tag_components
         ) {
             iteration_handle handle;
             auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
 
             if (auto it = manager::instance().worlds.find(world_id); it != manager::instance().worlds.end())
                 for (const auto& archetype_ptr : it->second.archetypes)
-                    if (archetype_ptr->matches_query(components, with_components, without_components))
+                    if (archetype_ptr->matches_query(components, with_components, without_components, with_tag_components, without_tag_components))
                         data->arch_data.push_back(archetype_ptr.get());
 
             data->calculate_data(components, with_clean_components, with_dirty_components, writes_components, with_changes);
@@ -1293,18 +1301,20 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes
+            std::span<component_id> with_changes,
+            std::span<whole_component_id> with_tag_components,
+            std::span<whole_component_id> without_tag_components
         ) {
             iteration_handle handle;
             auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
 
             for (const auto& archetype_ptr : manager::instance().limbo.archetypes)
-                if (archetype_ptr->matches_query(components, with_components, without_components))
+                if (archetype_ptr->matches_query(components, with_components, without_components, with_tag_components, without_tag_components))
                     data->arch_data.push_back(archetype_ptr.get());
 
             for (const auto& [id, world] : manager::instance().worlds)
                 for (const auto& archetype_ptr : world.archetypes)
-                    if (archetype_ptr->matches_query(components, with_components, without_components))
+                    if (archetype_ptr->matches_query(components, with_components, without_components, with_tag_components, without_tag_components))
                         data->arch_data.push_back(archetype_ptr.get());
 
 
@@ -1404,7 +1414,7 @@ namespace copper_server::api::ecs {
         return is_frozen_;
     }
 
-    const std::vector<component_id>& entity_recipe::get_ids() const {
+    const std::vector<whole_component_id>& entity_recipe::get_ids() const {
         return component_ids;
     }
 

@@ -54,9 +54,39 @@ namespace copper_server::api::ecs::com {
         struct block_id {
             int32_t id; //block state id
         };
+
+        //TODO add virtual tag over minecraft:block to get block entities
+        //struct tag_type {
+        //    int32_t value;
+        //    tag_type(const std::string&);
+        //    tag_type(const tag_type& copy) noexcept : value(copy.value) {}
+        //    tag_type& operator=(const tag_type& copy) noexcept {
+        //        value = copy.value;
+        //        return *this;
+        //    }
+        //    int32_t get_tag_id() const noexcept {
+        //        return value;
+        //    }
+        //};
     }
 
     namespace entities {
+        struct tag_type {
+            int32_t value;
+            tag_type(const std::string&);
+
+            tag_type(const tag_type& copy) noexcept : value(copy.value) {}
+
+            tag_type& operator=(const tag_type& copy) noexcept {
+                value = copy.value;
+                return *this;
+            }
+
+            int32_t get_tag_id() const noexcept {
+                return value;
+            }
+        };
+
         struct inventory { //some entities
             std::unique_ptr<std::unordered_map<uint32_t, base_objects::slot>> value;
 

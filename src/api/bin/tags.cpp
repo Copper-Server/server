@@ -101,7 +101,12 @@ namespace copper_server::api::tags {
 #undef safety
     }
 
+    using TagID = uint32_t;
+
     struct tags_entry {
+        int32_t id;
+        int32_t entry_id;
+
         mutable fast_task::task_mutex caching_mut;
         list_array<std::string> items;
         mutable list_array<int32_t> ids_cache{};
@@ -111,10 +116,11 @@ namespace copper_server::api::tags {
         mutable bool allow_override = true;
         mutable bool need_update = true;
 
-        tags_entry() = default;
+        tags_entry(int32_t id, int32_t entry_id) : id(id), entry_id(entry_id) {}
 
         tags_entry(const tags_entry& copy)
-            : items(copy.items),
+            : id(copy.id), entry_id(copy.entry_id),
+              items(copy.items),
               ids_cache(copy.ids_cache),
               state_ids_cache(copy.state_ids_cache),
               check_cache(copy.check_cache),
@@ -122,14 +128,16 @@ namespace copper_server::api::tags {
               allow_override(copy.allow_override),
               need_update(copy.need_update) {}
 
-        tags_entry(const list_array<std::string>& items)
-            : items(items) {}
+        tags_entry(int32_t id, int32_t entry_id, const list_array<std::string>& items)
+            : id(id), entry_id(entry_id), items(items) {}
 
-        tags_entry(list_array<std::string>&& items)
-            : items(std::move(items)) {}
+        tags_entry(int32_t id, int32_t entry_id, list_array<std::string>&& items)
+            : id(id), entry_id(entry_id), items(std::move(items)) {}
 
         tags_entry(tags_entry&& move) noexcept
-            : items(std::move(move.items)),
+            : id(move.id),
+              entry_id(move.entry_id),
+              items(std::move(move.items)),
               ids_cache(std::move(move.ids_cache)),
               state_ids_cache(std::move(move.state_ids_cache)),
               check_cache(std::move(move.check_cache)),
@@ -138,6 +146,8 @@ namespace copper_server::api::tags {
               need_update(std::move(move.need_update)) {}
 
         tags_entry& operator=(tags_entry&& move) noexcept {
+            id = move.id;
+            entry_id = move.entry_id;
             items = std::move(move.items);
             ids_cache = std::move(move.ids_cache);
             state_ids_cache = std::move(move.state_ids_cache);
@@ -268,30 +278,87 @@ namespace copper_server::api::tags {
 
     using tags_map = std::unordered_map<std::string, std::shared_ptr<tags_entry>, string_hash, string_eq>;
     using namespace_map = std::unordered_map<std::string, tags_map, string_hash, string_eq>;
-    using entry_map = std::unordered_map<std::string, namespace_map, string_hash, string_eq>;
 
-    fast_task::protected_value<entry_map> data;
-    std::atomic_size_t tags_version = 0;
+    struct entry_handle {
+        int32_t id;
+        namespace_map data;
+
+        fast_task::task_rw_mutex mutex_;
+        int32_t next_id_ = 0;
+        std::unordered_map<std::string, int32_t> string_to_id_;
+        std::unordered_map<int32_t, std::string> id_to_string_;
+
+        int32_t get_or_create_id(const std::string& tag_string) {
+            {
+                fast_task::read_lock lock(mutex_);
+                if (auto it = string_to_id_.find(tag_string); it != string_to_id_.end())
+                    return it->second;
+            }
+
+            fast_task::write_lock lock(mutex_);
+            if (auto it = string_to_id_.find(tag_string); it != string_to_id_.end())
+                return it->second;
+
+            int32_t new_id = next_id_++;
+            string_to_id_[tag_string] = new_id;
+            id_to_string_[new_id] = tag_string;
+            return new_id;
+        }
+
+        std::optional<std::string> get_string(int32_t id) {
+            fast_task::read_lock lock(mutex_);
+            if (auto it = id_to_string_.find(id); it != id_to_string_.end()) {
+                return it->second;
+            }
+            return std::nullopt;
+        }
+    };
 
     const char default_namespace[] = "minecraft";
 
-    static auto fixed_entry_map(std::string_view entry, const entry_map& map) {
-        if (entry.starts_with(':'))
-            return map.find(default_namespace + std::string(entry));
-        else if (!entry.contains(':'))
-            return map.find(std::string(default_namespace) + ":" + std::string(entry));
-        else
-            return map.find(std::string(entry));
-    }
+    struct entry_map {
+        mutable std::atomic_int32_t next_entry_id = 0;
+        mutable std::unordered_map<std::string, entry_handle, string_hash, string_eq> map;
 
-    static auto fixed_entry_map(std::string_view entry, entry_map& map) {
-        if (entry.starts_with(':'))
-            return map.find(default_namespace + std::string(entry));
-        else if (!entry.contains(':'))
-            return map.find(std::string(default_namespace) + ":" + std::string(entry));
-        else
-            return map.find(std::string(entry));
-    }
+        entry_handle& get_entry_raw(std::string_view entry) {
+            if (auto it = map.find(entry); it != map.end())
+                return it->second;
+            else
+                return map.emplace(entry, next_entry_id++).first->second;
+        }
+
+        const entry_handle& get_entry_raw(std::string_view entry) const {
+            if (auto it = map.find(entry); it != map.end())
+                return it->second;
+            else
+                return map.emplace(entry, next_entry_id++).first->second;
+        }
+
+        entry_handle& get_entry(std::string_view entry) {
+            if (entry.starts_with(':'))
+                return get_entry_raw(default_namespace + std::string(entry));
+            else if (!entry.contains(':'))
+                return get_entry_raw(std::string(default_namespace) + ":" + std::string(entry));
+            else
+                return get_entry_raw(entry);
+        }
+
+        const entry_handle& get_entry(std::string_view entry) const {
+            if (entry.starts_with(':'))
+                return get_entry_raw(default_namespace + std::string(entry));
+            else if (!entry.contains(':'))
+                return get_entry_raw(std::string(default_namespace) + ":" + std::string(entry));
+            else
+                return get_entry_raw(entry);
+        }
+
+        void clear() {
+            map.clear();
+        }
+    };
+
+    fast_task::protected_value<entry_map> data;
+    std::atomic_size_t tags_version = 0;
 
     static void get_namespace_and_tag(std::string_view& namespace_, std::string_view& tag_, std::string_view tag) {
         if (tag.starts_with('#'))
@@ -310,11 +377,9 @@ namespace copper_server::api::tags {
     static const list_array<std::string>& unfold_tags_tag(const entry_map& tags, std::string_view type, std::string_view namespace_, std::string_view tag) {
         static std::string_view block_entry = "minecraft:block";
         static list_array<std::string> empty;
-        auto ns = fixed_entry_map(type != "minecraft:block_state" ? type : block_entry, tags);
-        if (ns == tags.end())
-            return empty;
-        auto t = ns->second.find(namespace_);
-        if (t == ns->second.end())
+        auto& ns = tags.get_entry(type != "minecraft:block_state" ? type : block_entry);
+        auto t = ns.data.find(namespace_);
+        if (t == ns.data.end())
             return empty;
         auto y = t->second.find(tag);
         if (y == t->second.end())
@@ -334,11 +399,9 @@ namespace copper_server::api::tags {
     static const list_array<int32_t>& unfold_direct_tag(builtin_entry entry, std::string_view namespace_, std::string_view tag) {
         return data.get([&](auto& tags) -> const list_array<int32_t>& {
             static list_array<int32_t> empty;
-            auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
-            if (ns == tags.end())
-                return empty;
-            auto t = ns->second.find(namespace_);
-            if (t == ns->second.end())
+            auto& ns = tags.tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
+            auto t = ns.data.find(namespace_);
+            if (t == ns.data.end())
                 return empty;
             auto y = t->second.find(tag);
             if (y == t->second.end())
@@ -371,11 +434,9 @@ namespace copper_server::api::tags {
         get_namespace_and_tag(_namespace, _tag, tag);
 
         return data.get([&](auto& tags) {
-            auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
-            if (ns == tags.end())
-                return false;
-            auto t = ns->second.find(_namespace);
-            if (t == ns->second.end())
+            auto& ns = tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
+            auto t = ns.data.find(_namespace);
+            if (t == ns.data.end())
                 return false;
             auto y = t->second.find(_tag);
             if (y == t->second.end())
@@ -392,11 +453,9 @@ namespace copper_server::api::tags {
         get_namespace_and_tag(_namespace, _tag, tag);
 
         return data.get([&](auto& tags) {
-            auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
-            if (ns == tags.end())
-                return false;
-            auto t = ns->second.find(_namespace);
-            if (t == ns->second.end())
+            auto& ns = tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
+            auto t = ns.data.find(_namespace);
+            if (t == ns.data.end())
                 return false;
             return t->second.find(_tag) != t->second.end();
         });
@@ -409,11 +468,9 @@ namespace copper_server::api::tags {
 
         return data.get([&](auto& tags) {
             static std::string_view block_entry = "minecraft:block";
-            auto ns = fixed_entry_map(custom_entry != "minecraft:block_state" ? custom_entry : block_entry, tags);
-            if (ns == tags.end())
-                return false;
-            auto t = ns->second.find(_namespace);
-            if (t == ns->second.end())
+            auto& ns = tags.get_entry(custom_entry != "minecraft:block_state" ? custom_entry : block_entry);
+            auto t = ns.data.find(_namespace);
+            if (t == ns.data.end())
                 return false;
             return t->second.find(_tag) != t->second.end();
         });
@@ -440,20 +497,15 @@ namespace copper_server::api::tags {
         std::string_view _tag;
         get_namespace_and_tag(_namespace, _tag, tag);
 
+
         return data.set([&](auto& tags) {
             ++tags_version;
             static std::string_view block_entry = "minecraft:block";
             auto actual_entry(entry != "minecraft:block_state" ? entry : block_entry);
-            auto ns = fixed_entry_map(actual_entry, tags);
-            if (ns == tags.end()) {
-                auto res = tags.insert({std::string(actual_entry), {}});
-                if (!res.second)
-                    throw std::runtime_error("Failed to add entry " + std::string(actual_entry));
-                ns = res.first;
-            }
-            auto t = ns->second.find(_namespace);
-            if (t == ns->second.end()) {
-                auto res = ns->second.insert({std::string(_namespace), {}});
+            auto& ns = tags.get_entry(actual_entry);
+            auto t = ns.data.find(_namespace);
+            if (t == ns.data.end()) {
+                auto res = ns.data.insert({std::string(_namespace), {}});
                 if (!res.second)
                     throw std::runtime_error("Failed to add namespace " + std::string(_namespace) + " in entry " + std::string(actual_entry));
                 t = res.first;
@@ -467,7 +519,7 @@ namespace copper_server::api::tags {
             }
             auto& res = y->second;
             if (!res)
-                res = std::make_shared<tags_entry>(items);
+                res = std::make_shared<tags_entry>(ns.get_or_create_id(std::string(_namespace) + ":" + std::string(_tag)), ns.id, items);
             if (res->allow_override) {
                 if (allow_override)
                     res->items += items;
@@ -485,11 +537,9 @@ namespace copper_server::api::tags {
 
     std::unordered_map<std::string, list_array<int32_t>> view_tag(builtin_entry entry, std::string_view _namespace) {
         return data.get([&](auto& tags) -> std::unordered_map<std::string, list_array<int32_t>> {
-            auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
-            if (ns == tags.end())
-                return {};
-            auto t = ns->second.find((std::string)_namespace);
-            if (t == ns->second.end())
+            auto& ns = tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
+            auto t = ns.data.find((std::string)_namespace);
+            if (t == ns.data.end())
                 return {};
             std::unordered_map<std::string, list_array<int32_t>> res;
             res.reserve(t->second.size());
@@ -502,11 +552,9 @@ namespace copper_server::api::tags {
 
     std::unordered_map<std::string, list_array<std::string>> view_tag(std::string_view custom_entry, std::string_view _namespace) {
         return data.get([&](auto& tags) -> std::unordered_map<std::string, list_array<std::string>> {
-            auto ns = fixed_entry_map(custom_entry, tags);
-            if (ns == tags.end())
-                return {};
-            auto t = ns->second.find((std::string)_namespace);
-            if (t == ns->second.end())
+            auto& ns = tags.get_entry(custom_entry);
+            auto t = ns.data.find((std::string)_namespace);
+            if (t == ns.data.end())
                 return {};
             std::unordered_map<std::string, list_array<std::string>> res;
             res.reserve(t->second.size());
@@ -519,12 +567,10 @@ namespace copper_server::api::tags {
 
     std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> view_entry(builtin_entry entry) {
         return data.get([&](auto& tags) -> std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> {
-            auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
-            if (ns == tags.end())
-                return {};
+            auto& ns = tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
             std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> res;
-            res.reserve(ns->second.size());
-            for (auto&& [namespace_, decl] : ns->second)
+            res.reserve(ns.data.size());
+            for (auto&& [namespace_, decl] : ns.data)
                 for (auto&& [tag, dec] : decl)
                     if (dec)
                         res[namespace_][tag] = dec->as_ids(entry);
@@ -549,13 +595,13 @@ namespace copper_server::api::tags {
 
     static void resolve_cross_references(bool secold_preset) {
         return data.set([&](auto& tags) {
-            decltype(tags) tmp_obj = tags;
+            decltype(tags.map) tmp_obj = tags.map;
             for (auto&& [entry, decl] : tmp_obj) {
-                for (auto&& [namespace_, dec] : decl) {
+                for (auto&& [namespace_, dec] : decl.data) {
                     for (auto&& [tag, de] : dec) {
                         list_array<std::string> resolved_items;
                         if (!de)
-                            de = std::make_shared<tags_entry>();
+                            de = std::make_shared<tags_entry>(decl.get_or_create_id(namespace_ + ":" + tag), decl.id);
                         for (auto& item : de->items) {
                             if (item.starts_with("#")) {
                                 if (secold_preset)
@@ -571,7 +617,7 @@ namespace copper_server::api::tags {
                     }
                 }
             }
-            tags = std::move(tmp_obj);
+            tags.map = std::move(tmp_obj);
         });
     }
 
@@ -580,8 +626,8 @@ namespace copper_server::api::tags {
         resolve_cross_references(true);
         return data.set([&](auto& tags) {
             ++tags_version;
-            for (auto& _entry : tags)
-                for (auto& _namespace : _entry.second)
+            for (auto& _entry : tags.map)
+                for (auto& _namespace : _entry.second.data)
                     for (auto& _tag : _namespace.second) {
                         _tag.second->items.unify();
                         _tag.second->items.commit();
@@ -632,7 +678,6 @@ namespace copper_server::api::tags {
     }
 
     tag_handle::~tag_handle() = default;
-
 
     tag_handle get_tag_handle(std::string_view custom_entry, std::string_view tag) {
         std::string actual_entry;
@@ -712,5 +757,13 @@ namespace copper_server::api::tags {
 
     const std::string& get_entry(const tag_handle& handle) {
         return handle->entry;
+    }
+
+    int32_t get_entry_id(const tag_handle& handle) {
+        return handle->entry_ptr->entry_id;
+    }
+
+    int32_t get_tag_id(const tag_handle& handle) {
+        return handle->entry_ptr->id;
     }
 }

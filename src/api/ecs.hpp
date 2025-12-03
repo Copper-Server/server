@@ -98,11 +98,25 @@ namespace copper_server::api::ecs {
             return *this;
         }
 
+        template <class component>
+        entity_recipe& with_tag(uint32_t value) {
+            if (!is_frozen_)
+                component_ids.push_back(detail::get_tag_entry<component>(value));
+            return *this;
+        }
+
+        template <class component>
+        entity_recipe& with_tag(int32_t value) {
+            if (!is_frozen_)
+                component_ids.push_back(detail::get_tag_entry<component>(value));
+            return *this;
+        }
+
         entity_recipe& freeze();
 
         bool is_frozen() const;
 
-        const std::vector<component_id>& get_ids() const;
+        const std::vector<whole_component_id>& get_ids() const;
 
         const std::unordered_map<component_id, void*>& get_defaults() const {
             return default_values;
@@ -114,7 +128,7 @@ namespace copper_server::api::ecs {
         void cleanup();
         void clone_value(component_id id, void* src);
 
-        std::vector<component_id> component_ids;
+        std::vector<whole_component_id> component_ids;
         std::unordered_map<component_id, void*> default_values; // Owns the memory
         size_t hash = 0;
         bool is_frozen_ = false;
@@ -179,6 +193,22 @@ namespace copper_server::api::ecs {
         [[nodiscard]] bool has() const {
             return detail::has_entity_component(id, generation, detail::get_component_id<component>());
         }
+
+        template <class T>
+        [[nodiscard]] bool has_tag(int32_t value) const {
+            return detail::has_entity_component(id, generation, detail::get_tag_entry<component>(value));
+        }
+
+        template <class T>
+        [[nodiscard]] bool has_tag(uint32_t value) const {
+            return detail::has_entity_component(id, generation, detail::get_tag_entry<component>(value));
+        }
+
+        template <detail::tag_component T>
+        [[nodiscard]] bool has_tag(T value) const {
+            return detail::has_entity_component(id, generation, detail::get_tag_entry(value));
+        }
+
 
         //could throw depending on components
         std::optional<entity> copy_and_wait() const;
@@ -251,62 +281,94 @@ namespace copper_server::api::ecs {
     struct query {
         query() : id() {}
 
-        query(query&& mov) noexcept : id(mov.id), with_relations(std::move(mov.with_relations)), with_wild_relations(std::move(mov.with_wild_relations)) {}
+        query(query&& mov) noexcept : id(mov.id), with_relations(std::move(mov.with_relations)), with_tag_components(std::move(with_tag_components)), without_tag_components(std::move(without_tag_components)) {}
 
-        query(const query& copy) : id(copy.id), with_relations(copy.with_relations), with_wild_relations(copy.with_wild_relations) {}
+        query(const query& copy) : id(copy.id), with_relations(copy.with_relations), with_tag_components(with_tag_components), without_tag_components(without_tag_components) {}
 
         query(int32_t world_id) : id(world_id) {}
 
-        query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations, list_array<entity>&& with_wild_relations)
-            : id(id), with_relations(std::move(with_relations)), with_wild_relations(std::move(with_wild_relations)) {}
+        query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations, list_array<whole_component_id>&& with_tag_components, list_array<whole_component_id>&& without_tag_components)
+            : id(id), with_relations(std::move(with_relations)), with_tag_components(std::move(with_tag_components)), without_tag_components(std::move(without_tag_components)) {}
 
         query& operator=(query&& mov) noexcept {
             id = mov.id;
             with_relations = std::move(mov.with_relations);
-            with_wild_relations = std::move(mov.with_wild_relations);
+            with_tag_components = std::move(mov.with_tag_components);
+            without_tag_components = std::move(mov.without_tag_components);
             return *this;
         }
 
         query& operator=(const query& copy) {
             id = copy.id;
             with_relations = copy.with_relations;
-            with_wild_relations = copy.with_wild_relations;
+            with_tag_components = copy.with_tag_components;
+            without_tag_components = copy.without_tag_components;
             return *this;
         }
 
         template <class... with_components>
         [[nodiscard]] query<params..., detail::query_with<with_components...>> with() && {
-            return query<params..., detail::query_with<with_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_with<with_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
         }
 
         template <class... without_components>
         [[nodiscard]] query<params..., detail::query_without<without_components...>> without() && {
-            return query<params..., detail::query_without<without_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_without<without_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+        }
+
+        template <class with_tag_component>
+        [[nodiscard]] query<params...> with_tag(int32_t value) && {
+            return query<params...>{id, std::move(with_relations), std::move(with_tag_components).push_back(detail::get_tag_entry<with_tag_component>(value)), std::move(mov.without_tag_components)};
+        }
+
+        template <class with_tag_component>
+        [[nodiscard]] query<params...> with_tag(uint32_t value) && {
+            return query<params...>{id, std::move(with_relations), std::move(with_tag_components).push_back(detail::get_tag_entry<with_tag_component>(value)), std::move(mov.without_tag_components)};
+        }
+
+        template <detail::tag_component with_tag_component>
+        [[nodiscard]] query<params...> with_tag(const with_tag_component& value) && {
+            return query<params...>{id, std::move(with_relations), std::move(with_tag_components).push_back(detail::get_tag_entry(value)), std::move(mov.without_tag_components)};
+        }
+
+        template <class without_tag_component>
+        [[nodiscard]] query<params...> without_tag(int32_t value) && {
+            return query<params...>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components).push_back(detail::get_tag_entry<without_tag_component>(value))};
+        }
+
+        template <class without_tag_component>
+        [[nodiscard]] query<params...> without_tag(uint32_t value) && {
+            return query<params...>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components).push_back(detail::get_tag_entry<without_tag_component>(value))};
+        }
+
+        template <detail::tag_component without_tag_component>
+        [[nodiscard]] query<params...> without_tag(const without_tag_component& value) && {
+            return query<params...>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components).push_back(detail::get_tag_entry(value))};
         }
 
         template <class... reads_components>
         [[nodiscard]] query<params..., detail::query_reads<reads_components...>> reads() && {
-            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
         }
 
         template <class... writes_components>
         [[nodiscard]] query<params..., detail::query_writes<writes_components...>> writes() && {
-            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
         }
 
         template <class... with_dirty_components>
         [[nodiscard]] query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() && {
-            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
         }
 
         template <class... with_clear_components>
         [[nodiscard]] query<params..., detail::query_with_clear<with_clear_components...>> with_clear() && {
-            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
         }
 
         template <class... with_changed_components>
         [[nodiscard]] query<params..., detail::query_with_changes<with_changed_components...>> with_changes() && {
-            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations), std::move(with_wild_relations)};
+            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
         }
 
         //this operation marks all written components as dirty,
@@ -392,7 +454,9 @@ namespace copper_server::api::ecs {
                             writes_ids,
                             dirty_ids,
                             clean_ids,
-                            changes_ids
+                            changes_ids,
+                            {with_tag_components.data(), with_tag_components.size()},
+                            {without_tag_components.data(), without_tag_components.size()}
                         )
                       : detail::iterate_components_global(
                             all_ids,
@@ -401,7 +465,9 @@ namespace copper_server::api::ecs {
                             writes_ids,
                             dirty_ids,
                             clean_ids,
-                            changes_ids
+                            changes_ids,
+                            {with_tag_components.data(), with_tag_components.size()},
+                            {without_tag_components.data(), without_tag_components.size()}
                         );
 
             return typename detail::apply_tuple_to_iter<
@@ -412,6 +478,8 @@ namespace copper_server::api::ecs {
         }
 
         std::optional<int32_t> id;
+        list_array<whole_component_id> with_tag_components;
+        list_array<whole_component_id> without_tag_components;
     };
 
     struct world_local_registry {
@@ -580,41 +648,72 @@ namespace copper_server::api::ecs {
         struct system_builder {
             system_builder() = default;
 
-            system_builder(scheduler& sched) : sched(sched) {}
+            system_builder(scheduler& sched, query<params...>&& query_prototype) : sched(sched), query_prototype(std::move(query_prototype)) {}
 
             template <class... with_components>
             [[nodiscard]] system_builder<params..., detail::query_with<with_components...>> with() && {
-                return {sched};
+                return {sched, std::move(query_prototype).with<with_components...>()};
             }
 
             template <class... without_components>
             [[nodiscard]] system_builder<params..., detail::query_without<without_components...>> without() && {
-                return {sched};
+                return {sched, std::move(query_prototype).without<without_components...>()};
+            }
+
+            template <class with_tag_component>
+            [[nodiscard]] query<params...> with_tag(int32_t value) && {
+                return {sched, std::move(query_prototype).with_tag<with_tag_component>(value)};
+            }
+
+            template <class with_tag_component>
+            [[nodiscard]] query<params...> with_tag(uint32_t value) && {
+                return {sched, std::move(query_prototype).with_tag<with_tag_component>(value)};
+            }
+
+            template <detail::tag_component with_tag_component>
+            [[nodiscard]] query<params...> with_tag(const with_tag_component& value) && {
+                return {sched, std::move(query_prototype).with_tag(value)};
+            }
+
+            template <class without_tag_component>
+            [[nodiscard]] query<params...> without_tag(int32_t value) && {
+                return {sched, std::move(query_prototype).without_tag<without_tag_component>(value)};
+            }
+
+            template <class without_tag_component>
+            [[nodiscard]] query<params...> without_tag(uint32_t value) && {
+                return {sched, std::move(query_prototype).without_tag<without_tag_component>(value)};
+            }
+
+            template <detail::tag_component without_tag_component>
+            [[nodiscard]] query<params...> without_tag(const without_tag_component& value) && {
+                return {sched, std::move(query_prototype).without_tag(value)};
             }
 
             template <class... reads_components>
             [[nodiscard]] system_builder<params..., detail::query_reads<reads_components...>> reads() && {
-                return {sched};
+                return {sched, std::move(query_prototype).reads<reads_components...>()};
             }
 
             template <class... writes_components>
             [[nodiscard]] system_builder<params..., detail::query_writes<writes_components...>> writes() && {
-                return {sched};
+                return {sched, std::move(query_prototype).writes<writes_components...>()};
             }
 
             template <class... with_dirty_components>
             [[nodiscard]] system_builder<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() && {
-                return {sched};
+                return {sched, std::move(query_prototype).with_dirty<with_dirty_components...>()};
             }
 
             template <class... with_clear_components>
             [[nodiscard]] system_builder<params..., detail::query_with_clear<with_clear_components...>> with_clear() && {
-                return {sched};
+                return {sched, std::move(query_prototype).with_clear<with_clear_components...>()};
             }
 
             template <class... with_changed_components>
             [[nodiscard]] system_builder<params..., detail::query_with_changes<with_changed_components...>> with_changes() && {
-                return {sched};
+
+                return {sched, std::move(query_prototype).with_changes<with_changed_components...>()};
             }
 
             template <class Func>
@@ -623,6 +722,7 @@ namespace copper_server::api::ecs {
 
                 auto ptr = std::make_unique<Adapter>(
                     std::forward<Func>(f),
+                    std::move(query_prototype),
                     std::move(name)
                 );
 
@@ -632,6 +732,7 @@ namespace copper_server::api::ecs {
 
         private:
             scheduler& sched;
+            query<params...> query_prototype;
         };
 
         scheduler();
@@ -642,8 +743,8 @@ namespace copper_server::api::ecs {
             add_system_impl(std::make_unique<T>(), detail::get_system_info<T>(), phase);
         }
 
-        system_builder<> build() { //builds system to be used in lambda
-            return system_builder<>{*this};
+        [[nodiscard]] system_builder<> build() { //builds system to be used in lambda
+            return system_builder<>{*this, {}};
         }
 
         // Called each tick to run all systems in parallel

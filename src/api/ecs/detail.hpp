@@ -23,13 +23,10 @@ namespace copper_server::util {
 
 namespace copper_server::api::ecs {
     using component_id = uint32_t;
+    using whole_component_id = uint64_t;
     struct entity_recipe;
     struct entity;
     struct world;
-
-    struct wildcard_t {};
-
-    inline constexpr wildcard_t wildcard{};
 
     template <class... components>
     struct dependent {};
@@ -53,6 +50,11 @@ namespace copper_server::api::ecs {
         template <class T>
         concept has_relation_unlink = requires(T& it, entity self, entity target) {
             it.on_unlink(self, target);
+        };
+
+        template <class T>
+        concept tag_component = requires(const T& it, int32_t& check) {
+            check = it.get_tag_id();
         };
 
         struct archetype_layout {
@@ -82,6 +84,7 @@ namespace copper_server::api::ecs {
             reset_fn reset = nullptr;
             get_relations_fn get_flat_relations = nullptr;
             on_unlink_fn on_unlink = nullptr;
+            bool is_trivial = false;
         };
 
         struct system_info {
@@ -130,7 +133,8 @@ namespace copper_server::api::ecs {
                             } //
                         },
                         .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); },
-                        .reset = [](void* mem) { static_cast<T*>(mem)->~T(); new (mem) T(); }
+                        .reset = [](void* mem) { static_cast<T*>(mem)->~T(); new (mem) T(); },
+                        .is_trivial = std::is_trivial_v<T>
                     };
 
                     if constexpr (has_relation_unlink<T>)
@@ -155,6 +159,7 @@ namespace copper_server::api::ecs {
 
         struct components_holder {
             std::vector<std::pair<component_id, void*>> components_reference;
+            std::vector<whole_component_id> tags;
 
             virtual ~components_holder() = default;
         };
@@ -203,6 +208,27 @@ namespace copper_server::api::ecs {
             return info;
         }
 
+        template <class T>
+        struct tag_mask {};
+
+        template <class T>
+        whole_component_id get_tag_entry(uint32_t id) {
+            if (id > INT32_MAX)
+                throw std::runtime_error("Tag entry id is too big. Expected uint31_t entry, got uint32_t.");
+            return get_component_id<tag_mask<T>>() | (static_cast<uint64_t>(id) << 32) & (1ui64 << 63);
+        }
+
+        template <class T>
+        whole_component_id get_tag_entry(int32_t id) {
+            return get_tag_entry<T>(std::bit_cast<uint32_t>(id));
+        }
+
+        template <tag_component T>
+        whole_component_id get_tag_entry(const T& value) {
+            return get_tag_entry<T>(value.get_tag_id());
+        }
+
+
         struct mutation_queue_item {
             uint32_t entity_id;
             uint32_t generation;
@@ -240,7 +266,7 @@ namespace copper_server::api::ecs {
 
         void queue_destroy_entity(uint32_t id, uint32_t generation);
         void queue_mark_dirty(uint32_t id, uint32_t generation, component_id component_id);
-        bool has_entity_component(uint32_t id, uint32_t generation, component_id component_id);
+        bool has_entity_component(uint32_t id, uint32_t generation, whole_component_id component_id);
         bool is_valid(uint32_t id, uint32_t generation);
         std::optional<int32_t> get_entity_assigned_to_world(uint32_t id, uint32_t generation);
 
@@ -305,7 +331,9 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes
+            std::span<component_id> with_changes,
+            std::span<whole_component_id> with_tag_components,
+            std::span<whole_component_id> without_tag_components
         );
 
         iteration_handle iterate_components_global(
@@ -315,7 +343,9 @@ namespace copper_server::api::ecs {
             std::span<component_id> writes_components,
             std::span<component_id> with_dirty_components,
             std::span<component_id> with_clean_components,
-            std::span<component_id> with_changes
+            std::span<component_id> with_changes,
+            std::span<whole_component_id> with_tag_components,
+            std::span<whole_component_id> without_tag_components
         );
 
         template <class... components>
@@ -352,6 +382,7 @@ namespace copper_server::api::ecs {
         struct filter_without {};
 
         struct filter_with {};
+
 
         template <typename T>
         using strip_const_t = std::remove_const_t<T>;
@@ -860,6 +891,7 @@ namespace copper_server::api::ecs {
 
         private:
             Func function;
+            Query query_prototype;
             std::string name;
 
         public:
@@ -869,10 +901,11 @@ namespace copper_server::api::ecs {
             virtual ~lambda_system_adapter() {}
 
             void tick(world_local_registry& world) override {
-                Query local_query{world.get_id()};
+                Query local_query(query_prototype);
+                local_query.set
 
-                if constexpr (std::is_invocable_r_v<void, Func, Query&>)
-                    function(local_query);
+                    if constexpr (std::is_invocable_r_v<void, Func, Query&>)
+                        function(local_query);
                 else {
                     auto task = function(local_query);
                     if constexpr (requires { task.await_task(); })

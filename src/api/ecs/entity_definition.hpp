@@ -144,6 +144,8 @@ namespace copper_server::api::ecs {
 
         std::string identifier;
         entity_recipe base_recipe;
+        entity_recipe stripped_recipe;
+        std::vector<component_id> stripped_ids;
         std::vector<component_rule> rules;
 
         std::unordered_map<component_id, size_t> rule_lookup;
@@ -167,7 +169,7 @@ namespace copper_server::api::ecs {
                 current = current->get_or_create_child(part);
 
             component_node_info info;
-            info.id = T::item_id::value;
+            info.id = detail::get_component_id<T>();
 
             if constexpr (std::is_empty_v<T>)
                 info.is_marker = true;
@@ -205,27 +207,42 @@ namespace copper_server::api::ecs {
         }
 
     public:
-        entity_definition(const std::string& id) : identifier(id) {}
+        entity_definition(const std::string& id);
+        entity_definition(std::string&& id);
+        entity_definition(const entity_definition&) = delete;
+        entity_definition(entity_definition&&) = delete;
+        entity_definition& operator=(const entity_definition&) = delete;
+        entity_definition& operator=(entity_definition&&) = delete;
 
-        entity_definition(std::string&& id) : identifier(std::move(id)) {}
-
-        const std::string& get_identifier() const {
-            return identifier;
-        }
+        const std::string& get_identifier() const;
 
         template <class T>
         entity_definition& add_locked() {
             base_recipe.with<T>();
-            auto res = rules.emplace_back(component_rule{T::item_id::value, component_remove_act::locked});
-            rule_lookup[T::item_id::value] = &res;
+            stripped_recipe.with<T>();
+            auto id = detail::get_component_id<T>();
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::locked});
+            rule_lookup[id] = &res;
+            try_auto_map<T>();
+            return *this;
+        }
+
+        template <class T>
+        entity_definition& add_locked(const T& value) {
+            base_recipe.with_value<T>(value);
+            stripped_recipe.with_value<T>(value);
+            auto id = detail::get_component_id<T>();
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::locked});
+            rule_lookup[id] = &res;
             try_auto_map<T>();
             return *this;
         }
 
         template <class T>
         entity_definition& add_optional() {
-            auto res = rules.emplace_back(component_rule{T::item_id::value, component_remove_act::optional});
-            rule_lookup[T::item_id::value] = &res;
+            auto id = detail::get_component_id<T>();
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::optional});
+            rule_lookup[id] = &res;
             try_auto_map<T>();
             return *this;
         }
@@ -233,23 +250,62 @@ namespace copper_server::api::ecs {
         template <class T>
         entity_definition& add_reset_on_remove() {
             base_recipe.with<T>();
-            auto res = rules.emplace_back(component_rule{com::reset_on_remove::item_id::value, component_remove_act::reset_on_remove});
-            rule_lookup[com::reset_on_remove::item_id::value] = &res;
+            stripped_recipe.with<T>();
+            auto id = detail::get_component_id<T>();
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::reset_on_remove});
+            rule_lookup[id] = &res;
             try_auto_map<T>();
             return *this;
         }
 
         template <class T>
-        entity_definition& add_constant(T value) {
-            base_recipe.with_value<T>(std::move(value));
-            auto res = rules.emplace_back(component_rule{T::item_id::value, component_remove_act::locked});
-            rule_lookup[T::item_id::value] = &res;
-
+        entity_definition& add_reset_on_remove(const T& value) {
+            base_recipe.with_value<T>();
+            stripped_recipe.with_value<T>();
+            auto id = detail::get_component_id<T>();
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::reset_on_remove});
+            rule_lookup[id] = &res;
             try_auto_map<T>();
             return *this;
         }
 
-        const component_remove_act get_remove_action(component_id id) const {
+        template <class T>
+        entity_definition& add_tag(int32_t value) {
+            base_recipe.with_tag<T>(value);
+            stripped_recipe.with_tag<T>(value);
+            return *this;
+        }
+
+        template <class T>
+        entity_definition& add_tag(uint32_t value) {
+            base_recipe.with_tag<T>(value);
+            stripped_recipe.with_tag<T>(value);
+            return *this;
+        }
+
+        template <class T>
+        entity_definition& add_stripable() {
+            base_recipe.with<T>();
+            auto id = detail::get_component_id<T>();
+            stripped_ids.push_back(id);
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::optional});
+            rule_lookup[id] = &res;
+            try_auto_map<T>();
+            return *this;
+        }
+
+        template <class T>
+        entity_definition& add_stripable(T value) {
+            base_recipe.with_value<T>(value);
+            auto id = detail::get_component_id<T>();
+            stripped_ids.push_back(id);
+            auto res = rules.emplace_back(component_rule{id, component_remove_act::optional});
+            rule_lookup[id] = &res;
+            try_auto_map<T>();
+            return *this;
+        }
+
+        component_remove_act get_remove_action(component_id id) const {
             if (rule_lookup.contains(id))
                 return rules[rule_lookup.at(id)].remove_action;
             return component_remove_act::optional;
@@ -259,15 +315,21 @@ namespace copper_server::api::ecs {
             return base_recipe;
         }
 
+        const entity_recipe& get_stripped_recipe() const {
+            return stripped_recipe;
+        }
+
         void to_nbt(util::nbt_write_stream& stream, entity entity) const;
         entity from_nbt(util::nbt_read_stream& stream, std::optional<world*> world_opt = std::nullopt) const;
+
+        void strip(entity entity);
+        void unstrip(entity entity);
 
         void finish();
     };
 
     //the ids should be always define the type of entity and then minecraft style identitier
     //ex:
-    //  @item:minecraft:dirt
     //  @block_entity:minecraft:chest
     //  @entity:minecraft:player
     const entity_definition& get_ecs_entity_definition(const std::string& id);
