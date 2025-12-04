@@ -791,12 +791,71 @@ namespace copper_server::api::ecs {
         scheduler();
         ~scheduler();
 
-        template <typename T>
+        template <class T>
         void add_system(tick_phase phase) {
             add_system_impl(std::make_unique<T>(), detail::get_system_info<T>(), phase);
         }
 
-        [[nodiscard]] system_builder<> build() { //builds system to be used in lambda
+        template <class FN>
+        void add_system(tick_phase phase, std::string_view name, FN&& inline_system) {
+            using Traits = detail::function_traits<std::decay_t<FN>>;
+            using ArgsTuple = typename Traits::args_tuple;
+
+            using QueryType = typename detail::deduce_query_params<ArgsTuple>::type<query>;
+            using SystemType = typename detail::deduce_query_params<ArgsTuple>::type<system_builder>;
+
+            auto wrapper = [sys = std::forward<FN>(inline_system)](QueryType& q) mutable {
+                auto invoker = [&](auto&&... args) {
+                    if constexpr (Traits::arity == sizeof...(args)) {
+                        sys(std::forward<decltype(args)>(args)...);
+                    } else {
+                        auto drop_first = [&](auto&&, auto&&... rest) {
+                            sys(std::forward<decltype(rest)>(rest)...);
+                        };
+                        drop_first(std::forward<decltype(args)>(args)...);
+                    }
+                };
+
+                for (auto&& tuple : q)
+                    std::apply(invoker, tuple);
+            };
+
+            SystemType(*this, QueryType{})
+                .finish(std::move(name), phase, std::move(wrapper));
+        }
+
+        template <class FN>
+        void add_parallel_system(tick_phase phase, std::string name, FN&& inline_system) {
+            using Traits = detail::function_traits<std::decay_t<FN>>;
+            using ArgsTuple = typename Traits::args_tuple;
+
+            using QueryType = typename detail::deduce_query_params<ArgsTuple>::type<query>;
+            using SystemType = typename detail::deduce_query_params<ArgsTuple>::type<system_builder>;
+
+            constexpr bool has_view = (std::tuple_size_v<ArgsTuple> > 0) && detail::is_view_type<std::tuple_element_t<0, ArgsTuple>>::value;
+
+            auto wrapper = [sys = std::forward<FN>(inline_system)](QueryType& q) mutable {
+                if constexpr (has_view) {
+                    q.par_for_each_chunk_parallel_view([&](auto&& chunk_view, auto*... arrays, size_t count) {
+                        for (size_t i = 0; i < count; ++i) {
+                            detail::parallel_view_proxy<decltype(chunk_view)> proxy{chunk_view, i};
+
+                            sys(proxy, arrays[i]...);
+                        }
+                    });
+                } else {
+                    q.par_for_each_chunk([&](auto*... arrays, size_t count) {
+                        for (size_t i = 0; i < count; ++i)
+                            sys(arrays[i]...);
+                    });
+                }
+            };
+
+            SystemType(*this, QueryType{})
+                .finish(std::move(name), phase, std::move(wrapper));
+        }
+
+        [[nodiscard]] system_builder<> build() {
             return system_builder<>{*this, {}};
         }
 

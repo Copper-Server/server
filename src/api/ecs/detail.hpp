@@ -228,7 +228,6 @@ namespace copper_server::api::ecs {
             return get_tag_entry<T>(value.get_tag_id());
         }
 
-
         struct mutation_queue_item {
             uint32_t entity_id;
             uint32_t generation;
@@ -417,7 +416,6 @@ namespace copper_server::api::ecs {
         struct filter_without {};
 
         struct filter_with {};
-
 
         template <typename T>
         using strip_const_t = std::remove_const_t<T>;
@@ -969,6 +967,114 @@ namespace copper_server::api::ecs {
                 }
             }
         };
+
+#pragma region inline_system
+
+        template <class T>
+        struct function_traits : function_traits<decltype(&T::operator())> {};
+
+        template <class C, class R, class... Args>
+        struct function_traits<R (C::*)(Args...) const> {
+            using args_tuple = std::tuple<Args...>;
+            static constexpr size_t arity = sizeof...(Args);
+        };
+
+        template <class C, class R, class... Args>
+        struct function_traits<R (C::*)(Args...)> {
+            using args_tuple = std::tuple<Args...>;
+            static constexpr size_t arity = sizeof...(Args);
+        };
+
+        template <class T>
+        struct map_arg_to_query;
+
+        template <class T>
+        struct map_arg_to_query {
+            using type = std::tuple<>;
+        };
+
+        template <class T>
+        struct map_arg_to_query<const T&> {
+            using type = std::tuple<query_reads<T>>;
+        };
+
+        template <class T>
+        struct map_arg_to_query<T&> {
+            using type = std::tuple<query_writes<T>>;
+        };
+
+        template <>
+        struct map_arg_to_query<detail::iterator_view> {
+            using type = std::tuple<>;
+        };
+
+        template <>
+        struct map_arg_to_query<const detail::iterator_view&> {
+            using type = std::tuple<>;
+        };
+
+        template <class... T>
+        struct map_arg_to_query<detail::iterator_view_dirty_mark<T...>> {
+            using type = std::tuple<>;
+        };
+
+        template <class Tuple>
+        struct deduce_query_params;
+
+        template <class... Args>
+        struct deduce_query_params<std::tuple<Args...>> {
+            using meta_tuple = decltype(std::tuple_cat(typename map_arg_to_query<Args>::type{}...));
+
+            template <class T>
+            struct make_wrap;
+
+            template <class wrap_in, class... Params>
+            struct make_wrap<std::tuple<Params...>> {
+                using type = wrap_in<Params...>;
+            };
+
+
+            template <class wrap_in>
+            using type = typename make_wrap<wrap_in, meta_tuple>::type;
+        };
+
+#pragma endregion
+
+#pragma region parallel inline system
+
+        template <typename T>
+        struct is_view_type : std::false_type {};
+
+        template <>
+        struct is_view_type<detail::iterator_view> : std::true_type {};
+
+        template <>
+        struct is_view_type<const detail::iterator_view&> : std::true_type {};
+
+        template <typename ChunkView>
+        struct parallel_view_proxy {
+            ChunkView& chunk_view;
+            size_t index;
+
+            entity current_entity() {
+                return chunk_view.current_entity(index);
+            }
+
+            template <class Component>
+            structural_changes get_change_state() {
+                return chunk_view.template get_change_state<Component>(index);
+            }
+
+            // Proxy dirty marking if available
+            template <class Component>
+            void mark_dirty()
+                requires requires { chunk_view.template mark_dirty<Component>(index); }
+            {
+                chunk_view.template mark_dirty<Component>(index);
+            }
+        };
+
+#pragma endregion
     }
 
     template <class T>
