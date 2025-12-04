@@ -433,7 +433,7 @@ namespace copper_server::api::ecs {
 
     private:
         template <bool explicit_marking>
-        auto begin_impl() {
+        std::shared_ptr<detail::iteration_topology> begin_topology_create() {
             using traits = detail::query_traits<params...>;
             auto all_ids = traits::get_all_component_ids();
             auto with_ids = traits::get_with_ids();
@@ -446,31 +446,72 @@ namespace copper_server::api::ecs {
             if constexpr (explicit_marking)
                 writes_ids = traits::get_writes_ids();
 
-            detail::iteration_handle handle
-                = id
-                      ? detail::iterate_components(
-                            *id,
-                            all_ids,
-                            with_ids,
-                            without_ids,
-                            writes_ids,
-                            dirty_ids,
-                            clean_ids,
-                            changes_ids,
-                            {with_tag_components.data(), with_tag_components.size()},
-                            {without_tag_components.data(), without_tag_components.size()}
-                        )
-                      : detail::iterate_components_global(
-                            all_ids,
-                            with_ids,
-                            without_ids,
-                            writes_ids,
-                            dirty_ids,
-                            clean_ids,
-                            changes_ids,
-                            {with_tag_components.data(), with_tag_components.size()},
-                            {without_tag_components.data(), without_tag_components.size()}
-                        );
+            return id
+                       ? detail::iterate_components(
+                             *id,
+                             all_ids,
+                             with_ids,
+                             without_ids,
+                             writes_ids,
+                             dirty_ids,
+                             clean_ids,
+                             changes_ids,
+                             {with_tag_components.data(), with_tag_components.size()},
+                             {without_tag_components.data(), without_tag_components.size()}
+                         )
+                       : detail::iterate_components_global(
+                             all_ids,
+                             with_ids,
+                             without_ids,
+                             writes_ids,
+                             dirty_ids,
+                             clean_ids,
+                             changes_ids,
+                             {with_tag_components.data(), with_tag_components.size()},
+                             {without_tag_components.data(), without_tag_components.size()}
+                         );
+        }
+
+        template <bool explicit_marking>
+        std::shared_ptr<detail::iteration_topology> begin_topology() {
+            if constexpr (explicit_marking) {
+                if (!exp_mark_cached_topology) {
+                    exp_mark_cached_version = detail::get_state_version(_q.id);
+                    return exp_mark_cached_topology = begin_topology_create<explicit_marking>();
+                } else {
+                    auto current_version = detail::get_state_version(_q.id);
+                    if (exp_mark_cached_version == current_version)
+                        return exp_mark_cached_topology;
+                    else {
+                        exp_mark_cached_version = current_version;
+                        return exp_mark_cached_topology = begin_topology_create<explicit_marking>();
+                    }
+                }
+            } else {
+                if (!cached_topology) {
+                    cached_version = detail::get_state_version(_q.id);
+                    return cached_topology = begin_topology_create<explicit_marking>();
+                } else {
+                    auto current_version = detail::get_state_version(_q.id);
+                    if (cached_version == current_version)
+                        return cached_topology;
+                    else {
+                        cached_version = current_version;
+                        return cached_topology = begin_topology_create<explicit_marking>();
+                    }
+                }
+            }
+        }
+
+        template <bool explicit_marking>
+        detail::iteration_handle begin_handle() {
+            using traits = detail::query_traits<params...>;
+            return detail::make_handle(begin_topology(), traits::get_all_component_count());
+        }
+
+        template <bool explicit_marking>
+        auto begin_wrap(detail::iteration_handle&& handle) {
+            using traits = detail::query_traits<params...>;
 
             return typename detail::apply_tuple_to_iter<
                 detail::query_iterator,
@@ -479,9 +520,19 @@ namespace copper_server::api::ecs {
                 typename traits::IteratorTuple>::type(std::move(handle));
         }
 
+        template <bool explicit_marking>
+        auto begin_impl() {
+            return begin_wrap(begin_handle<explicit_marking>());
+        }
+
         std::optional<int32_t> id;
         list_array<whole_component_id> with_tag_components;
         list_array<whole_component_id> without_tag_components;
+
+        mutable std::shared_ptr<detail::iteration_topology> exp_mark_cached_topology;
+        mutable size_t exp_mark_cached_version = 0;
+        mutable std::shared_ptr<detail::iteration_topology> cached_topology;
+        mutable size_t cached_version = 0;
     };
 
     struct world_local_registry {

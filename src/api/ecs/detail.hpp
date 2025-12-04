@@ -276,7 +276,6 @@ namespace copper_server::api::ecs {
         fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, std::unique_ptr<components_holder> components);
         fast_task::future_ptr<entity> create_entity(std::optional<world*> world_opt, const entity_recipe& recipe, std::unique_ptr<components_holder> components);
         fast_task::future_ptr<std::optional<entity>> copy_entity(std::optional<world*> world_opt, const api::ecs::entity& base_entity);
-        fast_task::task_rw_mutex& immediate_lock();
 
         entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream, std::optional<world*> world_opt);
         void store_ecs_entity(const std::string& named_id, util::nbt_write_stream& stream, entity);
@@ -292,11 +291,44 @@ namespace copper_server::api::ecs {
         world* register_world(int32_t);
         void unregister_world(world*);
 
+        size_t get_state_version(std::optional<int32_t> world_id);
+
+        struct iteration_topology {
+            struct arch_data_t {
+                archetype* type;
+                std::vector<size_t> required_layout_offsets;
+                std::vector<uint32_t> required_clean_comp_indices; // Use correct type
+                std::vector<uint32_t> required_dirty_comp_indices; // Use correct type
+                std::vector<uint32_t> make_dirty_comp_indices;     // Use correct type
+
+                arch_data_t(archetype* type) : type(type) {}
+            };
+
+            std::vector<arch_data_t> arch_data;
+            std::vector<component_id> with_changes;
+
+            void calculate_data(
+                std::span<component_id> components,
+                std::span<component_id> clean_components,
+                std::span<component_id> dirty_components,
+                std::span<component_id> mark_dirty_components,
+                std::span<component_id> with_changes_
+            );
+
+            void mark_component_dirty(size_t archetype_index, size_t chunk_index, component_id component, size_t entity_index);
+            bool is_entity_match(size_t archetype_index, size_t chunk_index, size_t entity_index) const;
+            std::pair<uint32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index);
+            structural_changes get_component_change_state(size_t archetype_index, size_t chunk_index, size_t entity_index, component_id cid);
+        };
+
+        //transparent handle
         struct iteration_handle {
             struct iteration_data;
+            std::shared_ptr<iteration_topology> topology;
             std::unique_ptr<iteration_data> data;
 
             iteration_handle() = default;
+            iteration_handle(const std::shared_ptr<iteration_topology>& topology);
             iteration_handle(const iteration_handle&) = delete;
             iteration_handle(iteration_handle&& other) noexcept;
             ~iteration_handle();
@@ -324,7 +356,7 @@ namespace copper_server::api::ecs {
             preserved_state preserve_state();
         };
 
-        iteration_handle iterate_components(
+        std::shared_ptr<iteration_topology> iterate_components(
             int32_t world_id,
             std::span<component_id> components,
             std::span<component_id> with_components,
@@ -337,7 +369,7 @@ namespace copper_server::api::ecs {
             std::span<whole_component_id> without_tag_components
         );
 
-        iteration_handle iterate_components_global(
+        std::shared_ptr<iteration_topology> iterate_components_global(
             std::span<component_id> components,
             std::span<component_id> with_components,
             std::span<component_id> without_components,
@@ -348,6 +380,8 @@ namespace copper_server::api::ecs {
             std::span<whole_component_id> with_tag_components,
             std::span<whole_component_id> without_tag_components
         );
+
+        iteration_handle make_handle(const std::shared_ptr<iteration_topology>& topology, size_t component_count);
 
         template <class... components>
         struct query_reads {};
@@ -834,6 +868,10 @@ namespace copper_server::api::ecs {
                 return ids;
             }
 
+            static constexpr size_t get_all_component_count() {
+                return compute_component_count<read_operation_query, write_operation_query>();
+            }
+
             static std::span<component_id> get_with_changes_ids() {
                 static std::vector<component_id> ids = compute_component_ids<filter_with_changes>();
                 return ids;
@@ -875,11 +913,26 @@ namespace copper_server::api::ecs {
                 return result_ids;
             }
 
+            template <typename... AccessFilters>
+            static constexpr size_t compute_component_count() {
+                size_t count = 0;
+                auto filter_op = [&](auto... pairs) {
+                    (inc_if_access_match<AccessFilters...>(count, pairs), ...);
+                };
+                std::apply(filter_op, MetaTuple{});
+                return count;
+            }
+
             template <typename... AccessFilters, typename T, typename Access>
             static void add_if_access_match(std::vector<component_id>& ids, std::pair<T, Access>) {
-                if constexpr ((std::is_same_v<Access, AccessFilters> || ...)) {
+                if constexpr ((std::is_same_v<Access, AccessFilters> || ...))
                     ids.push_back(detail::get_component_id<T>());
-                }
+            }
+
+            template <typename... AccessFilters, typename T, typename Access>
+            static void inc_if_access_match(size_t& count, std::pair<T, Access>) {
+                if constexpr ((std::is_same_v<Access, AccessFilters> || ...))
+                    ++count;
             }
         };
 

@@ -473,6 +473,11 @@ namespace copper_server::api::ecs {
         moodycamel::ConcurrentQueue<entity_dirty_mark_item> marking_queue;
         moodycamel::ConcurrentQueue<uint32_t> arch_type_changes;
 
+        std::atomic_size_t state_version = 0;
+        std::atomic_size_t& global_state_version;
+
+        world(std::atomic_size_t& global_state_version) : global_state_version(global_state_version) {}
+
         archetype* map_get_archetype(const std::vector<whole_component_id>& sorted_ids) {
             auto hash = archetype_hash()(sorted_ids);
             auto bucket_it = archetype_lookup.find(hash);
@@ -500,6 +505,8 @@ namespace copper_server::api::ecs {
             auto arch = new_archetype_ptr.get();
             archetypes.push_back(std::move(new_archetype_ptr));
             archetype_lookup[hash].push_back(arch);
+            ++state_version;
+            ++global_state_version;
             return arch;
         }
 
@@ -542,12 +549,15 @@ namespace copper_server::api::ecs {
 
     struct manager {
         fast_task::task_rw_mutex manager_mutex;
+        std::atomic_size_t state_version = 0;
 
         world limbo;
         std::unordered_map<int32_t, world> worlds;
 
         std::vector<entity_record> records;
         moodycamel::ConcurrentQueue<uint32_t> free_entity_ids;
+
+        manager() : limbo(state_version) {}
 
         static void swap_remove(std::vector<uint32_t>& arr, uint32_t value) {
             auto it = std::find(arr.begin(), arr.end(), value);
@@ -653,7 +663,8 @@ namespace copper_server::api::ecs {
 
         world* enable_world(int32_t id) {
             std::lock_guard guard(manager_mutex);
-            auto& world = worlds[id];
+            auto world_ref = worlds.emplace(id, state_version);
+            auto& world = world_ref.first->second;
             world.id = id;
             ++world.usages;
             return &world;
@@ -661,19 +672,21 @@ namespace copper_server::api::ecs {
 
         void disable_world(int32_t id) {
             std::lock_guard guard(manager_mutex);
-            if (worlds[id].usages <= 1) {
-                if (auto it = worlds.find(id); it != worlds.end()) {
-                    for (auto& arch : it->second.archetypes) {
+            if (auto world_ref = worlds.find(id); worlds.end() != world_ref) {
+                auto& world = world_ref->second;
+                if (world.usages <= 1) {
+                    for (auto& arch : world.archetypes) {
                         while (arch->chunks.size()) {
                             auto& chunk = arch->chunks.back();
                             auto entities = chunk->entities();
                             move_entity(entities[0], limbo.map_get_archetype(arch->whole_component_ids), &limbo);
                         }
                     }
-                }
-                worlds.erase(id);
-            } else
-                --worlds[id].usages;
+                    worlds.erase(world_ref);
+                    ++state_version;
+                } else
+                    --world.usages;
+            }
         }
 
         static manager& instance();
