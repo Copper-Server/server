@@ -8,12 +8,12 @@
  */
 #ifndef SRC_API_REGISTERS
 #define SRC_API_REGISTERS
-#include <library/enbt/enbt.hpp>
 #include <src/api/id.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/number_provider.hpp>
 #include <src/base_objects/pool.hpp>
 #include <src/base_objects/recipe.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -46,7 +46,7 @@ namespace copper_server::api::registers {
 
         std::optional<display_t> display;
         std::string parent;
-        enbt::compound criteria;
+        util::nbt_compound criteria;
         std::vector<std::vector<std::string>> requirements;
         rewards_t rewards;
         bool send_via_network_body = true;
@@ -90,7 +90,7 @@ namespace copper_server::api::registers {
         struct particle {
             struct {
                 api::id::particle_type type;
-                enbt::value options;
+                util::nbt options;
             } options;
 
             float probability;
@@ -255,8 +255,8 @@ namespace copper_server::api::registers {
     };
 
     struct wolf_variant {
-        enbt::compound assets;
-        enbt::dynamic_array spawn_conditions;
+        util::nbt_compound assets;
+        util::nbt spawn_conditions; //list
 
         uint32_t id;
         bool allow_override = false;
@@ -266,7 +266,7 @@ namespace copper_server::api::registers {
     struct entity_variant {
         std::string asset_id;
         std::optional<std::string> model;
-        enbt::dynamic_array spawn_conditions;
+        util::nbt spawn_conditions; //list
 
         uint32_t id;
         bool allow_override = false;
@@ -328,7 +328,7 @@ namespace copper_server::api::registers {
         std::variant<api::id::set::item, std::vector<api::id::item>> supported_items;
         std::variant<api::id::set::item, std::vector<api::id::item>> primary_items;
         std::vector<std::string> slots;
-        std::unordered_map<std::string, enbt::value> effects; //TODO create api for custom effects
+        std::unordered_map<std::string, util::nbt> effects; //TODO create api for custom effects
 
         struct {
             int32_t base = 0;
@@ -349,7 +349,7 @@ namespace copper_server::api::registers {
     };
 
     struct enchantment_provider {
-        enbt::compound data;
+        util::nbt_compound data;
 
         uint32_t id = 0;
         bool send_via_network_body = true;
@@ -396,13 +396,13 @@ namespace copper_server::api::registers {
         struct pool {
             std::shared_ptr<base_objects::number_provider> rolls;
             std::shared_ptr<base_objects::number_provider> bonus_rolls;
-            std::vector<enbt::compound> entries;
-            std::vector<enbt::compound> functions;
-            std::vector<enbt::compound> conditions; //predicates, can be empty
+            std::vector<util::nbt_compound> entries;
+            std::vector<util::nbt_compound> functions;
+            std::vector<util::nbt_compound> conditions; //predicates, can be empty
         };
 
         std::vector<pool> pools;
-        std::vector<enbt::compound> functions;
+        std::vector<util::nbt_compound> functions;
         std::string type; //default: generic // used to filter loot context
         std::optional<std::string> random_sequence;
 
@@ -418,7 +418,7 @@ namespace copper_server::api::registers {
 
             struct {
                 float probability = 0.0f;
-                enbt::compound y; //number provider
+                util::nbt_compound y; //number provider
 
                 struct {
                     int32_t absolute = 0;
@@ -444,18 +444,18 @@ namespace copper_server::api::registers {
 
                 std::optional<debug_settings_t> debug_settings;
 
-                enbt::compound custom_data; //virtual field, used in handlers
+                util::nbt_compound custom_data; //virtual field, used in handlers
             } config;
         };
 
         struct configured_feature {
             std::string type;
-            enbt::compound config;
+            util::nbt_compound config;
         };
 
         struct density_function {
             std::string type;
-            enbt::compound custom_data; //virtual field, used in handlers
+            util::nbt_compound custom_data; //virtual field, used in handlers
         };
 
         struct noise {
@@ -503,17 +503,17 @@ namespace copper_server::api::registers {
                 int32_t size_vertical = 0;
             } noise;
 
-            enbt::compound noise_router;
-            enbt::compound surface_rule;
+            util::nbt_compound noise_router;
+            util::nbt_compound surface_rule;
         };
 
         struct placed_feature {
             std::variant<std::string, configured_feature> feature;
-            std::vector<enbt::compound> placement;
+            std::vector<util::nbt_compound> placement;
         };
 
         struct processor_list {
-            std::vector<enbt::compound> processors;
+            std::vector<util::nbt_compound> processors;
         };
 
         struct structure {
@@ -534,7 +534,7 @@ namespace copper_server::api::registers {
             std::string step;
             std::string terrain_adaptation;
             std::unordered_map<std::string, spawn_override> spawn_overrides;
-            enbt::compound custom_data; //virtual field, used in handlers
+            util::nbt_compound custom_data; //virtual field, used in handlers
         };
 
         struct structure_set {
@@ -553,7 +553,7 @@ namespace copper_server::api::registers {
                 int32_t locale_offset[3] = {0, 0, 0};
 
                 std::string type;
-                enbt::compound custom_data; //virtual field, used in handlers
+                util::nbt_compound custom_data; //virtual field, used in handlers
             } placement;
         };
 
@@ -564,7 +564,7 @@ namespace copper_server::api::registers {
                 struct {
                     std::string element_type;
                     std::string projection;
-                    enbt::compound custom_data; //virtual field, used in handlers
+                    util::nbt_compound custom_data; //virtual field, used in handlers
                 } element;
             };
 
@@ -575,7 +575,7 @@ namespace copper_server::api::registers {
         struct world_preset {
             struct dimension {
                 std::string type;
-                enbt::compound custom_data; //virtual field, used in handlers
+                util::nbt_compound custom_data; //virtual field, used in handlers
             };
 
             std::unordered_map<std::string, dimension> dimensions;
@@ -611,7 +611,7 @@ namespace copper_server::api::registers {
 
     struct trial_spawner_config {
         struct spawn_data {
-            enbt::value entity;
+            util::nbt entity;
 
             struct custom_spawn_rules_t {
                 std::shared_ptr<base_objects::number_provider> block_light_limit;
@@ -689,14 +689,14 @@ namespace copper_server::api::registers {
     extern list_array<decltype(jukebox_songs)::iterator> jukebox_songs_cache;
 
 
-    extern enbt::compound current_protocol_registers;
+    extern util::nbt_compound current_protocol_registers;
     extern uint32_t current_protocol_id;
 
     std::string normalize_entry(const std::string& str);
     std::string normalize_entry(std::string&& str);
 
-    enbt::value& view_registry_entries(const std::string& registry);
-    enbt::value& view_registry_proto_invert(const std::string& registry);
+    util::nbt& view_registry_entries(const std::string& registry);
+    util::nbt& view_registry_proto_invert(const std::string& registry);
     list_array<int32_t> reg_ids(const std::string& registry);
     int32_t view_reg_pro_id(const std::string& registry, const std::string& item);
     std::string_view view_reg_pro_name(const std::string& registry, int32_t id);

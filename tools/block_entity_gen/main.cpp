@@ -644,10 +644,8 @@ int main(int argc, char* argv[]) {
         source_file << "    namespace internal {\n";
         source_file << "        void register_generated_block_entities() {\n";
         for (const auto& [entity_id, data] : entity_map) {
-            std::string definition_id = "@block_entity:" + entity_id;
-
-            source_file << "            api::ecs::initialization::make_ecs_entity_definition(\"" << definition_id << "\")";
-            source_file << "\n                .add_constant(api::ecs::com::block_entity::type{" << data.id << "})";
+            source_file << "            api::ecs::initialization::make_block_entity_definition(\"" << entity_id << "\")";
+            source_file << "\n                .add_locked(api::ecs::com::block_entity::type{" << data.id << "})";
             source_file << "\n                .add_locked<api::ecs::com::block_entity::base_data>()";
             for (const auto& comp_name : data.components)
                 source_file << "\n                .add_locked<" << comp_name << ">()";

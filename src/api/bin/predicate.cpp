@@ -13,8 +13,8 @@
 namespace copper_server::api::predicate {
     std::unordered_map<std::string, handler> handlers;
 
-    bool process_predicate(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-        return handlers.at(api::registers::normalize_entry((std::string)predicate["condition"]))(predicate, context);
+    bool process_predicate(const util::nbt_compound& predicate, const base_objects::command_context& context) {
+        return handlers.at(api::registers::normalize_entry(predicate["condition"].as_string()))(predicate, context);
     }
 
     void register_handler(const std::string& name, handler handler) {

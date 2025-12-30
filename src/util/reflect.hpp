@@ -94,10 +94,8 @@ namespace copper_server::reflect {
             return T::name_override::data;
         } else {
             constexpr std::string_view name = type_name<T>();
-            if (name == "enbt::value")
+            if (name == "nbt_compound")
                 return "nbt";
-            if (name == "enbt::raw_uuid")
-                return "UUID";
             if (auto it = name.rfind("::"); it != name.npos) {
                 return name.substr(it + 2);
             } else

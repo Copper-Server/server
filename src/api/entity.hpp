@@ -10,7 +10,6 @@
 #define SRC_API_ENTITY
 #include <chrono>
 #include <filesystem>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <memory>
 #include <src/api/ecs.hpp>
@@ -22,15 +21,8 @@
 #include <src/base_objects/weather.hpp>
 #include <src/base_objects/world/block_action.hpp>
 #include <src/util/calculations.hpp>
+#include <src/util/nbt.hpp>
 #include <stdint.h>
-
-namespace enbt::io_helper {
-    class value_write_stream;
-    class value_read_stream;
-
-    template <class T>
-    struct serialization;
-}
 
 namespace copper_server {
     namespace storage {
@@ -121,7 +113,7 @@ namespace copper_server::api {
         std::optional<living_entity_data_t> living_entity_data;
         std::optional<int32_t> spawn_egg;
 
-        enbt::compound data;
+        util::nbt_compound data;
 
         std::function<bool(ecs::entity target_entity, bool force)> pre_death_callback;
         std::function<void(ecs::entity target_entity)> create_callback;
@@ -337,9 +329,9 @@ namespace copper_server::api {
         void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, ecs::entity block_entity);
 
         static ecs::entity create(int32_t id);
-        static ecs::entity create(int32_t id, const enbt::compound_const_ref& nbt);
+        static ecs::entity create(int32_t id, const util::nbt_compound& nbt);
         static ecs::entity create(const std::string& id);
-        static ecs::entity create(const std::string& id, const enbt::compound_const_ref& nbt);
+        static ecs::entity create(const std::string& id, const util::nbt_compound& nbt);
 
         bool hitboxes_touching_x(double min, double max);
         bool hitboxes_touching_y(double min, double max);
@@ -347,11 +339,10 @@ namespace copper_server::api {
 
         std::optional<int32_t> get_object_field() const;
 
-        static void store_to_file(ecs::entity entity, enbt::io_helper::value_write_stream& w);
-        static ecs::entity load_from_file(enbt::io_helper::value_read_stream& w);
-        static void store_to_enbt(ecs::entity entity, enbt::compound& w) ;
-        static ecs::entity load_from_enbt(const enbt::compound_const_ref& nbt);
-
+        static void store_to_file(ecs::entity entity, util::nbt_write_stream& w);
+        static ecs::entity load_from_file(util::nbt_read_stream& w);
+        static void store_to_nbt(ecs::entity entity, util::nbt_compound& w);
+        static ecs::entity load_from_nbt(const util::nbt_compound& nbt);
 
         void tick();
     };

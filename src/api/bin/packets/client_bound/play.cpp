@@ -10,12 +10,15 @@
 
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>
+#include <src/api/ecs/block_entity_components.hpp>
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/entity.hpp>
 #include <src/api/entity_proxy.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/registers.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/commands.hpp>
+#include <src/base_objects/world/chunk.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::api::packets::client_bound::play {
@@ -61,7 +64,7 @@ namespace copper_server::api::packets::client_bound::play {
         return res;
     }
 
-    chunks_biomes chunks_biomes::create(const storage::chunk_data& chunk) {
+    chunks_biomes chunks_biomes::create(const base_objects::world::chunk_data& chunk) {
         chunks_biomes result;
         result.x = (int32_t)chunk.chunk_x;
         result.z = (int32_t)chunk.chunk_z;
@@ -71,13 +74,10 @@ namespace copper_server::api::packets::client_bound::play {
         return result;
     }
 
-    level_chunk_with_light level_chunk_with_light::create(const storage::chunk_data& chunk, const storage::world_data& world) {
+    level_chunk_with_light level_chunk_with_light::create(const base_objects::world::chunk_data& chunk, const storage::world_data& world) {
         level_chunk_with_light result;
-        static auto build_height_map = [](uint8_t type, const uint64_t (&hei_map)[16][16], size_t world_height) {
-            base_objects::palette_data_height_map data(base_objects::palette_data::bits_for_max(world_height), 16 * 16);
-            for (uint_fast8_t x = 0; x < 16; x++)
-                for (uint_fast8_t z = 0; z < 16; z++)
-                    data.add((int32_t)hei_map[x][z]);
+        static auto build_height_map = [](uint8_t type, const base_objects::palette_data_height_map& hei_map, size_t world_height) {
+            base_objects::palette_data_height_map data = hei_map;
             data.add(0); //TODO check if bug fixed MC-247438, currently at 1.21.9 still not fixed
             return height_map{
                 .type = height_map::type_e(type),
@@ -102,13 +102,20 @@ namespace copper_server::api::packets::client_bound::play {
             for (auto& section : chunk.sub_chunks) {
                 auto sub_chunk_pos = sub_chunk * 16;
                 section.for_each_block_entity(
-                    [&result, sub_chunk_pos](uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data) {
+                    [&result, sub_chunk_pos](uint8_t local_x, uint8_t local_y, uint8_t local_z, api::ecs::entity block_e) {
+                        std::stringstream ss;
+                        util::nbt_write_stream ws(ss);
+                        block_e.get<api::ecs::com::type_definition>().type->to_nbt(ws, block_e);
+                        auto type = block_e.get<api::ecs::com::block_entity::type>().id;
+                        size_t res_size = 0;
+                        auto data = util::nbt_convert::readNBT((uint8_t*)ss.view().data(), ss.view().size(), res_size);
+
                         result.block_entities.push_back(
                             block_entity{
                                 .xz = uint8_t((local_x << 4) | local_z),
                                 .y = int16_t(sub_chunk_pos + local_y),
-                                .type = block.block_entity_id(),
-                                .data = entity_data
+                                .type = type,
+                                .data = std::move(data)
                             }
                         );
                     }
@@ -129,7 +136,7 @@ namespace copper_server::api::packets::client_bound::play {
         return result;
     }
 
-    light_update light_update::create(const storage::chunk_data& chunk) {
+    light_update light_update::create(const base_objects::world::chunk_data& chunk) {
         bit_list_array<uint64_t> sky_light_mask;
         bit_list_array<uint64_t> block_light_mask;
         bit_list_array<uint64_t> empty_sky_light_mask;

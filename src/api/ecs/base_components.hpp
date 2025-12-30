@@ -14,6 +14,7 @@
 #include <src/api/entity.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/util/calculations.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server {
     namespace storage {
@@ -387,24 +388,24 @@ namespace copper_server::api::ecs::com {
         };
 
         struct nbt {
-            std::unique_ptr<enbt::compound> value;
+            std::unique_ptr<util::nbt_compound> value;
 
             nbt()
-                : value(std::make_unique<enbt::compound>()) {}
+                : value(std::make_unique<util::nbt_compound>()) {}
 
             nbt(nbt&&) noexcept = default;
             nbt& operator=(nbt&&) noexcept = default;
 
             nbt(const nbt& other) {
                 if (other.value)
-                    value = std::make_unique<enbt::compound>(*other.value);
+                    value = std::make_unique<util::nbt_compound>(*other.value);
             }
 
             nbt& operator=(const nbt& other) {
                 if (this != &other) {
                     if (other.value) {
                         if (!value) {
-                            value = std::make_unique<enbt::compound>(*other.value);
+                            value = std::make_unique<util::nbt_compound>(*other.value);
                         } else
                             *value = *other.value;
                     } else
@@ -413,34 +414,34 @@ namespace copper_server::api::ecs::com {
                 return *this;
             }
 
-            enbt::compound& get() {
+            util::nbt_compound& get() {
                 return *value;
             }
 
-            const enbt::compound& get() const {
+            const util::nbt_compound& get() const {
                 return *value;
             }
         };
 
         struct server_nbt {
-            std::unique_ptr<enbt::compound> value;
+            std::unique_ptr<util::nbt_compound> value;
 
             server_nbt()
-                : value(std::make_unique<enbt::compound>()) {}
+                : value(std::make_unique<util::nbt_compound>()) {}
 
             server_nbt(server_nbt&&) noexcept = default;
             server_nbt& operator=(server_nbt&&) noexcept = default;
 
             server_nbt(const server_nbt& other) {
                 if (other.value)
-                    value = std::make_unique<enbt::compound>(*other.value);
+                    value = std::make_unique<util::nbt_compound>(*other.value);
             }
 
             server_nbt& operator=(const server_nbt& other) {
                 if (this != &other) {
                     if (other.value) {
                         if (!value) {
-                            value = std::make_unique<enbt::compound>(*other.value);
+                            value = std::make_unique<util::nbt_compound>(*other.value);
                         } else
                             *value = *other.value;
                     } else
@@ -449,11 +450,11 @@ namespace copper_server::api::ecs::com {
                 return *this;
             }
 
-            enbt::compound& get() {
+            util::nbt_compound& get() {
                 return *value;
             }
 
-            const enbt::compound& get() const {
+            const util::nbt_compound& get() const {
                 return *value;
             }
         };

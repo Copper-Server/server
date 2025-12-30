@@ -52,7 +52,7 @@ build_resource_merge_json("copper_server" "${CMAKE_CURRENT_SOURCE_DIR}/resources
 build_resources("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build compressed)
 create_resources_header("resources" "${RESOURCE_FILES_include}")
 create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_FILES}")
-create_mappings()
+#create_mappings()
 
 IF(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -71,6 +71,7 @@ find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
 find_package(lz4 CONFIG REQUIRED)
+find_package(ctre CONFIG REQUIRED)
 
 add_subdirectory("library/fast_task")
 add_subdirectory("library/commandline")
@@ -80,7 +81,6 @@ set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
 
 FILE(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS
   src/*.cpp 
-  library/enbt/*.cpp
 )
 add_executable(CopperServer src/main.cpp)
 target_sources(CopperServer PRIVATE ${SRCFILES} ${RESOURCE_FILES_build})
@@ -131,4 +131,5 @@ target_link_libraries(CopperServer PRIVATE
   commandline
   fast_task
   lz4::lz4
+  ctre::ctre
 )

@@ -15,17 +15,17 @@
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
 #include <src/plugin/registration.hpp>
-#include <src/storage/enbt_list_storage.hpp>
+#include <src/storage/unordered_list_storage.hpp>
 
 namespace copper_server::build_in_plugins::tools {
     class ban : public plugin_auto_register<"tools/ban", ban> {
-        storage::enbt_list_storage banned_players;
-        storage::enbt_list_storage banned_ips;
+        storage::unordered_list_storage banned_players;
+        storage::unordered_list_storage banned_ips;
 
     public:
         ban()
-            : banned_players(api::configuration::get().server.get_storage_path() / +"banned_players.c_enbt"),
-              banned_ips(api::configuration::get().server.get_storage_path() / +"banned_ips.c_enbt") {
+            : banned_players(api::configuration::get().server.get_storage_path() / +"banned_players.c_banned"),
+              banned_ips(api::configuration::get().server.get_storage_path() / +"banned_ips.c_banned") {
             if (!banned_players.is_loaded()) {
                 api::log::error("BanPlugin", "Failed to load banned players list");
             }
@@ -37,22 +37,22 @@ namespace copper_server::build_in_plugins::tools {
         ~ban() noexcept {};
 
         void on_initialization(const plugin_registration_ptr&) override {
-            api::configuration::get() ^ "ban" ^ "on_ban_message" |= enbt::compound{{"text", "You are banned from this server\nReason: %."}, {"color", "red"}};
-            api::configuration::get() ^ "ban" ^ "on_ban_ip_message" |= enbt::compound{{"text", "You are banned from this server\nReason: %."}, {"color", "red"}};
+            api::configuration::get() ^ "ban" ^ "on_ban_message" |= std::unordered_map<std::string, util::nbt>{{"text", "You are banned from this server\nReason: %."}, {"color", "red"}};
+            api::configuration::get() ^ "ban" ^ "on_ban_ip_message" |= std::unordered_map<std::string, util::nbt>{{"text", "You are banned from this server\nReason: %."}, {"color", "red"}};
         }
 
         void on_post_load(const plugin_registration_ptr&) override {
             register_event(api::ban::on_ban, base_objects::events::priority::low, [](const api::ban::ban_data& client) {
                 api::players::calls::on_player_kick(
                     {api::players::get_player(base_objects::shared_client_data::packets_state_t::protocol_state::play, client.who),
-                     base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {client.reason})}
+                     base_objects::chat::from_nbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {client.reason})}
                 );
                 return false;
             });
             register_event(api::ban::on_ban, base_objects::events::priority::low, [](const api::ban::ban_data& client) {
                 api::players::calls::on_player_kick(
                     {api::players::get_player(base_objects::shared_client_data::packets_state_t::protocol_state::play, client.who),
-                     base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {client.reason})}
+                     base_objects::chat::from_nbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {client.reason})}
                 );
                 return false;
             });
@@ -74,7 +74,7 @@ namespace copper_server::build_in_plugins::tools {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been already banned."}};
                             return false;
                         }
-                        banned_players.add(player_name, {});
+                        banned_players.add(player_name); //TODO reason
                         context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been banned."}};
                         return true;
                     })
@@ -88,7 +88,7 @@ namespace copper_server::build_in_plugins::tools {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been already banned."}};
                             return false;
                         }
-                        banned_players.add(player_name, reason);
+                        banned_players.add(player_name); //TODO reason
                         context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been banned"}};
                         return true;
                     });
@@ -118,16 +118,16 @@ namespace copper_server::build_in_plugins::tools {
 
                     players.set_callback("command.banlist.players", [this](const list_array<predicate>&, base_objects::command_context& context) -> size_t {
                         bool max_reached = false;
-                        auto banned = banned_players.keys(100, max_reached);
+                        auto banned = banned_players.entrys(100, max_reached);
                         if (banned.size() == 0) {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"There are no banned players."}};
                             return 0;
                         } else if (banned.size() == 1) {
-                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There is only one banned player:" + banned.back()}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There is only one banned player:" + *banned.begin()}};
                             return 1;
                         } else {
-                            std::string last_item = banned.back();
-                            banned.pop_back();
+                            std::string last_item = *banned.end();
+                            banned.erase(banned.end());
                             std::string message = "There a total of " + std::to_string(banned.size() + 1) + " banned players:\n";
                             for (auto& player : banned)
                                 message += player + ", ";
@@ -178,7 +178,7 @@ namespace copper_server::build_in_plugins::tools {
 
                     ips.set_callback("command.banlist.ips", [this](const list_array<predicate>&, base_objects::command_context& context) -> size_t {
                         bool max_reached = false;
-                        auto banned = banned_ips.keys(100, max_reached);
+                        auto banned = banned_ips.entrys(100, max_reached);
                         if (banned.size() == 0) {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"There are no banned ips."}};
                             return 0;
@@ -244,7 +244,7 @@ namespace copper_server::build_in_plugins::tools {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been already banned."}};
                             return false;
                         }
-                        banned_ips.add(ip, {});
+                        banned_ips.add(ip); //TODO reason
                         context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been banned."}};
                         return true;
                     })
@@ -258,7 +258,7 @@ namespace copper_server::build_in_plugins::tools {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been already banned."}};
                             return false;
                         }
-                        banned_ips.add(ip, reason);
+                        banned_ips.add(ip); //TODO reason
                         context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been banned."}};
                         return true;
                     });
@@ -285,10 +285,10 @@ namespace copper_server::build_in_plugins::tools {
         }
 
         void on_play_initialize(base_objects::shared_client_data& client) override {
-            if (auto banned = banned_players.get(client.name); banned)
-                api::players::calls::on_player_kick({api::players::get_player(client), base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {banned->convert_to_str()})});
-            if (auto banned = banned_ips.get(client.ip); banned)
-                api::players::calls::on_player_kick({api::players::get_player(client), base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {banned->convert_to_str()})});
+            if (auto banned = banned_players.contains(client.name); banned)
+                api::players::calls::on_player_kick({api::players::get_player(client), {}}); //base_objects::chat::from_nbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {banned->convert_to_str()})});
+            if (auto banned = banned_ips.contains(client.ip); banned)
+                api::players::calls::on_player_kick({api::players::get_player(client), {}}); //base_objects::chat::from_nbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {banned->convert_to_str()})});
         }
     };
 }

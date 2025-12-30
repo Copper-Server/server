@@ -6,9 +6,9 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <library/enbt/enbt.hpp>
 #include <src/api/file/compression.hpp>
 #include <src/storage/region_storage.hpp>
+#include <src/util/endian.hpp>
 
 namespace copper_server::storage {
     constexpr size_t SECTOR_SIZE = 4096;
@@ -145,8 +145,8 @@ namespace copper_server::storage {
                 memcpy(&instance->locations[i], locations_data.data() + i * 4, 4);
                 memcpy(&instance->timestamps[i], timestamps_data.data() + i * 4, 4);
             }
-            enbt::endian_helpers::convert_endian_arr(std::endian::big, instance->locations.data(), CHUNKS_PER_REGION);
-            enbt::endian_helpers::convert_endian_arr(std::endian::big, instance->timestamps.data(), CHUNKS_PER_REGION);
+            util::convert_endian_arr(std::endian::big, instance->locations.data(), CHUNKS_PER_REGION);
+            util::convert_endian_arr(std::endian::big, instance->timestamps.data(), CHUNKS_PER_REGION);
         }
 
         instance->build_free_space_cache();
@@ -182,7 +182,7 @@ namespace copper_server::storage {
 
             uint32_t exact_length;
             memcpy(&exact_length, chunk_header.data(), 4);
-            exact_length = enbt::endian_helpers::convert_endian(std::endian::big, exact_length);
+            exact_length = util::convert_endian(std::endian::big, exact_length);
 
             if (exact_length == 0)
                 return {};
@@ -299,7 +299,7 @@ namespace copper_server::storage {
 
             std::vector<uint8_t> file_buffer;
             uint32_t mca_length = 1 + uint32_t(use_external_file ? 0 : data.size());
-            uint32_t length_nbo = enbt::endian_helpers::convert_endian(std::endian::big, mca_length);
+            uint32_t length_nbo = util::convert_endian(std::endian::big, mca_length);
 
             file_buffer.resize(5 + (use_external_file ? 0 : data.size()));
             memcpy(file_buffer.data(), &length_nbo, 4);
@@ -336,9 +336,9 @@ namespace copper_server::storage {
                 self->locations[index] = new_location;
                 self->timestamps[index] = current_timestamp;
 
-                uint32_t location_nbo = enbt::endian_helpers::convert_endian(std::endian::big, new_location);
+                uint32_t location_nbo = util::convert_endian(std::endian::big, new_location);
                 self->handle.write_inline_at(index * 4, reinterpret_cast<uint8_t*>(&location_nbo), 4);
-                uint32_t timestamp_nbo = enbt::endian_helpers::convert_endian(std::endian::big, current_timestamp);
+                uint32_t timestamp_nbo = util::convert_endian(std::endian::big, current_timestamp);
                 self->handle.write_inline_at(HEADER_LOCATIONS_BYTES + index * 4, reinterpret_cast<uint8_t*>(&timestamp_nbo), 4);
             }
             self->handle.flush();

@@ -7,12 +7,12 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#ifndef SRC_API_BIN_PACKETS_GENERIC_AUTO
-#define SRC_API_BIN_PACKETS_GENERIC_AUTO
+#ifndef SRC_UTIL_ENCODING_PACKET_AUTO
+#define SRC_UTIL_ENCODING_PACKET_AUTO
 
-#include <src/api/bin/packets/generic_decode.hpp>
-#include <src/api/bin/packets/generic_encode.hpp>
-#include <src/api/bin/packets/generic_stringize.hpp>
+#include <src/util/encoding/packet/generic_decode.hpp>
+#include <src/util/encoding/packet/generic_encode.hpp>
+#include <src/util/encoding/packet/generic_stringize.hpp>
 
 #define auto_define_packet_ops(packet)                                                                                               \
     template struct packet_ops<packet>;                                                                                              \
@@ -38,20 +38,20 @@
     }                                                                                                                                \
     template <>                                                                                                                      \
     bool packet_ops<packet>::send(base_objects::shared_client_data& client, packet&& p) {                                            \
-        return make_send<packet_ops>(client, std::move(p));                                                                          \
+        return util::encoding::packet::make_send<packet_ops>(client, std::move(p));                                                  \
     }                                                                                                                                \
     template <>                                                                                                                      \
     base_objects::network::response packet_ops<packet>::client_encode(base_objects::shared_client_data& context, packet&& p) {       \
-        return make_encode<packet_ops>(context, std::move(p));                                                                       \
+        return util::encoding::packet::make_encode<packet_ops>(context, std::move(p));                                               \
     }                                                                                                                                \
     template <>                                                                                                                      \
     base_objects::network::response packet_ops<packet>::encode(packet&& p) {                                                         \
         base_objects::shared_client_data context;                                                                                    \
-        return make_encode<packet_ops>(context, std::move(p));                                                                       \
+        return util::encoding::packet::make_encode<packet_ops>(context, std::move(p));                                               \
     }                                                                                                                                \
     template <>                                                                                                                      \
     bool packet_ops<packet>::make_process(base_objects::shared_client_data& client, packet&& p) {                                    \
-        return decoder_make_process<packet_ops>(client, p);                                                                          \
+        return util::encoding::packet::decoder_make_process<packet_ops>(client, p);                                                  \
     }                                                                                                                                \
     template <>                                                                                                                      \
     packet packet_ops<packet>::decode(ArrayStream& stream) {                                                                         \
@@ -61,14 +61,14 @@
     template <>                                                                                                                      \
     packet packet_ops<packet>::client_decode(base_objects::shared_client_data& context, ArrayStream& stream) {                       \
         packet res;                                                                                                                  \
-        decode_entry(context, stream, res, &res);                                                                                    \
+        util::encoding::packet::decode_entry(context, stream, res, &res);                                                            \
         return res;                                                                                                                  \
     }                                                                                                                                \
     template <>                                                                                                                      \
     std::string packet_ops<packet>::stringize(const packet& p) {                                                                     \
         std::string res;                                                                                                             \
-        sp::serialize_packet(res, 0, p);                                                                                             \
+        util::encoding::packet::sp::serialize_packet(res, 0, p);                                                                     \
         return res;                                                                                                                  \
     }
 
-#endif /* SRC_API_BIN_PACKETS_GENERIC_AUTO */
+#endif /* SRC_UTIL_ENCODING_PACKET_AUTO */

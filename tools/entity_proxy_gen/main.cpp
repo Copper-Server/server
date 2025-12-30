@@ -25,11 +25,11 @@ struct MetadataField {
     std::string field_name;
     std::string type_name;
     int32_t network_id;
-    bool mark_component = false;
 };
 
 struct EntityInfo {
     int32_t id;
+    std::string entity_name;
     std::string class_name;
     std::vector<MetadataField> metadata_fields;
 };
@@ -99,56 +99,21 @@ void generate_components_file(const std::string& path, const std::map<std::strin
         const std::string& component_name = pair.first;
         const MetadataField& field = pair.second;
 
-        if (field.mark_component) {
+        auto it = type_map.find(field.type_name);
+        if (it != type_map.end()) {
             out << "    struct " << component_name << " {\n";
             out << "        static constexpr uint8_t network_id = " << field.network_id << ";\n";
+            out << "        " << it->second.first << " value;\n";
             out << "    };\n";
-        } else {
-            auto it = type_map.find(field.type_name);
-            if (it != type_map.end()) {
-                out << "    struct " << component_name << " {\n";
-                out << "        static constexpr uint8_t network_id = " << field.network_id << ";\n";
-                out << "        " << it->second.first << " value;\n";
-                out << "    };\n";
-            } else
-                std::cerr << "Warning: No C++ type mapping for component '" << component_name << "'. Skipping.\n";
-        }
+        } else
+            std::cerr << "Warning: No C++ type mapping for component '" << component_name << "'. Skipping.\n";
     }
 
     out << "    using all_metadata_components = std::tuple<\n";
     size_t count = 0;
     for (const auto& pair : unique_components)
         out << "        " << pair.first << (++count == unique_components.size() ? "" : ",") << "\n";
-    out << "    >;\n\n";
-
-    out << "    using all_mark_metadata_components = std::tuple<";
-    count = 0;
-    bool is_first = true;
-    for (const auto& pair : unique_components) {
-        count++;
-        if (pair.second.mark_component) {
-            out << (count == unique_components.size() || is_first ? "\n" : ",\n");
-            out << "        " << pair.first;
-            is_first = false;
-        }
-        count++;
-    }
-    out << "\n    >;\n\n";
-
-    out << "    using all_simple_metadata_components = std::tuple<";
-    count = 0;
-    is_first = true;
-    for (const auto& pair : unique_components) {
-        count++;
-        if (!pair.second.mark_component) {
-            out << (count == unique_components.size() || is_first ? "\n" : ",\n");
-            out << "        " << pair.first;
-            is_first = false;
-        }
-    }
-    out << "\n    >;\n";
-
-
+    out << "    >;\n";
     out << "}\n";
 }
 
@@ -168,11 +133,6 @@ void generate_components_to_packet_file(const std::string& components_path, cons
         const std::string& component_name = pair.first;
         const MetadataField& field = pair.second;
 
-        if (field.mark_component) {
-            out << "    inline std::pair<uint8_t, base_objects::entity_metadata> to_metadata(const " << component_name << "&, bool exists) {\n";
-            out << "        return {" << component_name << "::network_id, base_objects::entity_metadata{ base_objects::entity_metadata::boolean{.value = exists} }};\n";
-            out << "    }\n";
-        } else {
             auto it = type_map.find(field.type_name);
             if (it != type_map.end()) {
                 out << "    inline std::pair<uint8_t, base_objects::entity_metadata> to_metadata(const " << component_name << "& comp) {\n";
@@ -183,7 +143,6 @@ void generate_components_to_packet_file(const std::string& components_path, cons
 
                 out << "    }\n";
             }
-        }
     }
     out << "\n}\n";
 }
@@ -215,48 +174,48 @@ protected:
     template<class T>
     static consteval bool is_one_of(){
         return (... || std::is_same_v<T, CoreComponents>) 
-        || std::is_same_v<api::ecs::com::position, T> 
-        || std::is_same_v<api::ecs::com::motion, T> 
-        || std::is_same_v<api::ecs::com::gravity, T> 
-        || std::is_same_v<api::ecs::com::bounding_box, T> 
-        || std::is_same_v<api::ecs::com::on_ground, T> 
-        || std::is_same_v<api::ecs::com::rotation, T> 
-        || std::is_same_v<api::ecs::com::head_rotation, T> 
-        || std::is_same_v<api::ecs::com::protocol_id, T> 
-        || std::is_same_v<api::ecs::com::uuid, T> 
-        || std::is_same_v<api::ecs::com::entity_type, T> 
-        || std::is_same_v<api::ecs::com::nbt, T> 
-        || std::is_same_v<api::ecs::com::server_nbt, T>
-        || std::is_same_v<api::ecs::com::spectating_players, T>
-        || std::is_same_v<api::ecs::com::world_syncing, T>
-        || std::is_same_v<api::ecs::com::ride_entity, T>
-        || std::is_same_v<api::ecs::com::ride_by_entity, T>
-        || std::is_same_v<api::ecs::com::attached_to, T>
-        || std::is_same_v<api::ecs::com::attached, T>
-        || std::is_same_v<api::ecs::com::effects, T>;
+        || std::is_same_v<api::ecs::com::entities::position, T> 
+        || std::is_same_v<api::ecs::com::entities::motion, T> 
+        || std::is_same_v<api::ecs::com::entities::gravity, T> 
+        || std::is_same_v<api::ecs::com::entities::bounding_box, T> 
+        || std::is_same_v<api::ecs::com::entities::on_ground, T> 
+        || std::is_same_v<api::ecs::com::entities::rotation, T> 
+        || std::is_same_v<api::ecs::com::entities::head_rotation, T> 
+        || std::is_same_v<api::ecs::com::entities::protocol_id, T> 
+        || std::is_same_v<api::ecs::com::entities::uuid, T> 
+        || std::is_same_v<api::ecs::com::entities::entity_type, T> 
+        || std::is_same_v<api::ecs::com::entities::nbt, T> 
+        || std::is_same_v<api::ecs::com::entities::server_nbt, T>
+        || std::is_same_v<api::ecs::com::entities::spectating_players, T>
+        || std::is_same_v<api::ecs::com::entities::world_syncing, T>
+        || std::is_same_v<api::ecs::com::entities::ride_entity, T>
+        || std::is_same_v<api::ecs::com::entities::ride_by_entity, T>
+        || std::is_same_v<api::ecs::com::entities::attached_to, T>
+        || std::is_same_v<api::ecs::com::entities::attached, T>
+        || std::is_same_v<api::ecs::com::entities::effects, T>;
     }
 
 public:
     using core_components_tuple = std::tuple<
-        api::ecs::com::position,
-        api::ecs::com::motion,
-        api::ecs::com::gravity,
-        api::ecs::com::bounding_box,
-        api::ecs::com::on_ground,
-        api::ecs::com::rotation, 
-        api::ecs::com::head_rotation,
-        api::ecs::com::protocol_id,
-        api::ecs::com::uuid,
-        api::ecs::com::entity_type,
-        api::ecs::com::nbt,
-        api::ecs::com::server_nbt,
-        api::ecs::com::spectating_players,
-        api::ecs::com::world_syncing,
-        api::ecs::com::ride_entity,
-        api::ecs::com::ride_by_entity,
-        api::ecs::com::attached_to,
-        api::ecs::com::attached,
-        api::ecs::com::effects,
+        api::ecs::com::entities::position,
+        api::ecs::com::entities::motion,
+        api::ecs::com::entities::gravity,
+        api::ecs::com::entities::bounding_box,
+        api::ecs::com::entities::on_ground,
+        api::ecs::com::entities::rotation, 
+        api::ecs::com::entities::head_rotation,
+        api::ecs::com::entities::protocol_id,
+        api::ecs::com::entities::uuid,
+        api::ecs::com::entities::entity_type,
+        api::ecs::com::entities::nbt,
+        api::ecs::com::entities::server_nbt,
+        api::ecs::com::entities::spectating_players,
+        api::ecs::com::entities::world_syncing,
+        api::ecs::com::entities::ride_entity,
+        api::ecs::com::entities::ride_by_entity,
+        api::ecs::com::entities::attached_to,
+        api::ecs::com::entities::attached,
+        api::ecs::com::entities::effects,
         CoreComponents...>;
 
     explicit entity_wrapper(api::ecs::entity e) : m_entity(e) {}
@@ -289,84 +248,84 @@ public:
     operator api::ecs::entity() const { return m_entity; }
 
 
-    api::ecs::com::position& position() { return *modify<api::ecs::com::position>(); }
-    const api::ecs::com::position& position() const { return get<api::ecs::com::position>(); }
+    api::ecs::com::entities::position& position() { return *modify<api::ecs::com::entities::position>(); }
+    const api::ecs::com::entities::position& position() const { return get<api::ecs::com::entities::position>(); }
 
-    api::ecs::com::motion& motion() { return *modify<api::ecs::com::motion>(); }
-    const api::ecs::com::motion& motion() const { return get<api::ecs::com::motion>(); }
+    api::ecs::com::entities::motion& motion() { return *modify<api::ecs::com::entities::motion>(); }
+    const api::ecs::com::entities::motion& motion() const { return get<api::ecs::com::entities::motion>(); }
 
-    double gravity() const { return get<api::ecs::com::gravity>().value; }
+    double gravity() const { return get<api::ecs::com::entities::gravity>().value; }
 
-    int32_t protocol_id() const { return get<api::ecs::com::protocol_id>().value; }
+    int32_t protocol_id() const { return get<api::ecs::com::entities::protocol_id>().value; }
 
-    base_objects::uuid uuid() const { return get<api::ecs::com::uuid>().value; }
+    base_objects::uuid uuid() const { return get<api::ecs::com::entities::uuid>().value; }
 
-    int32_t entity_type() const { return get<api::ecs::com::entity_type>().value; }
+    int32_t entity_type() const { return get<api::ecs::com::entities::entity_type>().value; }
 
-    const api::entity_data& const_data() const { return get<api::ecs::com::entity_type>().const_data(); }
+    const api::entity_data& const_data() const { return get<api::ecs::com::entities::entity_type>().const_data(); }
 
-    enbt::compound& nbt() { return modify<api::ecs::com::nbt>()->get(); }
-    const enbt::compound& nbt() const { return get<api::ecs::com::nbt>().get(); }
+    enbt::compound& nbt() { return modify<api::ecs::com::entities::nbt>()->get(); }
+    const enbt::compound& nbt() const { return get<api::ecs::com::entities::nbt>().get(); }
 
-    enbt::compound& server_nbt() { return modify<api::ecs::com::server_nbt>()->get(); }
-    const enbt::compound& server_nbt() const { return get<api::ecs::com::server_nbt>().get(); }
+    enbt::compound& server_nbt() { return modify<api::ecs::com::entities::server_nbt>()->get(); }
+    const enbt::compound& server_nbt() const { return get<api::ecs::com::entities::server_nbt>().get(); }
 
-    api::ecs::com::bounding_box& bounding_box() { return modify<api::ecs::com::bounding_box>(); }
-    const api::ecs::com::bounding_box& bounding_box() const { return get<api::ecs::com::bounding_box>(); }
+    api::ecs::com::entities::bounding_box& bounding_box() { return modify<api::ecs::com::entities::bounding_box>(); }
+    const api::ecs::com::entities::bounding_box& bounding_box() const { return get<api::ecs::com::entities::bounding_box>(); }
 
-    bool& on_ground() { return modify<api::ecs::com::on_ground>()->value; }
-    bool on_ground() const { return get<api::ecs::com::on_ground>().value; }
+    bool& on_ground() { return modify<api::ecs::com::entities::on_ground>()->value; }
+    bool on_ground() const { return get<api::ecs::com::entities::on_ground>().value; }
 
-    api::ecs::com::rotation& rotation() { return modify<api::ecs::com::rotation>(); }
-    const api::ecs::com::rotation& rotation() const { return get<api::ecs::com::rotation>(); }
+    api::ecs::com::entities::rotation& rotation() { return modify<api::ecs::com::entities::rotation>(); }
+    const api::ecs::com::entities::rotation& rotation() const { return get<api::ecs::com::entities::rotation>(); }
 
-    api::ecs::com::head_rotation& head_rotation() { return modify<api::ecs::com::head_rotation>()->value; }
-    const api::ecs::com::head_rotation& head_rotation() const { return get<api::ecs::com::head_rotation>().value; }
+    api::ecs::com::entities::head_rotation& head_rotation() { return modify<api::ecs::com::entities::head_rotation>()->value; }
+    const api::ecs::com::entities::head_rotation& head_rotation() const { return get<api::ecs::com::entities::head_rotation>().value; }
 
-    list_array<base_objects::client_data_holder>& spectating_players() { return modify<api::ecs::com::spectating_players>()->value; }
-    const list_array<base_objects::client_data_holder>& spectating_players() const { return get<api::ecs::com::spectating_players>().value; }
+    list_array<base_objects::client_data_holder>& spectating_players() { return modify<api::ecs::com::entities::spectating_players>()->value; }
+    const list_array<base_objects::client_data_holder>& spectating_players() const { return get<api::ecs::com::entities::spectating_players>().value; }
 
-    api::ecs::com::world_syncing& world_syncing() { return *modify<api::ecs::com::world_syncing>(); }
-    const api::ecs::com::world_syncing& world_syncing() const { return get<api::ecs::com::world_syncing>(); }
+    api::ecs::com::entities::world_syncing& world_syncing() { return *modify<api::ecs::com::entities::world_syncing>(); }
+    const api::ecs::com::entities::world_syncing& world_syncing() const { return get<api::ecs::com::entities::world_syncing>(); }
 
-    std::optional<api::ecs::entity>& ride_entity() { return modify<api::ecs::com::ride_entity>()->value; }
-    const std::optional<api::ecs::entity>& ride_entity() const { return get<api::ecs::com::ride_entity>().value; }
+    std::optional<api::ecs::entity>& ride_entity() { return modify<api::ecs::com::entities::ride_entity>()->value; }
+    const std::optional<api::ecs::entity>& ride_entity() const { return get<api::ecs::com::entities::ride_entity>().value; }
 
-    list_array<api::ecs::entity>& ride_by_entity() { return modify<api::ecs::com::ride_by_entity>()->value; }
-    const list_array<api::ecs::entity>& ride_by_entity() const { return get<api::ecs::com::ride_by_entity>().value; }
+    list_array<api::ecs::entity>& ride_by_entity() { return modify<api::ecs::com::entities::ride_by_entity>()->value; }
+    const list_array<api::ecs::entity>& ride_by_entity() const { return get<api::ecs::com::entities::ride_by_entity>().value; }
 
-    std::optional<std::variant<api::ecs::entity, base_objects::uuid>>& attached_to() { return modify<api::ecs::com::attached_to>()->value; }
-    const std::optional<std::variant<api::ecs::entity, base_objects::uuid>>& attached_to() const { return get<api::ecs::com::attached_to>().value; }
+    std::optional<std::variant<api::ecs::entity, base_objects::uuid>>& attached_to() { return modify<api::ecs::com::entities::attached_to>()->value; }
+    const std::optional<std::variant<api::ecs::entity, base_objects::uuid>>& attached_to() const { return get<api::ecs::com::entities::attached_to>().value; }
 
-    list_array<std::variant<api::ecs::entity, base_objects::uuid>>& attached() { return modify<api::ecs::com::attached>()->value; }
-    const list_array<std::variant<api::ecs::entity, base_objects::uuid>>& attached() const { return get<api::ecs::com::attached>().value; }
+    list_array<std::variant<api::ecs::entity, base_objects::uuid>>& attached() { return modify<api::ecs::com::entities::attached>()->value; }
+    const list_array<std::variant<api::ecs::entity, base_objects::uuid>>& attached() const { return get<api::ecs::com::entities::attached>().value; }
 
-    api::ecs::com::effects& effects() { return *modify<api::ecs::com::effects>(); }
-    const api::ecs::com::effects& effects() const { return get<api::ecs::com::effects>(); }
+    api::ecs::com::entities::effects& effects() { return *modify<api::ecs::com::entities::effects>(); }
+    const api::ecs::com::entities::effects& effects() const { return get<api::ecs::com::entities::effects>(); }
 };
 
 template <class WrapperType, class... Comps>
 bool check_all_components(api::ecs::entity e, std::tuple<Comps...>) {
     return (e.has<Comps>() && ...) 
-        && e.has<api::ecs::com::position> ()
-        && e.has<api::ecs::com::motion>()
-        && e.has<api::ecs::com::gravity>()
-        && e.has<api::ecs::com::bounding_box>()
-        && e.has<api::ecs::com::on_ground>()
-        && e.has<api::ecs::com::rotation>()
-        && e.has<api::ecs::com::head_rotation>()
-        && e.has<api::ecs::com::protocol_id>()
-        && e.has<api::ecs::com::uuid>()
-        && e.has<api::ecs::com::entity_type>()
-        && e.has<api::ecs::com::nbt>()
-        && e.has<api::ecs::com::server_nbt>()
-        && e.has<api::ecs::com::spectating_players>()
-        && e.has<api::ecs::com::world_syncing>()
-        && e.has<api::ecs::com::ride_entity>()
-        && e.has<api::ecs::com::ride_by_entity>()
-        && e.has<api::ecs::com::attached_to>()
-        && e.has<api::ecs::com::attached>()
-        && e.has<api::ecs::com::effects>()
+        && e.has<api::ecs::com::entities::position> ()
+        && e.has<api::ecs::com::entities::motion>()
+        && e.has<api::ecs::com::entities::gravity>()
+        && e.has<api::ecs::com::entities::bounding_box>()
+        && e.has<api::ecs::com::entities::on_ground>()
+        && e.has<api::ecs::com::entities::rotation>()
+        && e.has<api::ecs::com::entities::head_rotation>()
+        && e.has<api::ecs::com::entities::protocol_id>()
+        && e.has<api::ecs::com::entities::uuid>()
+        && e.has<api::ecs::com::entities::entity_type>()
+        && e.has<api::ecs::com::entities::nbt>()
+        && e.has<api::ecs::com::entities::server_nbt>()
+        && e.has<api::ecs::com::entities::spectating_players>()
+        && e.has<api::ecs::com::entities::world_syncing>()
+        && e.has<api::ecs::com::entities::ride_entity>()
+        && e.has<api::ecs::com::entities::ride_by_entity>()
+        && e.has<api::ecs::com::entities::attached_to>()
+        && e.has<api::ecs::com::entities::attached>()
+        && e.has<api::ecs::com::entities::effects>()
         ;
 }
 
@@ -397,37 +356,31 @@ using generic_entity = entity_wrapper<>;
         out << "    // --- Convenience Accessors ---\n";
 
         for (const auto& field : entity.metadata_fields) {
-
-            if (field.mark_component) {
-                out << "    bool is_" << field.field_name << "() const { return m_entity.has<" << field.component_name << ">(); }\n";
-                out << "    void set_" << field.field_name << "(bool v) { if(v) m_entity.add<" << field.component_name << ">(); else m_entity.remove<" << field.component_name << ">(); }\n\n";
-            } else {
-                auto it = type_map.find(field.type_name);
-                if (it != type_map.end()) {
-                    out << "    " << it->second.first << "& " << field.field_name << "() { return modify<" << field.component_name << ">()->value; }\n";
-                    out << "    const " << it->second.first << "& " << field.field_name << "() const { return get<" << field.component_name << ">().value; }\n\n";
-                }
+            auto it = type_map.find(field.type_name);
+            if (it != type_map.end()) {
+                out << "    " << it->second.first << "& " << field.field_name << "() { return modify<" << field.component_name << ">()->value; }\n";
+                out << "    const " << it->second.first << "& " << field.field_name << "() const { return get<" << field.component_name << ">().value; }\n\n";
             }
         }
 
         if (entity.class_name == "player") {
-            out << "    uint8_t& held_slot() { return modify<api::ecs::com::held_slot>()->hotbar_slot; }\n";
-            out << "    const uint8_t& held_slot() const { return get<api::ecs::com::held_slot>().hotbar_slot; }\n\n";
+            out << "    uint8_t& held_slot() { return modify<api::ecs::com::entities::held_slot>()->hotbar_slot; }\n";
+            out << "    const uint8_t& held_slot() const { return get<api::ecs::com::entities::held_slot>().hotbar_slot; }\n\n";
 
-            out << "    api::ecs::com::experience& experience() { return *modify<api::ecs::com::experience>(); }\n";
-            out << "    const api::ecs::com::experience& experience() const { return get<api::ecs::com::experience>(); }\n\n";
+            out << "    api::ecs::com::entities::experience& experience() { return *modify<api::ecs::com::entities::experience>(); }\n";
+            out << "    const api::ecs::com::entities::experience& experience() const { return get<api::ecs::com::entities::experience>(); }\n\n";
 
-            out << "    int32_t& food() { return modify<api::ecs::com::food>()->value; }\n";
-            out << "    const int32_t& food() const { return get<api::ecs::com::food>().value; }\n\n";
+            out << "    int32_t& food() { return modify<api::ecs::com::entities::food>()->value; }\n";
+            out << "    const int32_t& food() const { return get<api::ecs::com::entities::food>().value; }\n\n";
 
-            out << "    float& saturation() { return modify<api::ecs::com::saturation>()->value; }\n";
-            out << "    const float& saturation() const { return get<api::ecs::com::saturation>().value; }\n\n";
+            out << "    float& saturation() { return modify<api::ecs::com::entities::saturation>()->value; }\n";
+            out << "    const float& saturation() const { return get<api::ecs::com::entities::saturation>().value; }\n\n";
 
-            out << "    std::unordered_map<uint32_t, base_objects::slot_data>& inventory() { return modify<api::ecs::com::inventory>()->get(); }\n";
-            out << "    const std::unordered_map<uint32_t, base_objects::slot_data>& inventory() const { return get<api::ecs::com::inventory>().get(); }\n\n";
+            out << "    std::unordered_map<uint32_t, base_objects::slot_data>& inventory() { return modify<api::ecs::com::entities::inventory>()->get(); }\n";
+            out << "    const std::unordered_map<uint32_t, base_objects::slot_data>& inventory() const { return get<api::ecs::com::entities::inventory>().get(); }\n\n";
 
-            out << "    std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& custom_inventory() { return modify<api::ecs::com::custom_inventory>()->get(); }\n";
-            out << "    const std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& custom_inventory() const { return get<api::ecs::com::custom_inventory>().get(); }\n\n";
+            out << "    std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& custom_inventory() { return modify<api::ecs::com::entities::custom_inventory>()->get(); }\n";
+            out << "    const std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& custom_inventory() const { return get<api::ecs::com::entities::custom_inventory>().get(); }\n\n";
         }
 
         out << "};\n\n";
@@ -449,7 +402,7 @@ void generate_factory_file(const std::string& components_path, const std::string
     out << "#include \"" << components_path << "\"\n";
     out << "#include <optional>\n\n";
     out << "namespace copper_server::generated::entity {\n";
-    out << "    void recipe_registration(int32_t entity_id, api::ecs::entity_recipe& recipe);\n";
+    out << "    void register_entities();\n";
     out << "}\n";
 }
 
@@ -465,45 +418,45 @@ void generate_factory_cpp_file(const std::string& components_path, const std::st
     out << "#include <optional>\n";
     out << "#include <src/api/ecs/base_components.hpp>\n";
     out << "#include <src/base_objects/shared_client_data.hpp>\n\n";
+    out << "#include <src/util/reflect/api/packets/chat_type.hpp>\n";
+    out << "#include <src/util/reflect/base_objects/block_entity.hpp>\n";
+    out << "#include <src/util/reflect/base_objects/component.hpp>\n";
+    out << "#include <src/util/reflect/base_objects/dye_color.hpp>\n";
+    out << "#include <src/util/reflect/base_objects/entity/metadata.hpp>\n";
+    out << "#include <src/util/reflect/base_objects/parsers.hpp>\n";
+    out << "#include <src/util/reflect/base_objects/particle_data.hpp>\n";
+    out << "#include <src/util/reflect/calculations.hpp>\n\n";
+    out << "#include <src/api/ecs/entity_definition.hpp>\n\n";
+
     out << "namespace copper_server::generated::entity {\n\n";
-    out << "    void recipe_registration(int32_t entity_id, api::ecs::entity_recipe& recipe) {\n";
-    out << "        recipe\n";
-    out << "            .with<api::ecs::com::position>()\n";
-    out << "            .with<api::ecs::com::motion>()\n";
-    out << "            .with<api::ecs::com::bounding_box>()\n";
-    out << "            .with<api::ecs::com::gravity>()\n";
-    out << "            .with<api::ecs::com::on_ground>()\n";
-    out << "            .with<api::ecs::com::rotation>()\n";
-    out << "            .with<api::ecs::com::head_rotation>()\n";
-    out << "            .with<api::ecs::com::protocol_id>()\n";
-    out << "            .with<api::ecs::com::uuid>()\n";
-    out << "            .with<api::ecs::com::entity_type>()\n";
-    out << "            .with<api::ecs::com::nbt>()\n";
-    out << "            .with<api::ecs::com::server_nbt>()\n";
-    out << "            .with<api::ecs::com::spectating_players>()\n";
-    out << "            .with<api::ecs::com::world_syncing>()\n";
-    out << "            .with<api::ecs::com::ride_entity>()\n";
-    out << "            .with<api::ecs::com::ride_by_entity>()\n";
-    out << "            .with<api::ecs::com::attached_to>()\n";
-    out << "            .with<api::ecs::com::attached>()\n";
-    out << "            .with<api::ecs::com::effects>();\n";
-    out << "        switch(entity_id) {\n";
+    out << "    void register_entities() {\n";
 
     for (const auto& entity : entities) {
-        out << "            case " << entity.id << ": {\n";
-        out << "                recipe\n";
+        out << "        api::ecs::initialization::make_entity_definition(\"" << entity.entity_name << "\")\n";
+        out << "            .add_locked<api::ecs::com::entities::position>()\n";
+        out << "            .add_locked<api::ecs::com::entities::motion>()\n";
+        out << "            .add_locked<api::ecs::com::entities::bounding_box>()\n";
+        out << "            .add_locked<api::ecs::com::entities::gravity>()\n";
+        out << "            .add_locked<api::ecs::com::entities::on_ground>()\n";
+        out << "            .add_locked<api::ecs::com::entities::rotation>()\n";
+        out << "            .add_locked<api::ecs::com::entities::head_rotation>()\n";
+        out << "            .add_locked<api::ecs::com::entities::protocol_id>()\n";
+        out << "            .add_locked<api::ecs::com::entities::uuid>()\n";
+        out << "            .add_locked(api::ecs::com::entities::entity_type{" << entity.id << "})\n";
+        out << "            .add_locked<api::ecs::com::entities::nbt>()\n";
+        out << "            .add_locked<api::ecs::com::entities::server_nbt>()\n";
+        out << "            .add_locked<api::ecs::com::entities::spectating_players>()\n";
+        out << "            .add_locked<api::ecs::com::entities::world_syncing>()\n";
+        out << "            .add_locked<api::ecs::com::entities::ride_entity>()\n";
+        out << "            .add_locked<api::ecs::com::entities::ride_by_entity>()\n";
+        out << "            .add_locked<api::ecs::com::entities::attached_to>()\n";
+        out << "            .add_locked<api::ecs::com::entities::attached>()\n";
+        out << "            .add_locked<api::ecs::com::entities::effects>()";
         for (const auto& field : entity.metadata_fields)
-            if (field.type_name != "Boolean")
-                out << "                    .with<" << field.component_name << ">()\n";
-
-        out << "                    .freeze();\n";
-        out << "                break;\n";
-        out << "            }\n";
+            out << "\n            .add_reset_on_remove<" << field.component_name << ">()";
+        out << ";\n";
     }
 
-    out << "            default:\n";
-    out << "                break;\n";
-    out << "        }\n";
     out << "    }\n";
     out << "}\n";
 }
@@ -543,6 +496,7 @@ int main(int argc, char* argv[]) {
     std::set<std::string> class_name_add;
     for (const auto& entity_pair : root) {
         EntityInfo current_entity;
+        current_entity.entity_name = entity_pair.first;
         current_entity.class_name = sanitize_name(entity_pair.first);
         current_entity.id = entity_pair.second.get<int>("id");
         try {
@@ -554,11 +508,6 @@ int main(int argc, char* argv[]) {
                 field.component_name = field.field_name;
                 if (field.field_name == current_entity.class_name)
                     field.field_name = "get_" + field.field_name;
-
-                if (field.type_name == "Boolean") {
-                    field.component_name += "_mark";
-                    field.mark_component = true;
-                }
 
                 if (auto it = unique_components.find(field.component_name); it == unique_components.end()) {
                     current_entity.metadata_fields.push_back(field);
@@ -600,13 +549,13 @@ int main(int argc, char* argv[]) {
     generate_components_to_packet_file(components_file, components_to_packet_file, unique_components);
 
     std::vector<MetadataField> player_fields;
-    player_fields.push_back(MetadataField{"api::ecs::com::held_slot"});
-    player_fields.push_back(MetadataField{"api::ecs::com::experience"});
-    player_fields.push_back(MetadataField{"api::ecs::com::food"});
-    player_fields.push_back(MetadataField{"api::ecs::com::saturation"});
-    player_fields.push_back(MetadataField{"api::ecs::com::inventory"});
-    player_fields.push_back(MetadataField{"api::ecs::com::custom_inventory"});
-    player_fields.push_back(MetadataField{"api::ecs::com::assigned_player"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::held_slot"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::experience"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::food"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::saturation"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::inventory"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::custom_inventory"});
+    player_fields.push_back(MetadataField{"api::ecs::com::entities::assigned_player"});
 
     for (auto& entity : all_entities)
         if (entity.class_name == "player")

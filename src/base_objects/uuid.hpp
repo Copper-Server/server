@@ -4,10 +4,6 @@
 #include <exception>
 #include <string>
 
-namespace enbt{
-    struct raw_uuid;
-}
-
 namespace copper_server::base_objects {
     struct uuid { //in nbt stored as 4 ints
         enum class family_t {
@@ -145,10 +141,6 @@ namespace copper_server::base_objects {
         //in online mode the server should always use clients uuid
 
         static uuid as_null();
-
-        static uuid to_uuid(const enbt::raw_uuid&) noexcept;
-
-        operator enbt::raw_uuid() const noexcept;
 
         uint8_t data[16];
     };

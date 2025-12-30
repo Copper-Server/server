@@ -9,11 +9,11 @@
 #include <cassert>
 #include <exception>
 #include <functional>
-#include <library/enbt/enbt.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
 #include <src/plugin/main.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 #include <utf8.h>
 #include <zlib.h>
@@ -122,14 +122,14 @@ namespace copper_server::build_in_plugins::network::tcp {
         legacy_motd.push_back(u'\0'); //why legacy need to know about online players?
         if constexpr (std::endian::native != std::endian::big)
             for (char16_t& it : legacy_motd)
-                it = enbt::endian_helpers::convert_endian(std::endian::big, it);
+                it = util::convert_endian(std::endian::big, it);
         list_array<uint8_t> response;
         response.push_back(0xFF); //KICK packet
         if (legacy_motd.size() > INT16_MAX)
             throw std::invalid_argument("motd too long");
         uint16_t len = (uint16_t)legacy_motd.size();
         if constexpr (std::endian::native != std::endian::big)
-            len = enbt::endian_helpers::convert_endian(std::endian::big, len);
+            len = util::convert_endian(std::endian::big, len);
         response.push_back(uint8_t(len >> 8));
         response.push_back(uint8_t(len & 0xFF));
         response.push_back(reinterpret_cast<uint8_t*>(legacy_motd.data()), legacy_motd.size() * 2);

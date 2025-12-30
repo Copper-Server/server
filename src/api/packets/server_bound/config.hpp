@@ -8,10 +8,10 @@
  */
 #ifndef SRC_API_PACKETS_SERVER_BOUND_CONFIGURATION
 #define SRC_API_PACKETS_SERVER_BOUND_CONFIGURATION
-#include <library/enbt/enbt.hpp>
 #include <optional>
 #include <src/api/packets/ops.hpp>
 #include <src/api/packets/types.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server::api::packets::server_bound::config {
     struct client_information : public packet<0x00> {
@@ -98,7 +98,7 @@ namespace copper_server::api::packets::server_bound::config {
 
     struct custom_click_action : public packet<0x08> {
         identifier id;
-        enbt::value payload;
+        util::nbt payload;
     };
 
     struct accept_code_of_conduct : public packet<0x09> {};

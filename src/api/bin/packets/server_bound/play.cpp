@@ -15,7 +15,7 @@
 #include <src/util/reflect/api/packets/slot.hpp>
 #include <src/util/reflect/api/packets/types.hpp>
 
-#include <src/api/bin/packets/generic_auto.hpp>
+#include <src/util/encoding/packet/generic_auto.hpp>
 
 namespace copper_server::api::packets {
     auto_define_packet_ops(server_bound::play::accept_teleportation);

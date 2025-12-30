@@ -9,8 +9,8 @@
 #ifndef SRC_BASE_OBJECTS_SLOT_DISPLAY
 #define SRC_BASE_OBJECTS_SLOT_DISPLAY
 #include <functional>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 #include <vector>
 
@@ -70,10 +70,10 @@ namespace copper_server::base_objects {
         }
 
         struct custom {
-            enbt::compound value;
+            util::nbt_compound value;
 
             //if empty, will be ignored
-            std::function<list_array<slot>(const enbt::compound&)> to_slots;
+            std::function<list_array<slot>(const util::nbt_compound&)> to_slots;
             static constexpr const char name[] = "copper_server:custom";
         };
 

@@ -62,7 +62,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
                     if (e.current_world()) {
                         int32_t item_id = 0;
-                        enbt::value data;
+                        util::nbt data;
                         e.current_world()->get_block(
                             packet.location.x,
                             packet.location.y,
@@ -70,8 +70,10 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             [&](auto block) {
                                 item_id = block.getStaticData().item_id;
                             },
-                            [&](auto block, auto& edata) {
-                                item_id = block.getStaticData().item_id;
+                            [&](auto eblock) {
+                                data = eblock.get
+                                           item_id
+                                    = block.getStaticData().item_id;
                                 if (packet.include_data)
                                     data = edata;
                             }

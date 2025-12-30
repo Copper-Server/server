@@ -13,6 +13,7 @@
 #include <src/api/log.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <src/util/conversions.hpp>
+#include <src/util/endian.hpp>
 #include <src/util/json_helpers.hpp>
 #include <thread>
 
@@ -233,8 +234,8 @@ namespace copper_server::api::configuration {
                 res.resize(file_size);
                 file.read((char*)res.data(), res.size());
                 uint32_t width = 0, height = 0;
-                width = enbt::endian_helpers::convert_endian(std::endian::big, *(uint32_t*)&res[16]);
-                height = enbt::endian_helpers::convert_endian(std::endian::big, *(uint32_t*)&res[20]);
+                width = util::convert_endian(std::endian::big, *(uint32_t*)&res[16]);
+                height = util::convert_endian(std::endian::big, *(uint32_t*)&res[20]);
 
                 if (width != 64 || height != 64) {
                     api::log::error("server", "Failed to read favicon, icon resolution not equal to 64x64, skipping...");

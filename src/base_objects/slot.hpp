@@ -8,20 +8,15 @@
  */
 #ifndef SRC_BASE_OBJECTS_SLOT
 #define SRC_BASE_OBJECTS_SLOT
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/component.hpp>
 #include <src/base_objects/dye_color.hpp>
 #include <src/base_objects/position.hpp>
+#include <src/util/nbt.hpp>
 #include <src/util/readers.hpp>
 #include <string>
-
-namespace enbt::io_helper {
-    class value_write_stream;
-    class value_read_stream;
-}
 
 namespace copper_server::util {
     class nbt_read_stream;
@@ -52,7 +47,7 @@ namespace copper_server::base_objects {
         uint32_t fuel_time = 0;                 //0 == not fuel
         float composter_increase_chance = 0.0f; //0.0f == should not be used in composter
 
-        enbt::compound server_side;
+        util::nbt_compound server_side;
 
         //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
         static void reset_items(); //INTERNAL
@@ -171,13 +166,6 @@ namespace copper_server::base_objects {
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
         static list_array<int32_t> get_slot_data_ids();
-
-
-        enbt::compound to_enbt() const;
-        static slot_data from_enbt(enbt::compound_const_ref compound);
-
-        void to_enbt(enbt::io_helper::value_write_stream&) const;
-        static slot_data from_enbt(enbt::io_helper::value_read_stream& stream);
 
         copper_server::api::packets::slot to_packet() const;
         static slot_data from_packet(copper_server::api::packets::slot&&);

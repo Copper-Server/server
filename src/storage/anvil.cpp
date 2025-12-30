@@ -9,14 +9,25 @@
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/id.hpp>
 #include <src/storage/anvil.hpp>
+#include <src/util/calculations.hpp>
 #include <src/util/nbt_stream.hpp>
 
 namespace copper_server::storage {
     anvil::anvil(const std::filesystem::path& region_path) : manager(region_path, "mca") {}
 
     constexpr auto world_version = 4556;
+
+    struct tile_tick {
+        api::id::block_type id;
+        int32_t priority;
+        int32_t ticks;
+        int32_t x;
+        int32_t y;
+        int32_t z;
+    };
 
     fast_task::future_ptr<std::shared_ptr<base_objects::world::chunk_data>> anvil::get_chunk(int32_t chunk_x, int32_t chunk_z) {
         return fast_task::future_tool::chain<
@@ -125,7 +136,15 @@ namespace copper_server::storage {
                 int32_t z_pos;
                 std::string status;
                 int64_t last_update;
+                int64_t inhabited_time = 0;
                 std::vector<base_objects::world::sub_chunk_data> sections;
+                boost::unordered_flat_map<util::xyz<int32_t>, api::ecs::unique_entity> block_entities; //0xXYZ => block_entity
+                std::unordered_map<std::string, std::vector<uint8_t>> carving_masks;
+                base_objects::world::height_maps h_maps;
+                std::vector<tile_tick> block_ticks;
+                std::vector<tile_tick> fluid_ticks;
+                std::vector<std::vector<base_objects::local_block_pos>> post_processing;
+
 
                 util::nbt_collection::compound_flex collect;
                 collect
@@ -135,19 +154,137 @@ namespace copper_server::storage {
                     .collect_as_required("yPos", y_pos)
                     .collect_as_required("Status", status)
                     .collect_as_required("LastUpdate", last_update)
-                    .collect_iterate_required("sections", [&collect_section, &section_pos, &sections](auto& it) {
-                        auto sect = collect_section(it);
-                        if (sections.size() <= (uint8_t)section_pos)
-                            sections.resize(uint16_t(section_pos) + 1);
-                        sections[(uint8_t)section_pos] = std::move(sect);
+                    .collect_required("sections", [&collect_section, &section_pos, &sections](auto& this_stream) {
+                        this_stream.iterate(
+                            [&sections](size_t size) {
+                                sections.reserve(size);
+                            },
+                            [&](util::nbt_read_stream& it) {
+                                auto sect = collect_section(it);
+                                if (sections.size() <= (uint8_t)section_pos)
+                                    sections.resize(uint16_t(section_pos) + 1);
+                                sections[(uint8_t)section_pos] = std::move(sect);
+                            }
+                        );
                     })
-                    .collect_iterate_required("block_entities", [](auto& name, auto& it) {
+                    .collect_iterate_required("block_entities", [&block_entities](auto& name, util::nbt_read_stream& it) {
                         api::id::block_entity_type id;
-
-
-                        //TODO
+                        int32_t x = 0, y = 0, z = 0;
+                        bool keep_packed = false;
+                        it.double_pass_read(
+                            [&](util::nbt_read_stream& this_stream) {
+                                util::nbt_collection::compound_flex collect;
+                                collect
+                                    .collect_into_required("id", id)
+                                    .collect_into_required("x", id)
+                                    .collect_into_required("y", id)
+                                    .collect_into_required("z", id)
+                                    .collect_into("keepPacked", keep_packed)
+                                    .make_collect(this_stream);
+                            },
+                            [&](util::nbt_read_stream& this_stream) {
+                                block_entities[{x, y, z}]
+                                    = api::ecs::get_block_entity_definition(id.to_string())
+                                          .from_nbt(this_stream);
+                            }
+                        );
                     })
-
+                    .collect_iterate("CarvingMasks", [&carving_masks](auto& name, util::nbt_read_stream& this_stream) {
+                        this_stream
+                            .read_compound()
+                            .iterable([&carving_masks](auto& craver, util::nbt_read_stream& it) {
+                                std::vector<uint8_t> res;
+                                it.iterate_into(res);
+                                carving_masks[craver] = std::move(res);
+                            });
+                    })
+                    .collect("Heightmaps", [&h_maps](util::nbt_read_stream& this_stream) { //TODO verify the nbt representation
+                        this_stream
+                            .read_compound()
+                            .collect("MOTION_BLOCKING", [&h_maps](util::nbt_read_stream& it) {
+                                it.skip();
+                            })
+                            .collect("MOTION_BLOCKING_NO_LEAVES", [&h_maps](util::nbt_read_stream& it) {
+                                it.skip();
+                            })
+                            .collect("OCEAN_FLOOR", [&h_maps](util::nbt_read_stream& it) {
+                                it.skip();
+                            })
+                            .collect("OCEAN_FLOOR_WG", [&h_maps](util::nbt_read_stream& it) {
+                                it.skip();
+                            })
+                            .collect("WORLD_SURFACE", [&h_maps](util::nbt_read_stream& it) {
+                                it.skip();
+                            })
+                            .collect("WORLD_SURFACE_WG", [&h_maps](util::nbt_read_stream& it) {
+                                it.skip();
+                            })
+                            .make_collect();
+                    })
+                    .collect("fluid_ticks", [&fluid_ticks](util::nbt_read_stream& this_stream) {
+                        this_stream.iterate(
+                            [&fluid_ticks](size_t size) {
+                                fluid_ticks.reserve(size);
+                            },
+                            [&fluid_ticks](util::nbt_read_stream& it) {
+                                tile_tick res;
+                                std::string id;
+                                it.read_compound()
+                                    .collect_as("i", id)
+                                    .collect_as("p", res.priority)
+                                    .collect_as("t", res.ticks)
+                                    .collect_as("x", res.x)
+                                    .collect_as("y", res.y)
+                                    .collect_as("z", res.z)
+                                    .force_all_collect();
+                                res.id = id;
+                                fluid_ticks.push_back(std::move(res));
+                            }
+                        );
+                    })
+                    .collect("block_ticks", [&block_ticks](util::nbt_read_stream& this_stream) {
+                        this_stream.iterate(
+                            [&block_ticks](size_t size) {
+                                block_ticks.reserve(size);
+                            },
+                            [&block_ticks](util::nbt_read_stream& it) {
+                                tile_tick res;
+                                std::string id;
+                                it.read_compound()
+                                    .collect_as("i", id)
+                                    .collect_as("p", res.priority)
+                                    .collect_as("t", res.ticks)
+                                    .collect_as("x", res.x)
+                                    .collect_as("y", res.y)
+                                    .collect_as("z", res.z)
+                                    .force_all_collect();
+                                res.id = id;
+                                block_ticks.push_back(std::move(res));
+                            }
+                        );
+                    })
+                    .collect_into("InhabitedTime", inhabited_time)
+                    .collect("PostProcessing", [&post_processing](util::nbt_read_stream& this_stream) {
+                        this_stream.iterate(
+                            [&post_processing](size_t size) {
+                                post_processing.reserve(size);
+                            },
+                            [&post_processing](util::nbt_read_stream& it) {
+                                std::vector<base_objects::local_block_pos> res;
+                                it.iterate(
+                                    [&res](size_t size) {
+                                        res.reserve(size);
+                                    },
+                                    [&res](util::nbt_read_stream& pos) {
+                                        uint16_t pos_res;
+                                        pos.read_into(pos_res);
+                                        res.push_back(std::bit_cast<base_objects::local_block_pos>(pos_res));
+                                    }
+                                );
+                                post_processing.push_back(std::move(res));
+                            }
+                        );
+                    })
 
                     .make_collect(read)
 
@@ -191,11 +328,10 @@ namespace copper_server::storage {
         );
     }
 
-    fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, region_storage::compression_type type, bool use_external_file){
+    fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, region_storage::compression_type type, bool use_external_file) {
         return fast_task::future<void>::make_ready();
     }
 
     fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, const std::string& type, bool use_external_file) {
-        return fast_task::future<void>::make_ready();
     }
 }

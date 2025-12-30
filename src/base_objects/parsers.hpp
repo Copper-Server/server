@@ -9,7 +9,6 @@
 #ifndef SRC_BASE_OBJECTS_PARSERS
 #define SRC_BASE_OBJECTS_PARSERS
 #include <cstdint>
-#include <library/enbt/enbt.hpp>
 #include <src/api/packets/types.hpp>
 #include <src/base_objects/uuid.hpp>
 #include <string>
@@ -278,14 +277,14 @@ namespace copper_server::base_objects {
         struct block_state {
             std::string block_id;
             std::unordered_map<std::string, std::string> states;
-            enbt::value data_tags;
+            util::nbt data_tags;
         };
 
         struct block_predicate {}; //TODO
 
         struct item_stack {
             std::string value;
-            enbt::value data_tags;
+            util::nbt data_tags;
         };
 
         struct item_predicate {}; //TODO
@@ -322,11 +321,11 @@ namespace copper_server::base_objects {
         };
 
         struct nbt_compound_tag {
-            enbt::compound nbt;
+            util::nbt_compound nbt;
         };
 
         struct nbt_tag {
-            enbt::value any_nbt;
+            util::nbt any_nbt;
         };
 
         struct nbt_path {
@@ -389,7 +388,7 @@ namespace copper_server::base_objects {
 
             struct item {
                 std::string item_id;
-                enbt::value nbt;
+                util::nbt nbt;
             };
 
             struct sculk_charge {

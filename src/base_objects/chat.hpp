@@ -8,10 +8,10 @@
  */
 #ifndef SRC_BASE_OBJECTS_CHAT
 #define SRC_BASE_OBJECTS_CHAT
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/dye_color.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 #include <vector>
 
@@ -21,7 +21,7 @@ namespace copper_server::base_objects {
             std::string open_url;
             std::string run_command;
             std::string suggest_command;
-            std::optional<uint32_t> change_page;
+            std::optional<int32_t> change_page;
             std::string copy_to_clipboard;
 
             ~click_event_s();
@@ -86,7 +86,7 @@ namespace copper_server::base_objects {
         chat& set_click_event_open_url(const std::string& _open_url);
         chat& set_click_event_run_command(const std::string& _run_command);
         chat& set_click_event_suggest_command(const std::string& _suggest_command);
-        chat& set_click_event_change_page(uint32_t _change_page);
+        chat& set_click_event_change_page(int32_t _change_page);
         chat& set_click_event_copy_to_clipboard(const std::string& _copy_to_clipboard);
         chat& set_click_event();
 
@@ -106,15 +106,15 @@ namespace copper_server::base_objects {
 
         std::string to_str() const;
         static chat from_str(std::string_view str);
-        enbt::value to_enbt() const;
+        util::nbt to_nbt() const;
 
         void remove_color();
         void remove_color_recursive();
         bool empty() const;
 
         static chat parse_to_chat(std::string_view string);
-        static chat from_enbt(const enbt::value& enbt);
-        static chat from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&&);
+        static chat from_nbt(const util::nbt& nbt);
+        static chat from_nbt_with_format(const util::nbt& nbt, list_array<util::nbt>&&);
         std::string to_ansi_console() const;
 
 

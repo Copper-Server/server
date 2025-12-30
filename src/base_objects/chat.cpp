@@ -92,13 +92,14 @@ namespace copper_server::base_objects {
         return result;
     }
 
-    void formater(list_array<enbt::value>& items, chat& it) {
+    void formater(list_array<util::nbt>& items, chat& it) {
         if (it.get_text().empty() && items.size()) {
             std::string_view str(it.get_text());
             if (auto res = str.find("%"); res != str.npos) {
                 chat insert[3]{it, {}, it};
-                insert[1] = chat::from_enbt(items.take_back());
                 insert[0].set_text(std::string(str.substr(0, res)));
+                insert[1] = chat::from_nbt(items.take_back());
+                insert[2].set_text(std::string(str.substr(res + 1)));
                 for (auto& i : insert[1].get_extra())
                     formater(items, i);
 
@@ -444,7 +445,7 @@ namespace copper_server::base_objects {
         return *this;
     }
 
-    chat& chat::set_click_event_change_page(uint32_t _change_page) {
+    chat& chat::set_click_event_change_page(int32_t _change_page) {
         if (!click_event)
             click_event = std::make_unique<click_event_s>();
         click_event->run_command.clear();
@@ -706,89 +707,90 @@ namespace copper_server::base_objects {
             return from_json(util::js_object::get_object(json_hold));
     }
 
-    enbt::value chat::to_enbt() const {
-        enbt::compound enbt;
+    util::nbt chat::to_nbt() const {
+        util::nbt_compound nbt;
         if (!text.empty()) {
             if (text_is_translation)
-                enbt["translate"] = text;
+                nbt["translate"] = text;
             else
-                enbt["text"] = text;
+                nbt["text"] = text;
         } else {
-            enbt["text"] = "";
+            nbt["text"] = "";
         }
         if (!color.empty())
-            enbt["color"] = color;
+            nbt["color"] = color;
         if (!insertion.empty())
-            enbt["insertion"] = insertion;
+            nbt["insertion"] = insertion;
         if (defined_bold)
-            enbt["bold"] = bold;
+            nbt["bold"] = bold;
         if (defined_italic)
-            enbt["italic"] = italic;
+            nbt["italic"] = italic;
         if (defined_underlined)
-            enbt["underlined"] = underlined;
+            nbt["underlined"] = underlined;
         if (defined_strikethrough)
-            enbt["strikethrough"] = strikethrough;
+            nbt["strikethrough"] = strikethrough;
         if (defined_obfuscated)
-            enbt["obfuscated"] = obfuscated;
+            nbt["obfuscated"] = obfuscated;
         if (click_event) {
-            enbt::compound click_event_enbt;
+            util::nbt_compound click_event_nbt;
             if (!click_event->open_url.empty()) {
-                click_event_enbt["action"] = "open_url";
-                click_event_enbt["value"] = click_event->open_url;
+                click_event_nbt["action"] = "open_url";
+                click_event_nbt["value"] = click_event->open_url;
             } else if (!click_event->run_command.empty()) {
-                click_event_enbt["action"] = "run_command";
-                click_event_enbt["value"] = click_event->run_command;
+                click_event_nbt["action"] = "run_command";
+                click_event_nbt["value"] = click_event->run_command;
             } else if (!click_event->suggest_command.empty()) {
-                click_event_enbt["action"] = "suggest_command";
-                click_event_enbt["value"] = click_event->suggest_command;
+                click_event_nbt["action"] = "suggest_command";
+                click_event_nbt["value"] = click_event->suggest_command;
             } else if (click_event->change_page) {
-                click_event_enbt["action"] = "change_page";
-                click_event_enbt["value"] = *click_event->change_page;
+                click_event_nbt["action"] = "change_page";
+                click_event_nbt["value"] = *click_event->change_page;
             } else if (!click_event->copy_to_clipboard.empty()) {
-                click_event_enbt["action"] = "copy_to_clipboard";
-                click_event_enbt["value"] = click_event->copy_to_clipboard;
+                click_event_nbt["action"] = "copy_to_clipboard";
+                click_event_nbt["value"] = click_event->copy_to_clipboard;
             }
-            enbt["clickEvent"] = std::move(click_event_enbt);
+            nbt["clickEvent"] = click_event_nbt.take_map();
         }
         if (hover_event) {
-            enbt::compound hover_event_enbt;
+            util::nbt_compound hover_event_nbt;
             if (hover_event->show_item) {
-                enbt::compound show_item_enbt;
-                show_item_enbt["id"] = hover_event->show_item->id;
-                show_item_enbt["count"] = hover_event->show_item->count;
+                util::nbt_compound show_item_nbt;
+                show_item_nbt["id"] = hover_event->show_item->id;
+                show_item_nbt["count"] = hover_event->show_item->count;
                 if (hover_event->show_item->tag) {
-                    show_item_enbt["tag"] = *hover_event->show_item->tag;
+                    show_item_nbt["tag"] = *hover_event->show_item->tag;
                 }
-                hover_event_enbt["action"] = "show_item";
-                hover_event_enbt["contents"] = std::move(show_item_enbt);
+                hover_event_nbt["action"] = "show_item";
+                hover_event_nbt["contents"] = show_item_nbt.take_map();
             } else if (hover_event->show_entity) {
-                enbt::compound show_entity_enbt;
-                show_entity_enbt["type"] = hover_event->show_entity->type;
-                show_entity_enbt["id"] = hover_event->show_entity->id;
+                util::nbt_compound show_entity_nbt;
+                show_entity_nbt["type"] = hover_event->show_entity->type;
+                show_entity_nbt["id"] = hover_event->show_entity->id;
                 if (hover_event->show_entity->name) {
-                    show_entity_enbt["name"] = *hover_event->show_entity->name;
+                    show_entity_nbt["name"] = *hover_event->show_entity->name;
                 }
-                hover_event_enbt["action"] = "show_entity";
-                hover_event_enbt["contents"] = std::move(show_entity_enbt);
+                hover_event_nbt["action"] = "show_entity";
+                hover_event_nbt["contents"] = show_entity_nbt.take_map();
             } else if (!hover_event->show_text.empty()) {
-                hover_event_enbt["action"] = "show_text";
-                hover_event_enbt["contents"] = hover_event->show_text;
+                hover_event_nbt["action"] = "show_text";
+                hover_event_nbt["contents"] = hover_event->show_text;
             }
-            enbt["hoverEvent"] = std::move(hover_event_enbt);
+            nbt["hoverEvent"] = hover_event_nbt.take_map();
         }
 
         if (extra.size()) {
-            enbt::fixed_array extra_enbt(extra.size());
+            list_array<util::nbt> extra_nbt;
+            extra_nbt.reserve(extra.size());
             size_t i = 0;
             for (auto& it : extra)
-                extra_enbt.set(i++, it.to_enbt());
-            enbt["extra"] = std::move(extra_enbt);
+                extra_nbt.push_back(it.to_nbt());
+            nbt["extra"] = std::move(extra_nbt);
         }
-        if (enbt.size() == 1) {
-            if (enbt.contains("text"))
-                return enbt["text"];
+        if (nbt.size() == 1) {
+            if (nbt.contains("text"))
+                return nbt["text"];
         }
-        return enbt;
+        return nbt.take_map();
     }
 
     void chat::remove_color() {
@@ -1012,89 +1014,89 @@ namespace copper_server::base_objects {
         return final_chat;
     }
 
-    chat chat::from_enbt(const enbt::value& enbt) {
-        if (enbt.is_string())
-            return chat((std::string)enbt);
+    chat chat::from_nbt(const util::nbt& nbt) {
+        if (nbt.is_string())
+            return chat(nbt.get_string());
         chat result;
-        auto entry = enbt.as_compound();
+        auto& entry = nbt.get_compound();
 
         if (entry.contains("text"))
-            result.set_text(entry["text"]);
+            result.set_text(entry.at("text").get_string());
         else if (entry.contains("translate"))
-            result.set_translation(entry["translate"]);
+            result.set_translation(entry.at("translate").get_string());
 
         if (entry.contains("color"))
-            result.set_color(entry["color"]);
+            result.set_color(entry.at("color").get_string());
 
         if (entry.contains("insertion"))
-            result.set_insertion(entry["insertion"]);
+            result.set_insertion(entry.at("insertion").get_string());
 
         if (entry.contains("bold"))
-            result.set_bold(entry["bold"]);
+            result.set_bold(entry.at("bold").get_byte());
 
         if (entry.contains("italic"))
-            result.set_italic(entry["italic"]);
+            result.set_italic(entry.at("italic").get_byte());
 
         if (entry.contains("underlined"))
-            result.set_underlined(entry["underlined"]);
+            result.set_underlined(entry.at("underlined").get_byte());
 
         if (entry.contains("strikethrough"))
-            result.set_strikethrough(entry["strikethrough"]);
+            result.set_strikethrough(entry.at("strikethrough").get_byte());
 
         if (entry.contains("obfuscated"))
-            result.set_obfuscated(entry["obfuscated"]);
+            result.set_obfuscated(entry.at("obfuscated").get_byte());
 
         if (entry.contains("font"))
-            result.set_font(entry["font"]);
+            result.set_font(entry.at("font").get_string());
 
         if (entry.contains("clickEvent")) {
-            auto click_event = entry["clickEvent"].as_compound();
-            const std::string& action = (const std::string&)click_event["action"];
-            auto& value = click_event["value"];
+            auto& click_event = entry.at("clickEvent").get_compound();
+            const std::string& action = click_event.at("action").get_string();
+            auto& value = click_event.at("value");
             if (action == "open_url")
-                result.set_click_event_open_url(value);
+                result.set_click_event_open_url(value.get_string());
             else if (action == "run_command")
 
-                result.set_click_event_run_command(value);
+                result.set_click_event_run_command(value.get_string());
 
             else if (action == "suggest_command")
-                result.set_click_event_suggest_command(value);
+                result.set_click_event_suggest_command(value.get_string());
 
             else if (action == "change_page")
-                result.set_click_event_change_page(value);
+                result.set_click_event_change_page(value.get_int());
             else if (action == "copy_to_clipboard")
-                result.set_click_event_copy_to_clipboard(value);
+                result.set_click_event_copy_to_clipboard(value.get_string());
         }
         if (entry.contains("hoverEvent")) {
-            auto hover_event = entry["hoverEvent"].as_compound();
-            const std::string& action = (const std::string&)hover_event["action"];
-            auto& content = hover_event["content"];
+            auto& hover_event = entry.at("hoverEvent").get_compound();
+            const std::string& action = hover_event.at("action").get_string();
+            auto& content = hover_event.at("content");
             if (action == "show_item") {
-                if (content.contains("tag"))
-                    result.set_hover_event_show_item(content["id"], content["count"], (std::string)content["tag"]);
+                if (content.get_compound().contains("tag"))
+                    result.set_hover_event_show_item(content.at("id").get_string(), content.at("count").get_int(), content.at("tag").get_string());
                 else
-                    result.set_hover_event_show_item(content["id"], content["count"], std::nullopt);
+                    result.set_hover_event_show_item(content.at("id").get_string(), content.at("count").get_int(), std::nullopt);
             } else if (action == "show_entity") {
-                if (content.contains("name"))
-                    result.set_hover_event_show_entity(content["id"], content["type"], (std::string)content["name"]);
+                if (content.get_compound().contains("name"))
+                    result.set_hover_event_show_entity(content.at("id").get_string(), content.at("type").get_string(), content.at("name").get_string());
                 else
-                    result.set_hover_event_show_item(content["id"], content["type"], std::nullopt);
+                    result.set_hover_event_show_entity(content.at("id").get_string(), content.at("type").get_string(), std::nullopt);
             } else if (action == "show_text")
-                result.set_hover_event_show_text(content);
+                result.set_hover_event_show_text(content.get_string());
         }
 
         if (entry.contains("extra")) {
             auto& extra_arr = result.get_extra();
-            auto extra = entry["extra"].as_fixed_array();
+            auto& extra = entry.at("extra").get_list();
             extra_arr.reserve(extra.size());
             for (auto& it : extra)
-                extra_arr.push_back(chat::from_enbt(it));
+                extra_arr.push_back(chat::from_nbt(it));
         }
         return result;
     }
 
-    chat chat::from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&& items) {
-        auto res = from_enbt(enbt);
+    chat chat::from_nbt_with_format(const util::nbt& nbt, list_array<util::nbt>&& items) {
+        auto res = from_nbt(nbt);
         formater(items, res);
         return res;
     }

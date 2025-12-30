@@ -9,16 +9,16 @@
 #ifndef SRC_API_PREDICATE
 #define SRC_API_PREDICATE
 #include <functional>
-#include <library/enbt/enbt.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server::base_objects {
     struct command_context;
 }
 
 namespace copper_server::api::predicate {
-    using handler = std::function<bool(const enbt::compound_const_ref&, const base_objects::command_context&)>;
+    using handler = std::function<bool(const util::nbt_compound&, const base_objects::command_context&)>;
 
-    bool process_predicate(const enbt::compound_const_ref& predicate, const base_objects::command_context& context);
+    bool process_predicate(const util::nbt_compound& predicate, const base_objects::command_context& context);
     void register_handler(const std::string& name, handler handler);
     void unregister_handler(const std::string& name);
     const handler& get_handler(const std::string& name);

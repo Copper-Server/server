@@ -9,63 +9,57 @@
 #ifndef SRC_UTIL_ENCODING_COMMON
 #define SRC_UTIL_ENCODING_COMMON
 #include <src/api/packets/types.hpp>
-#include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/pool.hpp>
-#include <src/base_objects/position.hpp>
 #include <src/util/cts.hpp>
 #include <src/util/reflect.hpp>
 
-namespace enbt {
-    class compound_ref;
-    class compound_const_ref;
-    class fixed_array_ref;
-    class dynamic_array_ref;
-    template <class T>
-    class simple_array_const_ref;
-    using simple_array_const_ref_ui8 = simple_array_const_ref<std::uint8_t>;
-    using simple_array_const_ref_ui16 = simple_array_const_ref<std::uint16_t>;
-    using simple_array_const_ref_ui32 = simple_array_const_ref<std::uint32_t>;
-    using simple_array_const_ref_ui64 = simple_array_const_ref<std::uint64_t>;
-    using simple_array_const_ref_i8 = simple_array_const_ref<std::int8_t>;
-    using simple_array_const_ref_i16 = simple_array_const_ref<std::int16_t>;
-    using simple_array_const_ref_i32 = simple_array_const_ref<std::int32_t>;
-    using simple_array_const_ref_i64 = simple_array_const_ref<std::int64_t>;
+namespace copper_server::base_objects {
+    struct chat;
+}
+
+namespace copper_server::base_objects {
+    struct position;
+    class palette_container;
+    struct palette_data_height_map;
+    struct palette_container_indirect;
+    struct palette_container_block;
+    struct palette_container_biome;
+    struct palette_container_single;
+    struct palette_data;
 
     template <class T>
-    class simple_array_ref;
-    using simple_array_ref_ui8 = simple_array_ref<std::uint8_t>;
-    using simple_array_ref_ui16 = simple_array_ref<std::uint16_t>;
-    using simple_array_ref_ui32 = simple_array_ref<std::uint32_t>;
-    using simple_array_ref_ui64 = simple_array_ref<std::uint64_t>;
-    using simple_array_ref_i8 = simple_array_ref<std::int8_t>;
-    using simple_array_ref_i16 = simple_array_ref<std::int16_t>;
-    using simple_array_ref_i32 = simple_array_ref<std::int32_t>;
-    using simple_array_ref_i64 = simple_array_ref<std::int64_t>;
+    struct box;
+}
 
-    class compound;
-    class fixed_array;
-    class dynamic_array;
-    template <class T>
-    class simple_array;
-
-
-    using simple_array_ui8 = simple_array<std::uint8_t>;
-    using simple_array_ui16 = simple_array<std::uint16_t>;
-    using simple_array_ui32 = simple_array<std::uint32_t>;
-    using simple_array_ui64 = simple_array<std::uint64_t>;
-    using simple_array_i8 = simple_array<std::int8_t>;
-    using simple_array_i16 = simple_array<std::int16_t>;
-    using simple_array_i32 = simple_array<std::int32_t>;
-    using simple_array_i64 = simple_array<std::int64_t>;
-
-    class bit;
-    class optional;
-    class uuid;
-    class value;
+namespace copper_server::api::packets::client_bound::play {
+    struct play_packet;
 }
 
 namespace copper_server::util::encoding {
+    template <unsigned N>
+    struct priority_tag : priority_tag<N - 1> {};
+
+    template <>
+    struct priority_tag<0> {};
+
+
+    template <class T>
+    concept is_map_compatible = requires(typename T::key_type& key) {
+        key = key.to_string();
+    };
+
+    template <class T>
+    concept make_packet_as_nbt = requires {
+        typename T::packet_as_nbt;
+    };
+    
+    template <class type>
+    concept is_convertible_to_nbt_form = requires(const type& d, util::nbt_write_stream& w_stream, util::nbt_read_stream& r_stream) {
+        d.to_nbt(w_stream);
+        type::from_packet(r_stream);
+    };
+
     template <template <auto...> class Base, auto... Ts>
     static void value_test(Base<Ts...>&) {}
 
@@ -153,11 +147,11 @@ namespace copper_server::util::encoding {
     concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_no_size<type> || is_bitset_fixed<type>;
 
 
-    template <class type>
-    concept is_convertible_to_nbt_form = requires(const type& d, util::nbt_write_stream& w_stream, util::nbt_read_stream& r_stream) {
-        d.to_nbt(w_stream);
-        type::from_packet(r_stream);
-    };
+    template <typename T, typename... Ts>
+    struct contains_type : std::disjunction<std::is_same<T, Ts>...> {};
+
+    template <typename T, typename... Ts>
+    inline constexpr bool contains_type_v = contains_type<T, Ts...>::value;
 }
 
 #endif /* SRC_UTIL_ENCODING_COMMON */

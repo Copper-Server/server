@@ -8,14 +8,14 @@
  */
 #ifndef SRC_API_LOOT_TABLE_POOL_ENTRY
 #define SRC_API_LOOT_TABLE_POOL_ENTRY
-#include <library/enbt/enbt.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/slot.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server::api::loot_table_pool_entry {
-    using handler = std::function<std::optional<base_objects::slot>(const enbt::compound_const_ref&, const base_objects::command_context&)>;
+    using handler = std::function<std::optional<base_objects::slot>(const util::nbt_compound&, const base_objects::command_context&)>;
 
-    std::optional<base_objects::slot> process_entry(const enbt::compound_const_ref& predicate, const base_objects::command_context& context);
+    std::optional<base_objects::slot> process_entry(const util::nbt_compound& predicate, const base_objects::command_context& context);
     void register_handler(const std::string& name, handler handler);
     void unregister_handler(const std::string& name);
     const handler& get_handler(const std::string& name);

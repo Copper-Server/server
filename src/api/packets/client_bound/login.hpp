@@ -9,7 +9,6 @@
 #ifndef SRC_API_PACKETS_CLIENT_BOUND_LOGIN
 #define SRC_API_PACKETS_CLIENT_BOUND_LOGIN
 
-#include <library/enbt/enbt.hpp>
 #include <optional>
 #include <src/api/packets/ops.hpp>
 #include <src/api/packets/types.hpp>

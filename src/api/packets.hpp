@@ -9,7 +9,6 @@
 #ifndef SRC_API_PACKETS
 #define SRC_API_PACKETS
 #include <array>
-#include <library/enbt/enbt.hpp>
 #include <src/api/packets/client_bound/config.hpp>
 #include <src/api/packets/client_bound/login.hpp>
 #include <src/api/packets/client_bound/play.hpp>

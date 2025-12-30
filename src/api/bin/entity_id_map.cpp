@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
 #include <memory>
 #include <src/api/ecs.hpp>

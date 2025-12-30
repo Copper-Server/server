@@ -9,7 +9,6 @@
 #ifndef SRC_API_RECIPE
 #define SRC_API_RECIPE
 #include <functional>
-#include <library/enbt/enbt.hpp>
 #include <src/api/id.hpp>
 #include <src/base_objects/recipe.hpp>
 #include <src/base_objects/slot.hpp>

@@ -1,7 +1,6 @@
 #include <chrono>
-#include <library/enbt/enbt.hpp>
-#include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <random>
 #include <src/base_objects/uuid.hpp>
 
@@ -116,19 +115,5 @@ namespace copper_server::base_objects {
 
     uuid uuid::as_null() {
         return {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    }
-
-    uuid uuid::to_uuid(const enbt::raw_uuid& e) noexcept {
-        uuid res;
-        for (std::size_t i = 0; i < 16; i++)
-            res.data[i] = e.data[i];
-        return res;
-    }
-
-    uuid::operator enbt::raw_uuid() const noexcept {
-        enbt::raw_uuid res;
-        for (std::size_t i = 0; i < 16; i++)
-            res.data[i] = data[i];
-        return res;
     }
 }

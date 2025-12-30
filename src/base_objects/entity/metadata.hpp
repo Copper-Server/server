@@ -80,7 +80,7 @@ namespace copper_server::base_objects {
         };
 
         struct optional_living_entity_reference : public enum_item<13> {
-            std::optional<enbt::raw_uuid> value;
+            std::optional<base_objects::uuid> value;
         };
 
         struct block_state : public enum_item<14> {

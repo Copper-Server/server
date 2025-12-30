@@ -9,13 +9,13 @@
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
 #include <functional>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/parsers.hpp>
 #include <src/base_objects/permissions.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -38,10 +38,10 @@ namespace copper_server::base_objects {
             : what(what), pos(pos) {}
     };
 
-    //the difference from vanilla commands there allowed any enbt result type, while in vanilla only integers
+    //the difference from vanilla commands there allowed any nbt result type, while in vanilla only integers
     struct command_context {
         shared_client_data& executor;
-        enbt::compound other_data;
+        util::nbt_compound other_data;
         //for player, position, rotation, motion, and world_id automatically copied to other_data
         //command result is set in other_data variable at "result" value
 
@@ -61,9 +61,9 @@ namespace copper_server::base_objects {
     };
 
     struct command;
-    using command_callback = std::function<enbt::value(const list_array<parser>&, command_context&)>;
+    using command_callback = std::function<util::nbt(const list_array<parser>&, command_context&)>;
 
-    using command_redirect = std::function<enbt::value(command& target, const list_array<parser>&, const std::string&, command_context&)>;
+    using command_redirect = std::function<util::nbt(command& target, const list_array<parser>&, const std::string&, command_context&)>;
 
 
     using command_suggestion = std::function<list_array<std::string>(const std::string& current, command_context&)>;

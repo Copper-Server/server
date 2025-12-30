@@ -10,7 +10,6 @@
 #define SRC_UTIL_NBT
 
 #include <iosfwd>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <unordered_map>
 
@@ -102,6 +101,7 @@ namespace copper_server::util {
         list_array<int32_t>& get_int_array();
         list_array<int64_t>& get_long_array();
 
+        bool is_end() const;
         bool is_byte() const;
         bool is_short() const;
         bool is_int() const;
@@ -122,6 +122,16 @@ namespace copper_server::util {
         float as_float() const;
         double as_double() const;
         std::string as_string() const;
+
+
+        nbt& at(const std::string& key);
+        const nbt& at(const std::string& key) const;
+
+        nbt& at(size_t index);
+        const nbt& at(size_t index) const;
+
+        std::string as_snbt() const;
+        static nbt from_snbt(const std::string& snbt);
     };
 
     class nbt_compound {
@@ -134,13 +144,18 @@ namespace copper_server::util {
         nbt_compound(const nbt_compound& copy);
         nbt_compound(nbt_compound&& move);
         nbt_compound(const nbt& nbt_val);
+        nbt_compound(nbt&& nbt_val);
 
         nbt_compound& operator=(const nbt_compound& copy);
         nbt_compound& operator=(nbt_compound&& move);
         nbt_compound& operator=(const nbt& nbt_val);
+        nbt_compound& operator=(nbt&& nbt_val);
 
         nbt& operator[](const std::string& key);
         const nbt& operator[](const std::string& key) const;
+
+        nbt& at(const std::string& key);
+        const nbt& at(const std::string& key) const;
 
         void set(const std::string& key, const nbt& value);
         void set(const std::string& key, nbt&& value);
@@ -154,51 +169,29 @@ namespace copper_server::util {
         std::unordered_map<std::string, nbt>& get_map();
         const std::unordered_map<std::string, nbt>& get_map() const;
 
-        operator nbt() const;
+        nbt take_map() &;
+        nbt take_map() &&;
+
         operator std::unordered_map<std::string, nbt>() const;
     };
 
-    //bridge class between ENBT and nbt formats
-    class nbt_enbt_convert {
+    class nbt_convert {
         list_array<uint8_t> nbt_data;
 
-#pragma region ENBT_TO_NBT
 
         template <class T>
         void insertValue(T val, size_t max = sizeof(T));
-
         template <class Target, class T>
         void insertValue(T val, size_t max = sizeof(T));
         void insertString(const char* val, size_t max);
-        void IntegerInsert(const enbt::value& val, bool typ_ins);
-        void FloatingInsert(const enbt::value& val, bool typ_ins);
-        void BuildCompoundItem(std::string_view c_name, const enbt::value& comp, bool compress);
-        void BuildCompound(std::string_view c_name, const enbt::value& comp, bool compress, bool in_array);
-        void InsertType(enbt::type_id t);
-        void BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id);
-        void BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id);
-        void BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress);
-        void BuildArray(const enbt::value& enbt, bool insert_type, bool compress);
-        void RecursiveBuilder(const enbt::value& enbt, bool insert_type, std::string_view name, bool compress, bool in_array);
-#pragma endregion
-#pragma region NBT_TO_ENBT
-
         template <class T>
         static T uncheckedExtractValue(const uint8_t* data, size_t& i);
         template <class T>
         static T extractValue(const uint8_t* data, size_t& i, size_t max_size);
-        template <class T>
-        static enbt::value extractArray(const uint8_t* data, size_t& i, size_t max_size);
-
-        static enbt::value RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size);
-        static enbt::value RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size);
-        static enbt::value RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size);
-
-#pragma endregion
 
 #pragma region NBT_TO_NBT
         void BuildCompoundItem(std::string_view c_name, const nbt& comp);
-        void RecursiveBuilder(const nbt& enbt, bool insert_type, std::string_view name, bool in_array);
+        void RecursiveBuilder(const nbt& nbt, bool insert_type, std::string_view name, bool in_array);
 
         template <class T>
         static nbt extractArray_NBT(const uint8_t* data, size_t& i, size_t max_size);
@@ -215,39 +208,38 @@ namespace copper_server::util {
 
 
     public:
-        static enbt::value readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
         static nbt readNBT_asNBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
-        static nbt_enbt_convert readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
+        static nbt_convert readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
 
-        static enbt::value readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
         static nbt readNetworkNBT_asNBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
-        static nbt_enbt_convert readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
+        static nbt_convert readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
 
-        nbt_enbt_convert();
+        nbt_convert();
 
-        nbt_enbt_convert(nbt_enbt_convert&& move);
-        nbt_enbt_convert(const nbt_enbt_convert& copy);
-        nbt_enbt_convert& operator=(nbt_enbt_convert&& move);
-        nbt_enbt_convert& operator=(const nbt_enbt_convert& copy);
-        ~nbt_enbt_convert();
+        nbt_convert(nbt_convert&& move);
+        nbt_convert(const nbt_convert& copy);
+        nbt_convert& operator=(nbt_convert&& move);
+        nbt_convert& operator=(const nbt_convert& copy);
+        ~nbt_convert();
 
-        static nbt_enbt_convert build(const enbt::value& enbt, bool compress = true, std::string_view entry_name = "");
-        static nbt_enbt_convert build(const nbt& nbt, std::string_view entry_name = "");
-        static nbt_enbt_convert build(const list_array<uint8_t>& data);
-        static nbt_enbt_convert build_network(const list_array<uint8_t>& data);
+        static nbt_convert build(const nbt& nbt, std::string_view entry_name = "");
+        static nbt_convert build(const list_array<uint8_t>& data);
+        static nbt_convert build_network(const list_array<uint8_t>& data);
+        static nbt_convert build_snbt(const std::string& snbt);
 
-        static nbt_enbt_convert build(nbt_type type, std::istream& stream);
-        static nbt_enbt_convert build_network(nbt_type type, std::istream& stream);
+        static nbt_convert build(nbt_type type, std::istream& stream);
+        static nbt_convert build_network(nbt_type type, std::istream& stream);
         operator list_array<uint8_t>() const;
         list_array<uint8_t> get_as_normal() const;
         list_array<uint8_t> get_as_network() const;
-        enbt::value get_as_enbt() const;
         nbt get_as_nbt() const;
         std::string get_entry_name() const;
-        static enbt::value extract_from_array_enbt(const uint8_t* arr, size_t& result, size_t max_size);
         static nbt extract_from_array_nbt(const uint8_t* arr, size_t& result, size_t max_size);
 
         list_array<uint8_t> take_data();
+
+
+        std::string to_snbt() const;
     };
 }
 

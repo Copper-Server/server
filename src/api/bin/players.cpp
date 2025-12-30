@@ -178,8 +178,8 @@ namespace copper_server::api::players {
             sel.flags.only_players = true;
             sel.flags.only_entities = false;
             sel.select(context, [&callback](api::ecs::entity entity) {
-                if (entity.has<api::ecs::com::assigned_player>())
-                    callback(*entity.get<api::ecs::com::assigned_player>().player);
+                if (entity.has<api::ecs::com::entities::assigned_player>())
+                    callback(*entity.get<api::ecs::com::entities::assigned_player>().player);
             });
         }
 

@@ -8,7 +8,6 @@
  */
 #ifndef SRC_API_PACKETS_CLIENT_BOUND_PLAY
 #define SRC_API_PACKETS_CLIENT_BOUND_PLAY
-#include <library/enbt/enbt.hpp>
 #include <optional>
 #include <src/api/packets/chat_type.hpp>
 #include <src/api/packets/debug_sub_scription_type.hpp>
@@ -111,7 +110,7 @@ namespace copper_server::api::packets::client_bound::play {
     struct block_entity_data : public packet<0x06> {
         base_objects::position location;
         var_int32::block_entity_type type;
-        enbt::value data;
+        util::nbt data;
     };
 
     struct block_event : public packet<0x07> {
@@ -497,7 +496,7 @@ namespace copper_server::api::packets::client_bound::play {
         int32_t count;
         std::optional<player_delta_velocity_t> player_delta_velocity = std::nullopt;
         base_objects::particle_data particle;
-        or_<var_int32::sound_event, base_objects::sound_event> sound;
+        or_<var_int32::sound_event, base_objects::sound_event_t> sound;
         list_array<block_particle> block_particles;
     };
 
@@ -658,7 +657,7 @@ namespace copper_server::api::packets::client_bound::play {
             uint8_t xz;
             short y;
             var_int32::block_entity_type type;
-            enbt::value data;
+            util::nbt_convert data;
         };
 
         int32_t x;
@@ -1420,7 +1419,7 @@ namespace copper_server::api::packets::client_bound::play {
         struct blank : public enum_item<0> {};
 
         struct styled : public enum_item<1> {
-            enbt::compound styling;
+            util::nbt_compound styling;
         };
 
         struct fixed : public enum_item<2> {
@@ -1514,7 +1513,7 @@ namespace copper_server::api::packets::client_bound::play {
         struct blank : public enum_item<0> {};
 
         struct styled : public enum_item<1> {
-            enbt::compound styling;
+            util::nbt_compound styling;
         };
 
         struct fixed : public enum_item<2> {
@@ -1553,7 +1552,7 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct sound_entity : public packet<0x72> {
-        or_<var_int32::sound_event, base_objects::sound_event> sound;
+        or_<var_int32::sound_event, base_objects::sound_event_t> sound;
         var_int32 category;
         var_int32::entity_id id;
         float volume;
@@ -1562,7 +1561,7 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct sound : public packet<0x73> {
-        or_<var_int32::sound_event, base_objects::sound_event> sound;
+        or_<var_int32::sound_event, base_objects::sound_event_t> sound;
         var_int32 category;
         int32_t x;
         int32_t y;
@@ -1603,7 +1602,7 @@ namespace copper_server::api::packets::client_bound::play {
 
     struct tag_query : public packet<0x79> {
         var_int32 tag_query_id; //managed by client
-        enbt::value nbt;
+        util::nbt nbt;
     };
 
     struct take_item_entity : public packet<0x7A> {
@@ -1843,7 +1842,7 @@ namespace copper_server::api::packets::client_bound::play {
     struct clear_dialog : public packet<0x89> {};
 
     struct show_dialog : public packet<0x8A> {
-        or_<var_int32::dialog, enbt::value> dialog;
+        or_<var_int32::dialog, util::nbt> dialog;
     };
 
     using _play_packets = std::variant<

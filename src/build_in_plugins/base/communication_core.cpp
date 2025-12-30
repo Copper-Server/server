@@ -141,16 +141,16 @@ namespace copper_server::build_in_plugins::base {
         }
 
         void on_initialization(const plugin_registration_ptr&) override {
-            api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message" |= enbt::compound{{"translation", "chat.disabled.options"}};
-            api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" |= enbt::value();
-            api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature" |= enbt::compound{{"text", "Failed to verify new chat signature"}};
-            api::configuration::get() ^ "communication_core" ^ "on_unload_message" |= enbt::compound{{"text", "The server closing."}};
+            api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message" |= util::nbt_compound{{"translation", "chat.disabled.options"}}.take_map();
+            api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" |= util::nbt();
+            api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature" |= util::nbt_compound{{"text", "Failed to verify new chat signature"}}.take_map();
+            api::configuration::get() ^ "communication_core" ^ "on_unload_message" |= util::nbt_compound{{"text", "The server closing."}}.take_map();
             api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "commands_only" |= true;
             api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "hidden" |= false;
-            _chat_disabled_notification() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
-            _on_invalid_new_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
-            if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
-                _on_chat_invalid_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
+            _chat_disabled_notification() = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
+            _on_invalid_new_signature() = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
+            if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_end())
+                _on_chat_invalid_signature() = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
         }
 
         static base_objects::chat& _chat_disabled_notification() {
@@ -292,11 +292,11 @@ namespace copper_server::build_in_plugins::base {
             api::packets::processor(*this, [this](api::packets::server_bound::play::chat&& packet, base_objects::shared_client_data& client) {
                 switch (client.chat_mode) {
                 case base_objects::shared_client_data::ChatMode::COMMANDS_ONLY:
-                    if (!(api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "commands_only" ^ get_conf))
+                    if (!(api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "commands_only" ^ get_conf).is_end())
                         return chat_disabled_notification(client);
                     break;
                 case base_objects::shared_client_data::ChatMode::HIDDEN:
-                    if (!(api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "hidden" ^ get_conf))
+                    if (!(api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "hidden" ^ get_conf).is_end())
                         return chat_disabled_notification(client);
                     break;
                 case base_objects::shared_client_data::ChatMode::ENABLED:
@@ -306,7 +306,7 @@ namespace copper_server::build_in_plugins::base {
                 bool allow_chat_reports = !api::configuration::get().server.prevent_chat_reports;
                 if (api::configuration::get().mojang.enforce_secure_profile && !api::configuration::get().server.offline_mode)
                     if (!signature_check(packet, client)) {
-                        if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
+                        if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_end())
                             client << api::packets::client_bound::play::system_chat{.content = _on_chat_invalid_signature()};
                         return;
                     }
@@ -419,7 +419,7 @@ namespace copper_server::build_in_plugins::base {
             api::packets::processor(*this, [](api::packets::server_bound::play::chat_command_signed&& packet, base_objects::shared_client_data& client) {
                 if (api::configuration::get().mojang.enforce_secure_profile && !api::configuration::get().server.offline_mode)
                     if (!signature_check(packet, client)) {
-                        if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
+                        if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_end())
                             client << api::packets::client_bound::play::system_chat{.content = _on_chat_invalid_signature()};
                         return;
                     }
@@ -455,7 +455,7 @@ namespace copper_server::build_in_plugins::base {
         }
 
         void on_unload(const plugin_registration_ptr& _) override {
-            auto msg = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_unload_message");
+            auto msg = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_unload_message");
             api::players::iterate_players([&msg](auto& it) {
                 switch (it.packets_state.state) {
                 case base_objects::shared_client_data::packets_state_t::protocol_state::handshake:
@@ -547,10 +547,10 @@ namespace copper_server::build_in_plugins::base {
         }
 
         void on_config_reload(const plugin_registration_ptr& _) override {
-            _chat_disabled_notification() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
-            _on_invalid_new_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
-            if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
-                _on_chat_invalid_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
+            _chat_disabled_notification() = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
+            _on_invalid_new_signature() = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
+            if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_end())
+                _on_chat_invalid_signature() = base_objects::chat::from_nbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
         }
     };
 }

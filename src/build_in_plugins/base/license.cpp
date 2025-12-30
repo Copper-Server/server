@@ -304,7 +304,6 @@ namespace copper_server::build_in_plugins::base {
                                    "    utfcpp ->  Boost Software License - Version 1.0\n"
                                    "    zlib ->  1995-2022 Jean-loup Gailly and Mark Adler\n"
                                    "    lionkor-commandline ->  MIT License \n"
-                                   "    enbt ->  MIT License \n"
                                    "    list_array ->  MIT License \n"
                                    "    fast_task ->  Boost Software License - Version 1.0\n"
                                    "\n"
@@ -331,10 +330,6 @@ namespace copper_server::build_in_plugins::base {
                 });
                 licenses.add_child("lionkor-commandline").set_callback({"command.licenses.lionkor-commandline", {"console"}}, [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::packets::client_bound::play::system_chat{.content = mit_kortlepel_license};
-                    return true;
-                });
-                licenses.add_child("enbt").set_callback({"command.licenses.enbt", {"console"}}, [](const list_array<predicate>&, base_objects::command_context& context) {
-                    context.executor << api::packets::client_bound::play::system_chat{.content = mit_melnytskyi_license};
                     return true;
                 });
                 licenses.add_child("list_array").set_callback({"command.licenses.list_array", {"console"}}, [](const list_array<predicate>&, base_objects::command_context& context) {

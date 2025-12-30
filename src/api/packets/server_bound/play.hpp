@@ -11,11 +11,10 @@
 
 
 #include <array>
-#include <library/enbt/enbt.hpp>
 #include <optional>
-#include <src/api/packets/ops.hpp>
 #include <src/api/packets/difficulty.hpp>
 #include <src/api/packets/gamemode.hpp>
+#include <src/api/packets/ops.hpp>
 #include <src/api/packets/slot.hpp>
 #include <src/api/packets/types.hpp>
 #include <src/base_objects/position.hpp>
@@ -639,7 +638,7 @@ namespace copper_server::api::packets::server_bound::play {
 
     struct custom_click_action : public packet<0x41> {
         identifier id;
-        enbt::value payload;
+        util::nbt payload;
     };
 }
 namespace copper_server::api::packets {

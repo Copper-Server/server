@@ -51,7 +51,7 @@ namespace copper_server {
 
         public:
             base_objects::chat display_name;
-            std::shared_ptr<enbt::compound> loot_table;
+            std::shared_ptr<util::nbt> loot_table;
             std::vector<shape_data*> collision_shapes;
             std::vector<shape_data*> outline_shapes;
             std::string instrument;
@@ -121,7 +121,6 @@ namespace copper_server {
 
             //on tick first checks `is_block_entity` and if true, checks `as_entity_on_tick` if one of them false/undefined then checks `on_tick`, if undefined then do nothing
             std::function<void(storage::world_data&, world::sub_chunk_data&, block& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> on_tick;
-            std::function<void(storage::world_data&, world::sub_chunk_data&, block& data, enbt::value& extended_data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> as_entity_on_tick;
 
             //used to check properties usage
             std::vector<int32_t> allowed_properties;

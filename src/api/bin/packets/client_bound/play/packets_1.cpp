@@ -26,7 +26,7 @@
 #include <src/util/reflect/base_objects/particle_data.hpp>
 #include <src/util/reflect/calculations.hpp>
 
-#include <src/api/bin/packets/generic_auto.hpp>
+#include <src/util/encoding/packet/generic_auto.hpp>
 
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>

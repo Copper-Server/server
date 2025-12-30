@@ -954,9 +954,9 @@ namespace copper_server::storage {
             convert_chunk_global_pos(radius)
         };
         get_height_maps_at(x, z, [&](base_objects::world::height_maps& height_maps) {
-            auto mt = height_maps.motion_blocking[x % 16][z % 16];
-            auto oc_flor = height_maps.ocean_floor[x % 16][z % 16];
-            auto oc = height_maps.surface[x % 16][z % 16];
+            auto mt = height_maps.motion_blocking.get(x % 16, z % 16);
+            auto oc_flor = height_maps.ocean_floor.get(x % 16, z % 16);
+            auto oc = height_maps.surface.get(x % 16, z % 16);
             spawn_data.y = std::max(mt, std::max(oc_flor, oc));
         });
     }

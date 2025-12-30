@@ -21,6 +21,12 @@ namespace copper_server::base_objects {
 
         palette_data();
         palette_data(uint8_t bits_per_entry, size_t reserve_size);
+        palette_data(palette_data&&);
+        palette_data(const palette_data&);
+
+        palette_data& operator=(palette_data&&);
+        palette_data& operator=(const palette_data&);
+
         static uint8_t bits_for_max(size_t items);
         void add(int32_t value);
         void modify(size_t index, int32_t value);
@@ -47,6 +53,8 @@ namespace copper_server::base_objects {
         const list_array<uint64_t>& get() const;
 
         void clear();
+
+        void resize_bits_per_entry(uint8_t bits_per_entry);
     };
 
     struct palette_container_single {
@@ -108,7 +116,41 @@ namespace copper_server::base_objects {
     };
 
     struct palette_data_height_map : public palette_data {
-        using palette_data::palette_data;
+        palette_data_height_map(int32_t max_height = 384)
+            : palette_data(palette_data::bits_for_max((size_t)max_height), 256) {
+            data.resize(256 * bits_per_entry);
+        }
+
+        palette_data_height_map(palette_data_height_map&& mov) : palette_data(std::move(mov)) {}
+
+        palette_data_height_map(const palette_data_height_map& copy) : palette_data(copy) {}
+
+        palette_data_height_map& operator=(palette_data_height_map&& mov) {
+            palette_data::operator=(std::move(mov));
+            return *this;
+        }
+
+        palette_data_height_map& operator=(const palette_data_height_map& copy) {
+            palette_data::operator=(copy);
+            return *this;
+        }
+
+        int32_t get(uint8_t x, uint8_t z) const {
+            return palette_data::get(to_pos(x, z));
+        }
+
+        void set(uint8_t x, uint8_t z, int32_t new_value) {
+            return palette_data::modify(to_pos(x, z), new_value);
+        }
+
+        void set_height(int32_t max_height) {
+            resize_bits_per_entry(palette_data::bits_for_max((size_t)max_height));
+        }
+
+    private:
+        static constexpr inline size_t to_pos(uint8_t x, uint8_t z) {
+            return (static_cast<size_t>(z) << 4) | static_cast<size_t>(x);
+        }
     };
 }
 

@@ -17,7 +17,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
 #include <library/list_array.hpp>
 #include <src/api/mojang/session_server.hpp>

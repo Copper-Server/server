@@ -9,10 +9,10 @@
 #ifndef SRC_BASE_OBJECTS_PLAYER
 #define SRC_BASE_OBJECTS_PLAYER
 #include <cstdint>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <memory>
 #include <src/api/ecs.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 #include <unordered_set>
 
@@ -92,7 +92,7 @@ namespace copper_server::base_objects {
         std::optional<api::ecs::entity> assigned_entity;
 
         //for server plugins
-        enbt::compound local_data;
+        util::nbt_compound local_data;
 
         player& operator=(const player& other) = delete;
         player& operator=(player&& other);

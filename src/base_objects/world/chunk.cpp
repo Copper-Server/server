@@ -323,7 +323,7 @@ namespace copper_server::base_objects::world {
                         .collect_iterate(
                             "block_entities",
                             [&sub_chunk_data](std::uint64_t len) { sub_chunk_data.block_entities.reserve(len); },
-                            [&sub_chunk_data](enbt::io_helper::value_read_stream& self) {
+                            [&](enbt::io_helper::value_read_stream& self) {
                                 base_objects::local_block_pos local_pos;
                                 base_objects::block block;
                                 self
@@ -337,7 +337,7 @@ namespace copper_server::base_objects::world {
                                         block = {id};
                                     })
                                     .collect("nbt", [&](auto& stream) {
-                                        auto& def = api::ecs::get_item_definition(block.getStaticData().name);
+                                        auto& def = api::ecs::get_block_entity_definition(block.getStaticData().name);
                                         auto cache = stream.iterate_into<char>();
                                         std::stringstream ss(cache.data(), cache.size());
                                         util::nbt_read_stream nbt_stream(ss);
@@ -345,11 +345,59 @@ namespace copper_server::base_objects::world {
                                             local_pos.x,
                                             local_pos.y,
                                             local_pos.z,
-                                            def.from_nbt(nbt_stream, world.world_id),
+                                            def.from_nbt(nbt_stream, world.current_world_reg.get_ecs_world_ref()),
                                             world.current_world_reg
                                         );
                                     })
                                     .force_all_collect();
+                            }
+                        )
+                        .collect_iterate( //format-fix
+                            "queried_for_tick",
+                            [&](std::uint64_t len) { sub_chunk_data.queried_for_tick.reserve(len); },
+                            [&sub_chunk_data, tick_counter](enbt::io_helper::value_read_stream& self) {
+                                to_be_ticked res;
+                                self
+                                    .read_compound()
+                                    .collect("x", [&res](auto& stream) { res.x = stream.read(); })
+                                    .collect("y", [&res](auto& stream) { res.x = stream.read(); })
+                                    .collect("z", [&res](auto& stream) { res.x = stream.read(); })
+                                    .collect("duration", [&res, tick_counter](auto& stream) {
+                                        stream.read_as(res.scheduled_on);
+                                        res.scheduled_on += tick_counter;
+                                    })
+                                    .collect_as("priority", res.priority)
+                                    .collect_as("block_id", res.block_id)
+                                    .collect("duration", [&res, tick_counter](auto& stream) {
+                                        stream.read_as(res.scheduled_on);
+                                        res.scheduled_on += tick_counter;
+                                    })
+                                    .force_all_collect();
+                                sub_chunk_data.queried_for_tick.push_back(res);
+                            }
+                        )
+                        .collect_iterate( //format-fix
+                            "queried_for_liquid_tick",
+                            [&](std::uint64_t len) { sub_chunk_data.queried_for_liquid_tick.reserve(len); },
+                            [&sub_chunk_data, tick_counter](enbt::io_helper::value_read_stream& self) {
+                                to_be_ticked res;
+                                self
+                                    .read_compound()
+                                    .collect("x", [&res](auto& stream) { res.x = stream.read(); })
+                                    .collect("y", [&res](auto& stream) { res.x = stream.read(); })
+                                    .collect("z", [&res](auto& stream) { res.x = stream.read(); })
+                                    .collect("duration", [&res, tick_counter](auto& stream) {
+                                        stream.read_as(res.scheduled_on);
+                                        res.scheduled_on += tick_counter;
+                                    })
+                                    .collect_as("priority", res.priority)
+                                    .collect_as("block_id", res.block_id)
+                                    .collect("duration", [&res, tick_counter](auto& stream) {
+                                        stream.read_as(res.scheduled_on);
+                                        res.scheduled_on += tick_counter;
+                                    })
+                                    .force_all_collect();
+                                sub_chunk_data.queried_for_liquid_tick.push_back(res);
                             }
                         )
                         .make_collect([](auto& name, auto& stream) { stream.read(); });
@@ -369,29 +417,6 @@ namespace copper_server::base_objects::world {
                     [&](enbt::io_helper::value_read_stream& self) {
                         auto res = api::entity::load_from_file(self);
                         world.register_entity(res);
-                    }
-                )
-                .collect_iterate( //format-fix
-                    "queried_for_tick",
-                    [&](std::uint64_t len) { queried_for_tick.reserve(len); },
-                    [&](enbt::io_helper::value_read_stream& self) {
-                        list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_tick_tmp;
-                        self.iterate(
-                            [&queried_for_tick_tmp](std::uint64_t len) { queried_for_tick_tmp.reserve(len); },
-                            [&queried_for_tick_tmp, &tick_counter](enbt::io_helper::value_read_stream& self) {
-                                base_objects::chunk_block_pos block_pos;
-                                uint32_t duration;
-                                self
-                                    .read_compound(true)
-                                    .collect("x", [&block_pos](auto& stream) { block_pos.x = stream.read(); })
-                                    .collect("y", [&block_pos](auto& stream) { block_pos.x = stream.read(); })
-                                    .collect("z", [&block_pos](auto& stream) { block_pos.x = stream.read(); })
-                                    .collect_as("duration", duration)
-                                    .force_all_collect();
-                                queried_for_tick_tmp.push_back({tick_counter + duration, block_pos});
-                            }
-                        );
-                        queried_for_tick.push_back(std::move(queried_for_tick_tmp));
                     }
                 )
                 .make_collect([](auto& name, auto& stream) { stream.read(); });
@@ -430,10 +455,10 @@ namespace copper_server::base_objects::world {
         enbt::io_helper::value_write_stream stream(str);
         {
             auto comp
-                = stream.write_compound(5 + (generator_stage != 0xFF) + (resume_gen_level != 255))
+                = stream.write_compound(3 + (generator_stage != 0xFF) + (resume_gen_level != 255))
                       .write("sub_chunks", [&](enbt::io_helper::value_write_stream& stream) {
                           stream.write_array(sub_chunks.size()).iterable(sub_chunks, [&](const world::sub_chunk_data& sub_chunk, enbt::io_helper::value_write_stream& stream) {
-                              auto compound = stream.write_compound(3 + (sub_chunk.need_to_recalculate_light ? 0 : 2) + sub_chunk.has_tickable_blocks);
+                              auto compound = stream.write_compound(5 + (sub_chunk.need_to_recalculate_light ? 0 : 2) + sub_chunk.has_tickable_blocks);
                               compound.write("blocks", [&](enbt::io_helper::value_write_stream& stream) {
                                   enbt::io_helper::serialization_write(sub_chunk.blocks, stream);
                               });
@@ -465,6 +490,28 @@ namespace copper_server::base_objects::world {
                               compound.write("biomes", [&](enbt::io_helper::value_write_stream& stream) {
                                   enbt::io_helper::serialization_write(sub_chunk.biomes, stream);
                               });
+                              compound.write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
+                                  stream.write_array(sub_chunk.queried_for_tick.size()).iterable(sub_chunk.queried_for_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
+                                      auto compound = stream.write_compound(6);
+                                      compound.write("x", item.x);
+                                      compound.write("y", item.y);
+                                      compound.write("z", item.z);
+                                      compound.write("duration", item.scheduled_on - tick_counter);
+                                      compound.write("priority", item.priority);
+                                      compound.write("block_id", item.block_id);
+                                  });
+                              });
+                              compound.write("queried_for_liquid_tick", [&](enbt::io_helper::value_write_stream& stream) {
+                                  stream.write_array(sub_chunk.queried_for_tick.size()).iterable(sub_chunk.queried_for_liquid_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
+                                      auto compound = stream.write_compound(6);
+                                      compound.write("x", item.x);
+                                      compound.write("y", item.y);
+                                      compound.write("z", item.z);
+                                      compound.write("duration", item.scheduled_on - tick_counter);
+                                      compound.write("priority", item.priority);
+                                      compound.write("block_id", item.block_id);
+                                  });
+                              });
                               if (!sub_chunk.need_to_recalculate_light) {
                                   compound.write("block_light", [&](enbt::io_helper::value_write_stream& stream) {
                                       enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
@@ -486,28 +533,6 @@ namespace copper_server::base_objects::world {
                                           entities.write([&entity](auto& stream) {
                                               api::entity::store_to_file(entity, stream);
                                           });
-                      })
-                      .write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
-                          stream.write_array(queried_for_tick.size()).iterable(queried_for_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
-                              stream.write_array(item.size()).iterable(item, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
-                                  auto& [till_tick, block_pos] = item;
-                                  auto compound = stream.write_compound(4);
-                                  compound.write("x", block_pos.x);
-                                  compound.write("y", block_pos.y);
-                                  compound.write("z", block_pos.z);
-                                  compound.write("duration", till_tick - tick_counter);
-                              });
-                          });
-                      })
-                      .write("queried_for_liquid_tick", [&](enbt::io_helper::value_write_stream& stream) {
-                          stream.write_array(queried_for_tick.size()).iterable(queried_for_liquid_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
-                              auto& [till_tick, block_pos] = item;
-                              auto compound = stream.write_compound(4);
-                              compound.write("x", block_pos.x);
-                              compound.write("y", block_pos.y);
-                              compound.write("z", block_pos.z);
-                              compound.write("duration", till_tick - tick_counter);
-                          });
                       })
                       .write("height_maps", [&](enbt::io_helper::value_write_stream& stream) {
                           enbt::io_helper::serialization_write(height_maps, stream);
@@ -533,19 +558,19 @@ namespace copper_server::base_objects::world {
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto bloc = get_block(local_x, local_y_block, local_z);
         if (!bloc.is_air()) {
-            if (height_maps.ocean_floor[local_x][local_z] < local_y_block)
-                height_maps.ocean_floor[local_x][local_z] = local_y_block;
+            if (height_maps.ocean_floor.get(local_x, local_z) < local_y_block)
+                height_maps.ocean_floor.set(local_x, local_z, local_y_block);
             if (bloc.is_liquid()) {
-                if (height_maps.surface[local_x][local_z] < local_y_block)
-                    height_maps.surface[local_x][local_z] = local_y_block;
+                if (height_maps.surface.get(local_x, local_z) < local_y_block)
+                    height_maps.surface.set(local_x, local_z, local_y_block);
             }
             if (bloc.is_solid()) {
-                if (height_maps.motion_blocking[local_x][local_z] < local_y_block)
-                    height_maps.motion_blocking[local_x][local_z] = local_y_block;
+                if (height_maps.motion_blocking.get(local_x, local_z) < local_y_block)
+                    height_maps.motion_blocking.set(local_x, local_z, local_y_block);
 
                 if (!leaves.contains(bloc.general_block_id()))
-                    if (height_maps.motion_blocking_no_leaves[local_x][local_z] < local_y_block)
-                        height_maps.motion_blocking_no_leaves[local_x][local_z] = local_y_block;
+                    if (height_maps.motion_blocking_no_leaves.get(local_x, local_z) < local_y_block)
+                        height_maps.motion_blocking_no_leaves.set(local_x, local_z, local_y_block);
             }
 
         } else {
@@ -563,20 +588,20 @@ namespace copper_server::base_objects::world {
                     if (!block.is_air()) {
                         auto y_pos = y + local_y_block;
 
-                        if (!height_maps.ocean_floor[local_x][local_z])
-                            height_maps.ocean_floor[local_x][local_z] = y_pos;
+                        if (!height_maps.ocean_floor.get(local_x, local_z))
+                            height_maps.ocean_floor.set(local_x, local_z, y_pos);
 
                         if (block.is_liquid())
-                            if (!height_maps.surface[local_x][local_z])
-                                height_maps.surface[local_x][local_z] = y_pos;
+                            if (!height_maps.surface.get(local_x, local_z))
+                                height_maps.surface.set(local_x, local_z, y_pos);
 
                         if (block.is_solid()) {
-                            if (!height_maps.motion_blocking[local_x][local_z])
-                                height_maps.motion_blocking[local_x][local_z] = y_pos;
+                            if (!height_maps.motion_blocking.get(local_x, local_z))
+                                height_maps.motion_blocking.set(local_x, local_z, y_pos);
 
                             if (!leaves.contains(block.general_block_id()))
-                                if (!height_maps.motion_blocking_no_leaves[local_x][local_z])
-                                    height_maps.motion_blocking_no_leaves[local_x][local_z] = y_pos;
+                                if (!height_maps.motion_blocking_no_leaves.get(local_x, local_z))
+                                    height_maps.motion_blocking_no_leaves.set(local_x, local_z, y_pos);
                         }
                     }
                 }
@@ -599,20 +624,20 @@ namespace copper_server::base_objects::world {
                         if (!block.is_air()) {
                             auto y_pos = y + local_y_block;
 
-                            if (!height_maps.ocean_floor[x][z])
-                                height_maps.ocean_floor[x][z] = y_pos;
+                            if (!height_maps.ocean_floor.get(x, z))
+                                height_maps.ocean_floor.set(x, z, y_pos);
 
                             if (block.is_liquid())
-                                if (!height_maps.surface[x][z])
-                                    height_maps.surface[x][z] = y_pos;
+                                if (!height_maps.surface.get(x, z))
+                                    height_maps.surface.set(x, z, y_pos);
 
                             if (block.is_solid()) {
-                                if (!height_maps.motion_blocking[x][z])
-                                    height_maps.motion_blocking[x][z] = y_pos;
+                                if (!height_maps.motion_blocking.get(x, z))
+                                    height_maps.motion_blocking.set(x, z, y_pos);
 
                                 if (!leaves.contains(block.general_block_id()))
-                                    if (!height_maps.motion_blocking_no_leaves[x][z])
-                                        height_maps.motion_blocking_no_leaves[x][z] = y_pos;
+                                    if (!height_maps.motion_blocking_no_leaves.get(x, z))
+                                        height_maps.motion_blocking_no_leaves.set(x, z, y_pos);
                             }
                         }
                     }
@@ -648,20 +673,20 @@ namespace copper_server::base_objects::world {
                             schunk.active_blocks += 1;
                             auto y_pos = y + local_y_block;
 
-                            if (!height_maps.ocean_floor[x][z])
-                                height_maps.ocean_floor[x][z] = y_pos;
+                            if (!height_maps.ocean_floor.get(x, z))
+                                height_maps.ocean_floor.set(x, z, y_pos);
 
                             if (block.is_liquid())
-                                if (!height_maps.surface[x][z])
-                                    height_maps.surface[x][z] = y_pos;
+                                if (!height_maps.surface.get(x, z))
+                                    height_maps.surface.set(x, z, y_pos);
 
                             if (block.is_solid()) {
-                                if (!height_maps.motion_blocking[x][z])
-                                    height_maps.motion_blocking[x][z] = y_pos;
+                                if (!height_maps.motion_blocking.get(x, z))
+                                    height_maps.motion_blocking.set(x, z, y_pos);
 
                                 if (!leaves.contains(block.general_block_id()))
-                                    if (!height_maps.motion_blocking_no_leaves[x][z])
-                                        height_maps.motion_blocking_no_leaves[x][z] = y_pos;
+                                    if (!height_maps.motion_blocking_no_leaves.get(x, z))
+                                        height_maps.motion_blocking_no_leaves.set(x, z, y_pos);
                             }
                         }
                     }
@@ -703,17 +728,32 @@ namespace copper_server::base_objects::world {
             func(sub_chunks[sub_chunk_y]);
     }
 
-    void chunk_data::query_for_tick(uint8_t local_x, uint32_t global_y, uint8_t local_z, uint64_t on_tick, int8_t priority) {
-        if (priority > 0)
-            throw std::runtime_error("Priority must be negative");
-        uint8_t real_priority = +priority;
-        if (real_priority >= queried_for_tick.size())
-            queried_for_tick.resize(real_priority + 1);
-        queried_for_tick[real_priority].push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
+    void chunk_data::query_for_tick(uint8_t local_x, uint32_t global_y, uint8_t local_z, uint64_t on_tick, int32_t priority) {
+        auto& sub_chunk = sub_chunks.at(convert_chunk_global_pos(global_y));
+        sub_chunk.queried_for_tick.push_back(
+            to_be_ticked{
+                on_tick,
+                get_block(local_x, global_y, local_z).general_block_id(),
+                priority,
+                local_x,
+                uint8_t(global_y & 15),
+                local_z
+            }
+        );
     }
 
-    void chunk_data::query_for_liquid_tick(uint8_t local_x, uint32_t global_y, uint8_t local_z, uint64_t on_tick) {
-        queried_for_liquid_tick.push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
+    void chunk_data::query_for_liquid_tick(uint8_t local_x, uint32_t global_y, uint8_t local_z, uint64_t on_tick, int32_t priority) {
+        auto& sub_chunk = sub_chunks.at(convert_chunk_global_pos(global_y));
+        sub_chunk.queried_for_liquid_tick.push_back(
+            to_be_ticked{
+                on_tick,
+                get_block(local_x, global_y, local_z).general_block_id(),
+                priority,
+                local_x,
+                uint8_t(global_y & 15),
+                local_z
+            }
+        );
     }
 
     void chunk_data::tick_players_sleep(storage::chunk_tick_result& rr, storage::world_data& world) {
@@ -724,37 +764,50 @@ namespace copper_server::base_objects::world {
     void chunk_data::tick_scheduled_blocks(storage::chunk_tick_result& rr, storage::world_data& world) {
         if (load_level > 32)
             return;
+        uint32_t sub_chunk_i = 0;
+        for (auto& sub_chunk : sub_chunks) {
+            for (auto item : sub_chunk.queried_for_tick
+                                 .take([tick_counter = world.tick_counter](auto& it) {
+                                     return it.scheduled_on >= tick_counter;
+                                 })
+                                 .sort([](auto& a, auto& b) {
+                                     return a.priority < b.priority;
+                                 })) {
 
-        for (auto& priority : queried_for_tick) {
-            for (
-                auto& [till, block_pos] :
-                priority.take([&world](auto& it) {
-                    return it.first >= world.tick_counter;
-                })
-            ) {
-                auto sub_chunk_y = convert_chunk_global_pos(block_pos.y);
-                auto local = convert_chunk_local_pos(block_pos.y);
-                auto& sub_chunk = sub_chunks.at(sub_chunk_y);
-
-                sub_chunk.get_block(block_pos.x, (uint8_t)local, block_pos.z).tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, (uint8_t)local, block_pos.z, false);
+                auto block = sub_chunk.get_block(
+                    item.x,
+                    item.y,
+                    item.z
+                );
+                if (block.general_block_id() == item.block_id)
+                    block.tick(world, sub_chunk, chunk_x, sub_chunk_i, chunk_z, item.x, item.y, item.z, false);
             }
+            ++sub_chunk_i;
         }
     }
 
     void chunk_data::tick_scheduled_fluids(storage::chunk_tick_result& rr, storage::world_data& world) {
         if (load_level > 32)
             return;
-        for (
-            auto& [till, block_pos] :
-            queried_for_liquid_tick.take([&world](auto& it) {
-                return it.first >= world.tick_counter;
-            })
-        ) {
-            auto sub_chunk_y = convert_chunk_global_pos(block_pos.y);
-            auto local = convert_chunk_local_pos(block_pos.y);
-            auto& sub_chunk = sub_chunks.at(sub_chunk_y);
+        uint32_t sub_chunk_i = 0;
+        for (auto& sub_chunk : sub_chunks) {
+            for (auto item : sub_chunk.queried_for_liquid_tick
+                                 .take([tick_counter = world.tick_counter](auto& it) {
+                                     return it.scheduled_on >= tick_counter;
+                                 })
+                                 .sort([](auto& a, auto& b) {
+                                     return a.priority < b.priority;
+                                 })) {
 
-            sub_chunk.get_block(block_pos.x, (uint8_t)local, block_pos.z).tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, (uint8_t)local, block_pos.z, false);
+                auto block = sub_chunk.get_block(
+                    item.x,
+                    item.y,
+                    item.z
+                );
+                if (block.id == item.block_id)
+                    block.tick(world, sub_chunk, chunk_x, sub_chunk_i, chunk_z, item.x, item.y, item.z, false);
+            }
+            ++sub_chunk_i;
         }
     }
 

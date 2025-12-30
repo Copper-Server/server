@@ -14,23 +14,23 @@
 namespace copper_server::build_in_plugins::tools {
     struct scheduled : public plugin_auto_register<"tools/scheduled", scheduled> {
         void on_initialization(const plugin_registration_ptr&) override {
-            api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command" |= enbt::fixed_array{enbt::value("version")};
-            api::configuration::get() ^ "scheduled" ^ "on_stop" ^ "command" |= enbt::fixed_array{};
+            api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command" |= list_array<util::nbt>{util::nbt("version")};
+            api::configuration::get() ^ "scheduled" ^ "on_stop" ^ "command" |= list_array<util::nbt>{};
             //TODO add more flexibility
         }
 
         void on_post_load(const plugin_registration_ptr&) override {
             if (api::console::console_enabled()) {
-                const enbt::value& command = api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command";
-                for (auto& commands : command.as_array())
+                const util::nbt& command = api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command";
+                for (auto& commands : command.get_list())
                     api::console::on_command(commands.as_string());
             }
         }
 
         void on_unload(const plugin_registration_ptr&) override {
             if (api::console::console_enabled()) {
-                const enbt::value& command = api::configuration::get() ^ "scheduled" ^ "on_stop" ^ "command";
-                for (auto& commands : command.as_array())
+                const util::nbt& command = api::configuration::get() ^ "scheduled" ^ "on_stop" ^ "command";
+                for (auto& commands : command.get_list())
                     api::console::on_command(commands.as_string());
             }
         }

@@ -12,6 +12,7 @@
 #include <functional>
 #include <istream>
 #include <src/base_objects/uuid.hpp>
+#include <src/util/endian.hpp>
 #include <src/util/nbt.hpp>
 #include <sstream>
 #include <type_traits>
@@ -19,38 +20,12 @@
 
 namespace copper_server::util {
     namespace __internal {
-
-        void endian_swap(void* value_ptr, std::size_t len);
-
-        void convert_endian(std::endian value_endian, void* value_ptr, std::size_t len);
-
-        template <class T>
-        T convert_endian(std::endian value_endian, T val) {
-            if (std::endian::native != value_endian)
-                endian_swap(&val, sizeof(T));
-            return val;
-        }
-
-        template <class T>
-        void convert_endian_arr(std::endian value_endian, T* val, std::size_t size) {
-            if (std::endian::native != value_endian)
-                for (std::size_t i = 0; i < size; i++)
-                    endian_swap(&val[i], sizeof(T));
-        }
-
-        template <class T>
-        void convert_endian_arr(std::endian value_endian, std::vector<T>& val) {
-            if (std::endian::native != value_endian)
-                for (auto& it : val)
-                    endian_swap(&it, sizeof(T));
-        }
-
         template <class T>
         T read_value(std::istream& read_stream) {
             T res;
-            read_stream.read((char*)&res, sizeof(T));
+            read_stream.read(reinterpret_cast<char*>(&res), sizeof(T));
             if constexpr (sizeof(T) != 1)
-                return convert_endian(std::endian::big, res);
+                return std::byteswap(res);
             else
                 return res;
         }
@@ -89,7 +64,7 @@ namespace copper_server::util {
         nbt_read_stream& read_into(float& res);
         nbt_read_stream& read_into(double& res);
         nbt_read_stream& read_into(std::string& res);
-        nbt_read_stream& read_into(nbt_enbt_convert& res);
+        nbt_read_stream& read_into(nbt_convert& res);
         nbt_read_stream& read_into(nbt& res);
         nbt_read_stream& read_into(base_objects::uuid& res);
         nbt_read_stream& read_into(base_objects::uuid_hex& res);
@@ -107,7 +82,7 @@ namespace copper_server::util {
         nbt_read_stream& read_as(float& res);
         nbt_read_stream& read_as(double& res);
         nbt_read_stream& read_as(std::string& res);
-        nbt_read_stream& read_as(nbt_enbt_convert& res);
+        nbt_read_stream& read_as(nbt_convert& res);
         nbt_read_stream& read_as(nbt& res);
         nbt_read_stream& read_as(base_objects::uuid& res);
         nbt_read_stream& read_as(base_objects::uuid_hex& res);
@@ -125,7 +100,7 @@ namespace copper_server::util {
         void double_pass_read(FN_first&& first_pass, FN_second&& second_pass)
             requires(std::is_invocable_v<FN_first, nbt_read_stream&> && std::is_invocable_v<FN_second, nbt_read_stream&>)
         {
-            nbt_enbt_convert temp;
+            nbt_convert temp;
             read_into(temp);
             auto data = temp.take_data().to_container<std::vector>();
             std::stringstream buf((const char*)data.data(), data.size());
@@ -175,7 +150,7 @@ namespace copper_server::util {
                         throw std::out_of_range("Invalid array size");
                     read_stream.read((char*)arr, size * sizeof(T));
                     readed = true;
-                    __internal::convert_endian_arr(std::endian::big, arr, size);
+                    convert_endian_arr(arr, size);
                 }
             } else if (current_type_id == nbt_type::tag_long_array) {
                 if constexpr (sizeof(T) != sizeof(int64_t))
@@ -186,7 +161,7 @@ namespace copper_server::util {
                         throw std::out_of_range("Invalid array size");
                     read_stream.read((char*)arr, size * sizeof(T));
                     readed = true;
-                    __internal::convert_endian_arr(std::endian::big, arr, size);
+                    convert_endian_arr(arr, size);
                 }
             } else {
                 size_t index = 0;
@@ -226,7 +201,7 @@ namespace copper_server::util {
                     arr.resize(size_t(len));
                     read_stream.read((char*)arr.data(), len * sizeof(T));
                     readed = true;
-                    __internal::convert_endian_arr(std::endian::big, arr);
+                    convert_endian_arr(arr);
                 }
             } else if (current_type_id == nbt_type::tag_long_array) {
                 if constexpr (sizeof(T) != sizeof(int64_t))
@@ -238,7 +213,7 @@ namespace copper_server::util {
                     arr.resize(size_t(len));
                     read_stream.read((char*)arr.data(), len * sizeof(T));
                     readed = true;
-                    __internal::convert_endian_arr(std::endian::big, arr);
+                    convert_endian_arr(arr);
                 }
             } else {
                 iterate(
@@ -433,7 +408,7 @@ namespace copper_server::util {
         nbt_read_list_stream& read_one_into(float& res);
         nbt_read_list_stream& read_one_into(double& res);
         nbt_read_list_stream& read_one_into(std::string& res);
-        nbt_read_list_stream& read_one_into(nbt_enbt_convert& res);
+        nbt_read_list_stream& read_one_into(nbt_convert& res);
         nbt_read_list_stream& read_one_into(nbt& res);
         nbt_read_list_stream& read_one_into(base_objects::uuid& res);
         nbt_read_list_stream& read_one_into(base_objects::uuid_hex& res);
@@ -451,7 +426,7 @@ namespace copper_server::util {
         nbt_read_list_stream& read_one_as(float& res);
         nbt_read_list_stream& read_one_as(double& res);
         nbt_read_list_stream& read_one_as(std::string& res);
-        nbt_read_list_stream& read_one_as(nbt_enbt_convert& res);
+        nbt_read_list_stream& read_one_as(nbt_convert& res);
         nbt_read_list_stream& read_one_as(nbt& res);
         nbt_read_list_stream& read_one_as(base_objects::uuid& res);
         nbt_read_list_stream& read_one_as(base_objects::uuid_hex& res);
@@ -539,7 +514,7 @@ namespace copper_server::util {
         nbt_read_compound_stream& collect_into(const std::string& name, float& res);
         nbt_read_compound_stream& collect_into(const std::string& name, double& res);
         nbt_read_compound_stream& collect_into(const std::string& name, std::string& res);
-        nbt_read_compound_stream& collect_into(const std::string& name, nbt_enbt_convert& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, nbt_convert& res);
         nbt_read_compound_stream& collect_into(const std::string& name, nbt& res);
         nbt_read_compound_stream& collect_into(const std::string& name,base_objects::uuid& res);
         nbt_read_compound_stream& collect_into(const std::string& name,base_objects::uuid_hex& res);
@@ -556,7 +531,7 @@ namespace copper_server::util {
         nbt_read_compound_stream& collect_as(const std::string& name, float& res);
         nbt_read_compound_stream& collect_as(const std::string& name, double& res);
         nbt_read_compound_stream& collect_as(const std::string& name, std::string& res);
-        nbt_read_compound_stream& collect_as(const std::string& name, nbt_enbt_convert& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, nbt_convert& res);
         nbt_read_compound_stream& collect_as(const std::string& name, nbt& res);
         nbt_read_compound_stream& collect_as(const std::string& name, base_objects::uuid& res);
         nbt_read_compound_stream& collect_as(const std::string& name, base_objects::uuid_hex& res);
@@ -629,8 +604,8 @@ namespace copper_server::util {
         void write(double res);
         void write(const std::string& res);
         void write(std::string_view res);
-        void write(const nbt_enbt_convert&);
-        void write(nbt_enbt_convert&&);
+        void write(const nbt_convert&);
+        void write(nbt_convert&&);
         void write(const nbt&);
         void write(base_objects::uuid res);
         void write(base_objects::uuid_hex res);
@@ -676,8 +651,8 @@ namespace copper_server::util {
         nbt_write_list_stream& write(double res);
         nbt_write_list_stream& write(const std::string& res);
         nbt_write_list_stream& write(std::string_view res);
-        nbt_write_list_stream& write(const nbt_enbt_convert&);
-        nbt_write_list_stream& write(nbt_enbt_convert&&);
+        nbt_write_list_stream& write(const nbt_convert&);
+        nbt_write_list_stream& write(nbt_convert&&);
         nbt_write_list_stream& write(const nbt&);
         nbt_write_list_stream& write(base_objects::uuid res);
         nbt_write_list_stream& write(base_objects::uuid_hex res);
@@ -734,8 +709,8 @@ namespace copper_server::util {
         nbt_write_compound_stream& write(std::string_view filed_name, double res);
         nbt_write_compound_stream& write(std::string_view filed_name, const std::string& res);
         nbt_write_compound_stream& write(std::string_view filed_name, std::string_view res);
-        nbt_write_compound_stream& write(std::string_view filed_name, const nbt_enbt_convert&);
-        nbt_write_compound_stream& write(std::string_view filed_name, nbt_enbt_convert&&);
+        nbt_write_compound_stream& write(std::string_view filed_name, const nbt_convert&);
+        nbt_write_compound_stream& write(std::string_view filed_name, nbt_convert&&);
         nbt_write_compound_stream& write(std::string_view filed_name, const nbt&);
         nbt_write_compound_stream& write(std::string_view filed_name, base_objects::uuid res);
         nbt_write_compound_stream& write(std::string_view filed_name, base_objects::uuid_hex res);
@@ -834,10 +809,10 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_relaxed& collect_into(const std::string& name,nbt_enbt_convert& res){
+            compound_relaxed& collect_into(const std::string& name, nbt_convert& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
-            
+
             compound_relaxed& collect_into(const std::string& name, nbt& res){
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
@@ -901,10 +876,10 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
-            compound_relaxed& collect_as(const std::string& name, nbt_enbt_convert& res){
+            compound_relaxed& collect_as(const std::string& name, nbt_convert& res) {
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
-            
+
             compound_relaxed& collect_as(const std::string& name, nbt& res){
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
@@ -1033,10 +1008,10 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_strict& collect_into(const std::string& name, nbt_enbt_convert& res){
+            compound_strict& collect_into(const std::string& name, nbt_convert& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
-            
+
             compound_strict& collect_into(const std::string& name, nbt& res){
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
@@ -1099,10 +1074,11 @@ namespace copper_server::util {
             compound_strict& collect_as(const std::string& name, std::string& res) {
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
-            compound_strict& collect_as(const std::string& name, nbt_enbt_convert& res){
+
+            compound_strict& collect_as(const std::string& name, nbt_convert& res) {
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
-            
+
             compound_strict& collect_as(const std::string& name, nbt& res){
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
@@ -1255,10 +1231,10 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_into(const std::string& name, nbt_enbt_convert& res){
+            compound_flex& collect_into(const std::string& name, nbt_convert& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
-            
+
             compound_flex& collect_into(const std::string& name, nbt& res){
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
@@ -1322,7 +1298,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
-            compound_flex& collect_as(const std::string& name, nbt_enbt_convert& res) {
+            compound_flex& collect_as(const std::string& name, nbt_convert& res) {
                 return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
@@ -1403,10 +1379,10 @@ namespace copper_server::util {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_into_required(const std::string& name, nbt_enbt_convert& res){
+            compound_flex& collect_into_required(const std::string& name, nbt_convert& res) {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
-            
+
             compound_flex& collect_into_required(const std::string& name, nbt& res){
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
@@ -1470,7 +1446,7 @@ namespace copper_server::util {
                 return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
-            compound_flex& collect_as_required(const std::string& name, nbt_enbt_convert& res) {
+            compound_flex& collect_as_required(const std::string& name, nbt_convert& res) {
                 return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 

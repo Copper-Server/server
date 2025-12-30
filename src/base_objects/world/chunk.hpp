@@ -18,7 +18,6 @@
 #include <src/base_objects/world/height_maps.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
 
-
 namespace copper_server::storage {
     class world_data;
     struct chunk_tick_result;
@@ -30,12 +29,8 @@ namespace copper_server::base_objects::world {
         std::vector<base_objects::world::sub_chunk_data> sub_chunks;
         boost::unordered_flat_map<uint64_t, api::ecs::entity> stored_entities; //uses id from world
 
-
-        //instead of using negative values for priority, schedule ticks in reverse order
-        // -1 == 1, -2 == 2, etc... means higher value == lower priority
-        list_array<list_array<std::pair<uint64_t, base_objects::chunk_block_pos>>> queried_for_tick;
-        list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_liquid_tick;
         std::chrono::milliseconds tick_speed{0};
+        int64_t inhabited_time = 0;
         const int32_t chunk_x, chunk_z;
         uint8_t load_level = 44;
         uint8_t resume_gen_level = 255; //if load_level would be lower or equal than this, then generation would be resumed, used by generators
@@ -55,8 +50,8 @@ namespace copper_server::base_objects::world {
         void get_sub_chunk(uint32_t local_y, const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
 
         //priority accepts only negative values
-        void query_for_tick(uint8_t local_x, uint32_t local_y, uint8_t local_z, uint64_t on_tick, int8_t priority = -1);
-        void query_for_liquid_tick(uint8_t local_x, uint32_t local_y, uint8_t local_z, uint64_t on_tick);
+        void query_for_tick(uint8_t local_x, uint32_t local_y, uint8_t local_z, uint64_t on_tick, int32_t priority = -1);
+        void query_for_liquid_tick(uint8_t local_x, uint32_t local_y, uint8_t local_z, uint64_t on_tick, int32_t priority = -1);
 
         void tick_players_sleep(storage::chunk_tick_result& rr, storage::world_data& world);
         void tick_scheduled_blocks(storage::chunk_tick_result& rr, storage::world_data& world);

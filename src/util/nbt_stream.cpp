@@ -12,16 +12,6 @@
 
 namespace copper_server::util {
     namespace __internal {
-        void endian_swap(void* value_ptr, std::size_t len) {
-            std::byte* prox = static_cast<std::byte*>(value_ptr);
-            std::reverse(prox, prox + len);
-        }
-
-        void convert_endian(std::endian value_endian, void* value_ptr, std::size_t len) {
-            if (std::endian::native != value_endian)
-                endian_swap(value_ptr, len);
-        }
-
         std::string read_string(std::istream& read_stream) {
             std::string res;
             res.resize(read_value<uint16_t>(read_stream));
@@ -32,7 +22,7 @@ namespace copper_server::util {
 
     template <class T>
     static void write_value(std::ostream& write_stream, T value) {
-        __internal::convert_endian(std::endian::big, &value, sizeof(T));
+        convert_endian(std::endian::big, &value, sizeof(T));
         write_stream.write(reinterpret_cast<const char*>(&value), sizeof(T));
     }
 
@@ -88,7 +78,7 @@ namespace copper_server::util {
             res = (T)__internal::read_value<float>(stream);
             return;
         default:
-            throw enbt::exception("Non castable value to numeric type");
+            throw std::runtime_error("Non castable value to numeric type");
         }
     }
 
@@ -116,7 +106,7 @@ namespace copper_server::util {
             res = __internal::read_string(stream);
             return;
         default:
-            throw enbt::exception("Non castable value to numeric type");
+            throw std::runtime_error("Non castable value to numeric type");
         }
     }
 
@@ -228,16 +218,16 @@ namespace copper_server::util {
         return *this;
     }
 
-    nbt_read_stream& nbt_read_stream::read_into(nbt_enbt_convert& res) {
+    nbt_read_stream& nbt_read_stream::read_into(nbt_convert& res) {
         check_io_state();
-        res = nbt_enbt_convert::build(current_type_id, read_stream);
+        res = nbt_convert::build(current_type_id, read_stream);
         readed = true;
         return *this;
     }
 
     nbt_read_stream& nbt_read_stream::read_into(nbt& res) {
         check_io_state();
-        res = nbt_enbt_convert::build(current_type_id, read_stream).get_as_nbt();
+        res = nbt_convert::build(current_type_id, read_stream).get_as_nbt();
         readed = true;
         return *this;
     }
@@ -344,16 +334,16 @@ namespace copper_server::util {
         return *this;
     }
 
-    nbt_read_stream& nbt_read_stream::read_as(nbt_enbt_convert& res) {
+    nbt_read_stream& nbt_read_stream::read_as(nbt_convert& res) {
         check_io_state();
-        res = nbt_enbt_convert::build(current_type_id, read_stream);
+        res = nbt_convert::build(current_type_id, read_stream);
         readed = true;
         return *this;
     }
 
     nbt_read_stream& nbt_read_stream::read_as(nbt& res) {
         check_io_state();
-        res = nbt_enbt_convert::build(current_type_id, read_stream).get_as_nbt();
+        res = nbt_convert::build(current_type_id, read_stream).get_as_nbt();
         return *this;
     }
 
@@ -519,7 +509,7 @@ namespace copper_server::util {
         return *this;
     }
 
-    nbt_read_list_stream& nbt_read_list_stream::read_one_into(nbt_enbt_convert& res) {
+    nbt_read_list_stream& nbt_read_list_stream::read_one_into(nbt_convert& res) {
         advance();
         nbt_read_stream tmp(read_stream, items_type);
         tmp.read_into(res);
@@ -638,7 +628,7 @@ namespace copper_server::util {
         return *this;
     }
 
-    nbt_read_list_stream& nbt_read_list_stream::read_one_as(nbt_enbt_convert& res) {
+    nbt_read_list_stream& nbt_read_list_stream::read_one_as(nbt_convert& res) {
         advance();
         nbt_read_stream tmp(read_stream, items_type);
         tmp.read_as(res);
@@ -738,7 +728,7 @@ namespace copper_server::util {
         return collect(name, [&res](auto& stream) { stream.read_into(res); });
     }
 
-    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, nbt_enbt_convert& res) {
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, nbt_convert& res) {
         return collect(name, [&res](auto& stream) { stream.read_into(res); });
     }
 
@@ -806,7 +796,7 @@ namespace copper_server::util {
         return collect(name, [&res](auto& stream) { stream.read_as(res); });
     }
 
-    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, nbt_enbt_convert& res) {
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, nbt_convert& res) {
         return collect(name, [&res](auto& stream) { stream.read_as(res); });
     }
 
@@ -976,11 +966,11 @@ namespace copper_server::util {
         return write([res](auto& s) { s.write(res); });
     }
 
-    nbt_write_list_stream& nbt_write_list_stream::write(const nbt_enbt_convert& res) {
+    nbt_write_list_stream& nbt_write_list_stream::write(const nbt_convert& res) {
         return write([res](auto& s) { s.write(res); });
     }
 
-    nbt_write_list_stream& nbt_write_list_stream::write(nbt_enbt_convert&& res) {
+    nbt_write_list_stream& nbt_write_list_stream::write(nbt_convert&& res) {
         return write([res](auto& s) mutable { s.write(std::move(res)); });
     }
 
@@ -1059,11 +1049,11 @@ namespace copper_server::util {
         return write(filed_name, [res](auto& s) { s.write(res); });
     }
 
-    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, const nbt_enbt_convert& res) {
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, const nbt_convert& res) {
         return write(filed_name, [res](auto& s) { s.write(res); });
     }
 
-    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, nbt_enbt_convert&& res) {
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, nbt_convert&& res) {
         return write(filed_name, [res](auto& s) mutable { s.write(std::move(res)); });
     }
 
@@ -1230,7 +1220,7 @@ namespace copper_server::util {
         write_string(write_stream, res);
     }
 
-    void nbt_write_stream::write(const nbt_enbt_convert& res) {
+    void nbt_write_stream::write(const nbt_convert& res) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
         auto data = (list_array<uint8_t>)res;
@@ -1239,7 +1229,7 @@ namespace copper_server::util {
         write_stream.write((const char*)data.data(), data.size());
     }
 
-    void nbt_write_stream::write(nbt_enbt_convert&& res) {
+    void nbt_write_stream::write(nbt_convert&& res) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
         auto data = res.take_data();
@@ -1249,7 +1239,7 @@ namespace copper_server::util {
     }
 
     void nbt_write_stream::write(const nbt& res) {
-        write(nbt_enbt_convert::build(res));
+        write(nbt_convert::build(res));
     }
 
     void nbt_write_stream::write(base_objects::uuid res) {

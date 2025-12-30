@@ -11,11 +11,11 @@
 #include <bit>
 #include <cstdint>
 #include <exception>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/base_objects/uuid.hpp>
 #include <src/base_objects/velocity.hpp>
 #include <src/util/calculations.hpp>
+#include <src/util/endian.hpp>
 #include <src/util/nbt.hpp>
 #include <string>
 
@@ -163,7 +163,7 @@ namespace copper_server {
             size_t len = sizeof(Res);
             Res res = util::fromVar<Res>(arr_ + r, len);
             r += len;
-            enbt::endian_helpers::convert_endian(std::endian::little, res);
+            util::convert_endian(std::endian::little, res);
             return res;
         }
 
@@ -172,7 +172,7 @@ namespace copper_server {
             uint8_t* tmp = (uint8_t*)&temp;
             for (size_t i = 0; i < 16; i++)
                 tmp[i] = read();
-            return enbt::endian_helpers::convert_endian(std::endian::big, temp);
+            return util::convert_endian(std::endian::big, temp);
         }
 
         template <class T>
@@ -180,7 +180,7 @@ namespace copper_server {
             uint8_t tmp[sizeof(T)];
             for (size_t i = 0; i < sizeof(T); i++)
                 tmp[i] = read();
-            return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
+            return util::convert_endian(std::endian::big, *(T*)tmp);
         }
 
         std::string read_string(int32_t max_string_len = INT32_MAX) {
@@ -283,7 +283,7 @@ namespace copper_server {
 
         constexpr size_t buf_len = sizeof(ResultT) + (sizeof(ResultT) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = util::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
+        size_t len = util::toVar(buf, buf_len, util::convert_endian(std::endian::little, (ResultT)val));
         for (size_t i = 0; i < len; i++)
             data.push_back(buf[i]);
     }
@@ -310,13 +310,13 @@ namespace copper_server {
 
         constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = util::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
+        size_t len = util::toVar(buf, buf_len, util::convert_endian(std::endian::little, (ResultT)val));
         for (size_t i = 0; i < len; i++)
             data.write(buf[i]);
     }
 
     static void WriteUUID(const base_objects::uuid& val, list_array<uint8_t>& data) {
-        base_objects::uuid temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
+        base_objects::uuid temp = util::convert_endian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < 16; i++)
             data.push_back(tmp[i]);
@@ -324,7 +324,7 @@ namespace copper_server {
 
     template <class T>
     static void WriteValue(const T& val, list_array<uint8_t>& data) {
-        T temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
+        T temp = util::convert_endian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < sizeof(T); i++)
             data.push_back(tmp[i]);
@@ -355,30 +355,30 @@ namespace copper_server {
                 WriteValue<ArrayT>(it, data);
     }
 
-    static util::nbt_enbt_convert ReadNBT(ArrayStream& data) {
+    static util::nbt_convert ReadNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::nbt_enbt_convert res(util::nbt_enbt_convert::readNBT(data.data_read(), data.size_read(), readed));
+        util::nbt_convert res(util::nbt_convert::readNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }
 
-    static enbt::value ReadNBT_enbt(ArrayStream& data) {
+    static util::nbt ReadNBT_nbt(ArrayStream& data) {
         size_t readed = 0;
-        auto res = util::nbt_enbt_convert::readNBT_asENBT(data.data_read(), data.size_read(), readed);
+        auto res = util::nbt_convert::readNBT_asNBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }
 
-    static util::nbt_enbt_convert ReadNetworkNBT(ArrayStream& data) {
+    static util::nbt_convert ReadNetworkNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::nbt_enbt_convert res(util::nbt_enbt_convert::readNetworkNBT(data.data_read(), data.size_read(), readed));
+        util::nbt_convert res(util::nbt_convert::readNetworkNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }
 
-    static enbt::value ReadNetworkNBT_enbt(ArrayStream& data) {
+    static util::nbt ReadNetworkNBT_nbt(ArrayStream& data) {
         size_t readed = 0;
-        auto res = util::nbt_enbt_convert::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
+        auto res = util::nbt_convert::readNetworkNBT_asNBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }

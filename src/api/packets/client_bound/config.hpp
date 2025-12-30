@@ -9,7 +9,6 @@
 #ifndef SRC_API_PACKETS_CLIENT_BOUND_CONFIG
 #define SRC_API_PACKETS_CLIENT_BOUND_CONFIG
 
-#include <library/enbt/enbt.hpp>
 #include <src/api/packets/ops.hpp>
 #include <src/api/packets/types.hpp>
 #include <src/base_objects/chat.hpp>
@@ -43,7 +42,7 @@ namespace copper_server::api::packets::client_bound::config {
     struct registry_data : public packet<0x07> {
         struct entry {
             identifier entry_id;
-            std::optional<enbt::value> data = std::nullopt;
+            std::optional<util::nbt> data = std::nullopt;
         };
 
         identifier registry_id;
@@ -135,7 +134,7 @@ namespace copper_server::api::packets::client_bound::config {
     struct clear_dialog : public packet<0x11> {};
 
     struct show_dialog : public packet<0x12> {
-        enbt::value dialog;
+        util::nbt dialog;
     };
 
     struct code_of_conduct : public packet<0x13> {

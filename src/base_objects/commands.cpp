@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <library/enbt/senbt.hpp>
 #include <library/list_array.hpp>
 #include <src/api/ecs/base_components.hpp>
 #include <src/api/permissions.hpp>
@@ -79,8 +78,8 @@ namespace copper_server::base_objects {
                 if (part.starts_with('{')) {
                     part += part;
                     std::string_view view = part;
-                    auto enbt = senbt::parse_mod(view);
-                    [[maybe_unused]] auto comp = enbt.as_compound();
+                    //auto enbt = snbt::parse_mod(view);
+                    //[[maybe_unused]] auto comp = enbt.as_compound();
 
                     //TODO
                 }

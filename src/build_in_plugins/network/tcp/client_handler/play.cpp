@@ -262,10 +262,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             packet.location.y,
                             packet.location.z,
                             [](auto) {},
-                            [&](auto, auto& enbt) {
+                            [&](auto, auto& nbt) {
                                 client << api::packets::client_bound::play::tag_query{
                                     .tag_query_id = packet.tag_query_id,
-                                    .nbt = enbt
+                                    .nbt = nbt
                                 };
                             }
                         );

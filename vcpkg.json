@@ -17,6 +17,7 @@
         "zlib",
         "lz4",
         "cpptrace",
+        "ctre",
         "lionkor-commandline",
         "concurrentqueue",
         {

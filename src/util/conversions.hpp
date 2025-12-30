@@ -41,15 +41,7 @@ namespace copper_server::util::conversions {
     }
 
     namespace json {
-        boost::json::value to_json(const enbt::value& enbt);
-        boost::json::object to_json(const enbt::compound& enbt);
-        boost::json::array to_json(const enbt::dynamic_array& enbt);
-        boost::json::array to_json(const enbt::fixed_array& enbt);
-        enbt::value from_json(const boost::json::value& json);
-        enbt::compound from_json(const boost::json::object& json);
-        enbt::dynamic_array from_json(const boost::json::array& json);
-
-        boost::json::value to_json(const util::nbt& enbt);
+        boost::json::value to_json(const util::nbt& nbt);
         util::nbt from_json_nbt(const boost::json::value& json);
     }
 }

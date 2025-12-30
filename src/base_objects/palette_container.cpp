@@ -18,6 +18,22 @@ namespace copper_server::base_objects {
             data.reserve_back(reserve_size * bits_per_entry);
     }
 
+    palette_data::palette_data(palette_data&& mov) : data(std::move(mov.data)), bits_per_entry(mov.bits_per_entry) {}
+
+    palette_data::palette_data(const palette_data& copy) : data(copy.data), bits_per_entry(copy.bits_per_entry) {}
+
+    palette_data& palette_data::operator=(palette_data&& mov) {
+        data = std::move(mov.data);
+        bits_per_entry = mov.bits_per_entry;
+        return *this;
+    }
+
+    palette_data& palette_data::operator=(const palette_data& copy) {
+        data = copy.data;
+        bits_per_entry = copy.bits_per_entry;
+        return *this;
+    }
+
     uint8_t palette_data::bits_for_max(size_t items) {
         if (items <= 1)
             return 0;
@@ -52,6 +68,19 @@ namespace copper_server::base_objects {
 
     void palette_data::clear() {
         return data.clear();
+    }
+
+    void palette_data::resize_bits_per_entry(uint8_t n_bits_per_entry) {
+        if (bits_per_entry != n_bits_per_entry) {
+            palette_data new_data(n_bits_per_entry, data.size());
+            size_t actual_size = data.size() / bits_per_entry;
+            for (size_t i = 0; i < actual_size; ++i)
+                new_data.add(get(i));
+
+
+            data = std::move(new_data.data);
+            bits_per_entry = n_bits_per_entry;
+        }
     }
 
     palette_container_indirect::palette_container_indirect(uint8_t bits_per_entry, size_t reserve_size) : bits_per_entry(bits_per_entry), data(bits_per_entry, reserve_size) {}

@@ -59,7 +59,7 @@ namespace copper_server::api::registers {
     list_array<decltype(jukebox_songs)::iterator> jukebox_songs_cache;
 
 
-    enbt::compound current_protocol_registers;
+    util::nbt_compound current_protocol_registers;
     uint32_t current_protocol_id;
 
     std::string normalize_entry(const std::string& entry) {
@@ -78,30 +78,30 @@ namespace copper_server::api::registers {
         return "minecraft:" + entry;
     }
 
-    enbt::value& view_registry_entries(const std::string& registry) {
+    util::nbt& view_registry_entries(const std::string& registry) {
         return current_protocol_registers.at(registry).at("entries");
     }
 
-    enbt::value& view_registry_proto_invert(const std::string& registry) {
+    util::nbt& view_registry_proto_invert(const std::string& registry) {
         return current_protocol_registers.at(registry).at("proto_invert");
     }
 
     list_array<int32_t> reg_ids(const std::string& registry) {
         list_array<int32_t> res;
         auto& reg = view_registry_entries(registry);
-        res.reserve(reg.size());
-        for (auto&& [name, it] : reg.as_compound())
-            res.push_back(it.at("protocol_id"));
+        res.reserve(reg.get_compound().size());
+        for (auto&& [name, it] : reg.get_compound())
+            res.push_back(it.at("protocol_id").as_int());
         return res;
     }
 
     int32_t view_reg_pro_id(const std::string& registry, const std::string& item) {
         if (item.contains(":") && !item.starts_with(':'))
-            return view_registry_entries(registry).at(item).at("protocol_id");
+            return view_registry_entries(registry).at(item).at("protocol_id").as_int();
         else if (item.starts_with(':'))
-            return view_registry_entries(registry).at("minecraft" + item).at("protocol_id");
+            return view_registry_entries(registry).at("minecraft" + item).at("protocol_id").as_int();
         else
-            return view_registry_entries(registry).at("minecraft:" + item).at("protocol_id");
+            return view_registry_entries(registry).at("minecraft:" + item).at("protocol_id").as_int();
     }
 
     std::string_view view_reg_pro_name(const std::string& registry, int32_t id) {
@@ -110,19 +110,19 @@ namespace copper_server::api::registers {
 
     list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& items) {
         auto& entries = view_registry_entries(registry);
-        return items.convert<int32_t>([&entries](const auto& item) {
+        return items.convert<int32_t>([&entries](const std::string& item) {
             if (item.contains(":") && !item.starts_with(':'))
-                return entries.at(item).at("protocol_id");
+                return entries.at(item).at("protocol_id").as_int();
             else if (item.starts_with(':'))
-                return entries.at("minecraft" + item).at("protocol_id");
+                return entries.at("minecraft" + item).at("protocol_id").as_int();
             else
-                return entries.at("minecraft:" + item).at("protocol_id");
+                return entries.at("minecraft:" + item).at("protocol_id").as_int();
         });
     }
 
     list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& items) {
         auto& entries = view_registry_proto_invert(registry);
-        return items.convert<std::string>([&entries](const auto& item) { return entries.at(item); });
+        return items.convert<std::string>([&entries](const auto& item) { return entries.at(item).as_int(); });
     }
 
     list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& items) {
@@ -131,11 +131,11 @@ namespace copper_server::api::registers {
         result.reserve(items.size());
         for (const auto& item : items) {
             if (item.contains(":") && !item.starts_with(':'))
-                result.push_back(entries.at(item).at("protocol_id"));
+                result.push_back(entries.at(item).at("protocol_id").as_int());
             else if (item.starts_with(':'))
-                result.push_back(entries.at("minecraft" + item).at("protocol_id"));
+                result.push_back(entries.at("minecraft" + item).at("protocol_id").as_int());
             else
-                result.push_back(entries.at("minecraft:" + item).at("protocol_id"));
+                result.push_back(entries.at("minecraft:" + item).at("protocol_id").as_int());
         }
         return result;
     }
@@ -145,7 +145,7 @@ namespace copper_server::api::registers {
         list_array<std::string> result;
         result.reserve(item.size());
         for (const auto& i : item)
-            result.push_back(entries.at(i));
+            result.push_back(entries.at(i).get_string());
         return result;
     }
 

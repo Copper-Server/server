@@ -12,8 +12,8 @@
 namespace copper_server::api::loot_table_pool_entry {
     std::unordered_map<std::string, handler> handlers;
 
-    std::optional<base_objects::slot> process_entry(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-        return handlers.at(registers::normalize_entry((std::string)predicate["type"]))(predicate, context);
+    std::optional<base_objects::slot> process_entry(const util::nbt_compound& predicate, const base_objects::command_context& context) {
+        return handlers.at(registers::normalize_entry(predicate["type"].as_string()))(predicate, context);
     }
 
     void register_handler(const std::string& name, handler handler) {

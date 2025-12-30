@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <functional>
 
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 
 #include <src/api/ecs.hpp>
@@ -20,6 +19,7 @@
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/palette_container.hpp>
 #include <src/base_objects/world/light_data.hpp>
+#include <src/base_objects/world/to_be_ticked.hpp>
 
 namespace copper_server::base_objects::world {
     struct sub_chunk_data {
@@ -29,6 +29,9 @@ namespace copper_server::base_objects::world {
 
         base_objects::world::light_data sky_light;
         base_objects::world::light_data block_light;
+        list_array<to_be_ticked> queried_for_tick;
+        list_array<to_be_ticked> queried_for_liquid_tick;
+        std::vector<local_block_pos> post_processing; //ticked after completing the chunk generation
 
         uint16_t active_blocks = 0; //if zero, the sub chunk is not rendered for clients
         bool has_tickable_blocks = false;

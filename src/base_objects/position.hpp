@@ -33,7 +33,7 @@ namespace copper_server::base_objects {
             return get() != other.get();
         }
 
-        auto operator<=>(const position& enbt) const = default;
+        auto operator<=>(const position& other) const = default;
     };
 }
 

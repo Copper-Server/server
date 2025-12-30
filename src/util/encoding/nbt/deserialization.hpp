@@ -17,7 +17,7 @@ namespace copper_server::util::encoding::nbt {
     consteval bool has_flattened_fields() {
         bool res = false;
         if constexpr (reflect::fields_count<T> > 0) {
-            reflect::for_each_field_type<T>([&]<class FieldT>() {
+            reflect::for_each_type<T>([&]<class FieldT>() {
                 if constexpr (is_flattened_type_v<FieldT>)
                     res = true;
             });
@@ -26,79 +26,47 @@ namespace copper_server::util::encoding::nbt {
     }
 
     template <class T, class T_prev>
-    void deserialize_entry(T& res, util::nbt_read_stream& stream, T_prev& prev) {
-        using Type = std::decay_t<T>;
-        if constexpr (
-            std::is_arithmetic_v<Type>
-            || std::is_same_v<std::string, Type>
-            || std::is_same_v<std::string_view, Type>
-            || std::is_same_v<base_objects::uuid, Type>
-            || std::is_same_v<base_objects::uuid_hex, Type>
-            || std::is_same_v<base_objects::uuid_flat_hex, Type>
-        )
+    void deserialize_entry(T& res, util::nbt_read_stream& stream, T_prev& prev);
+
+    namespace detail {
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_arithmetic_v<Type>
+                     || std::is_same_v<std::string, Type>
+                     || std::is_same_v<std::string_view, Type>
+                     || std::is_same_v<base_objects::uuid, Type>
+                     || std::is_same_v<base_objects::uuid_hex, Type>
+                     || std::is_same_v<base_objects::uuid_flat_hex, Type>
+        {
             stream.read_as(res);
-        else if constexpr (std::is_same_v<::enbt::value, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt();
-        } else if constexpr (std::is_same_v<::enbt::compound, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_compound();
-        } else if constexpr (std::is_same_v<::enbt::dynamic_array, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_dyn_array();
-        } else if constexpr (std::is_same_v<::enbt::fixed_array, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_fixed_array();
-        } else if constexpr (std::is_same_v<::enbt::uuid, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_uuid();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_i8, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_i8_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_i16, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_i16_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_i32, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_i32_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_i64, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_i64_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_ui8, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_ui8_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_ui16, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_ui16_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_ui32, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_ui32_array();
-        } else if constexpr (std::is_same_v<::enbt::simple_array_ui64, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-            res = ss.get_as_enbt().as_ui64_array();
-        } else if constexpr (is_std_array<Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<4>)
+            requires is_template_base_of<base_objects::box, Type>
+        {
+            res.ptr = std::make_shared<typename Type::value_type>();
+            deserialize_entry(*res, stream, prev);
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<4>)
+            requires is_std_array<Type>
+        {
             stream.iterate(
                 [&res](auto size) { if (res.size() != size)
                     throw std::runtime_error("Size mismatch, detected for std::array"); },
-                [&res](auto& item_stream) {
+                [&res, &prev](auto& item_stream) {
                     for (auto& item : res)
-                        deserialize_entry(item, item_stream, res);
+                        deserialize_entry(item, item_stream, prev);
                 }
             );
-        } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<4>)
+            requires is_template_base_of<_list_array_impl::list_array, Type>
+        {
             stream.iterate(
                 [&res](auto size) { res.reserve(size); },
                 [&res, &prev](auto& item_stream) {
@@ -106,15 +74,45 @@ namespace copper_server::util::encoding::nbt {
                     deserialize_entry(res.back(), item_stream, prev);
                 }
             );
-        } else if constexpr (
-            std::is_same_v<api::packets::identifier, Type>
-            || is_string_sized<Type>
-            || std::is_same_v<api::packets::json_text_component, Type>
-            || std::is_same_v<api::packets::var_int32, Type>
-            || std::is_same_v<api::packets::var_int64, Type>
-        )
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<4>)
+            requires is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>
+        {
+            stream.iterate(
+                [&res, &prev](auto& key, auto& item_stream) {
+                    deserialize_entry(res[key], item_stream, prev);
+                }
+            );
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<4>)
+            requires is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>
+        {
+            stream.iterate(
+                [&res, &prev](auto& key, auto& item_stream) {
+                    deserialize_entry(res[key.to_string()], item_stream, prev);
+                }
+            );
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<api::packets::identifier, Type>
+                     || is_string_sized<Type>
+                     || std::is_same_v<api::packets::json_text_component, Type>
+                     || std::is_same_v<api::packets::var_int32, Type>
+                     || std::is_same_v<api::packets::var_int64, Type>
+        {
             stream.read_as(res.value);
-        else if constexpr (std::is_same_v<base_objects::velocity, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<base_objects::velocity, Type>
+        {
             stream.iterate([&res](auto& name, auto& value) {
                 if (name == "x")
                     value.read_into(res.x);
@@ -123,21 +121,41 @@ namespace copper_server::util::encoding::nbt {
                 else if (name == "z")
                     value.read_into(res.z);
             });
-        } else if constexpr (std::is_same_v<base_objects::chat, Type>) {
-            nbt_enbt_convert ss;
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<base_objects::chat, Type>
+        {
+            nbt_convert ss;
             stream.read_into(ss);
-            res = base_objects::chat::from_enbt(ss.get_as_enbt());
-        } else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type>) {
+            res = base_objects::chat::from_nbt(ss.get_as_nbt());
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<api::packets::optional_var_int32, Type>
+        {
             int32_t res_value = 0;
             stream.read_into(res_value);
             if (res_value != 0)
                 res = res_value - 1;
-        } else if constexpr (std::is_same_v<api::packets::optional_var_int64, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<api::packets::optional_var_int64, Type>
+        {
             int64_t res_value = 0;
             stream.read_into(res_value);
             if (res_value != 0)
                 res = res_value - 1;
-        } else if constexpr (std::is_same_v<base_objects::position, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<base_objects::position, Type>
+        {
             stream.iterate([&res](auto& name, auto& value) {
                 if (name == "x")
                     value.read_into(res.x);
@@ -146,43 +164,67 @@ namespace copper_server::util::encoding::nbt {
                 else if (name == "z")
                     value.read_into(res.z);
             });
-        } else if constexpr (is_template_base_of<api::packets::ignored, Type>) {
-            nbt_enbt_convert ss;
-            stream.read_into(ss);
-        } else if constexpr (is_template_base_of<std::optional, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires is_template_base_of<api::packets::ignored, Type>
+        {
+            stream.skip();
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<4>)
+            requires is_template_base_of<std::optional, Type>
+        {
             stream.read_compound()
                 .collect("opt", [&](util::nbt_read_stream& opt_stream) {
                     res.emplace();
                     deserialize_entry(*res, opt_stream, prev);
                 })
                 .make_collect();
-        } else if constexpr (is_template_base_of<api::packets::enum_as, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires is_template_base_of<api::packets::enum_as, Type>
+        {
             std::string str;
             stream.read_into(str);
             res.value = reflect::get_enum_value<typename Type::enum_t>(str);
-        } else if constexpr (is_template_base_of<api::packets::enum_as_flag, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires is_template_base_of<api::packets::enum_as_flag, Type>
+        {
             std::string str;
             stream.read_into(str);
             res.value = reflect::get_enum_flag_value<typename Type::enum_t>(str);
-        } else if constexpr (is_template_base_of<api::packets::or_, Type> || is_template_base_of<api::packets::bool_or, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires is_template_base_of<api::packets::or_, Type> || is_template_base_of<api::packets::bool_or, Type>
+        {
             if constexpr (get_nbt_type<typename Type::var_0>() != get_nbt_type<typename Type::var_1>()) {
                 if (get_nbt_type<typename Type::var_0>() == stream.get_type()) {
                     typename Type::var_0 it{};
-                    deserialize_entry(it, var_stream, prev);
+                    deserialize_entry(it, stream, prev);
                     res = std::move(it);
                 } else {
                     typename Type::var_1 it{};
-                    deserialize_entry(it, var_stream, prev);
+                    deserialize_entry(it, stream, prev);
                     res = std::move(it);
                 }
             } else {
-                nbt_enbt_convert converter;
+                nbt_convert converter;
                 stream.read_into(converter);
                 auto buffered_data = converter.get_as_normal();
 
                 auto try_decode = [&]<class VariantT>() -> std::optional<VariantT> {
                     try {
-                        std::stringstream ss((const char*)buffered_data.data(), buffered_data.size());
+                        std::stringstream ss(std::string((const char*)buffered_data.data(), buffered_data.size()));
                         util::nbt_read_stream temp_stream(ss);
 
                         VariantT val{};
@@ -200,12 +242,17 @@ namespace copper_server::util::encoding::nbt {
                 else
                     throw std::runtime_error("Failed to decode either variant of field");
             }
-        } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires is_template_base_of<api::packets::enum_switch, Type>
+        {
             if constexpr (enum_switch_is_inline_eligible<Type>) {
-                Type::for_each([]<class Ty>() {
-                    if (get_nbt_type<Ty>() == type) {
+                Type::for_each([&res, &prev, &stream]<class Ty>() {
+                    if (get_nbt_type<Ty>() == stream.get_type()) {
                         Ty it{};
-                        deserialize_entry(it, data_stream, prev);
+                        deserialize_entry(it, stream, prev);
                         res = std::move(it);
                     }
                 });
@@ -218,10 +265,10 @@ namespace copper_server::util::encoding::nbt {
                             .collect_into("type", type)
                             .make_collect();
                     },
-                    [&res, &prev](util::nbt_read_stream& data_stream) {
-                        Type::for_each([&data_stream, &res, &prev]<class Ty>() {
-                            if (type == reflect::get_pretty_type_name<it_T>()) {
-                                stream.iterate([&res, &prev](auto& name, auto& item_stream) {
+                    [&res, &prev, &type](util::nbt_read_stream& this_stream) {
+                        Type::for_each([&this_stream, &res, &prev, &type]<class Ty>() {
+                            if (type == reflect::get_pretty_type_name<Ty>()) {
+                                this_stream.iterate([&res, &prev](auto& name, auto& item_stream) {
                                     if (name == "type")
                                         return;
                                     reflect::visit_field(name, res, [&item_stream, &prev](auto& res_v) {
@@ -233,12 +280,19 @@ namespace copper_server::util::encoding::nbt {
                     }
                 );
             }
-        } else if constexpr (is_template_base_of<base_objects::box, Type>) {
-            res.ptr = std::make_shared<typename Type::value_type>();
-            deserialize_entry(*res, stream, prev);
-        } else if constexpr (is_template_base_of<api::packets::any_of, Type> || is_ordered_id<Type> || is_template_base_of<api::packets::sized_entry, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires is_template_base_of<api::packets::any_of, Type> || is_ordered_id<Type> || is_template_base_of<api::packets::sized_entry, Type>
+        {
             deserialize_entry(res.value, stream, prev);
-        } else if constexpr (is_template_base_of<api::packets::flags_list, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires is_template_base_of<api::packets::flags_list, Type>
+        {
             stream.iterate([&res, &prev](auto& name, auto& comp_stream) {
                 if (name == "flag") {
                     deserialize_entry(res, comp_stream, prev);
@@ -258,19 +312,12 @@ namespace copper_server::util::encoding::nbt {
                     });
                 }
             });
-        } else if constexpr (is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>) {
-            stream.iterate(
-                [&res, &prev](auto& key, auto& item_stream) {
-                    deserialize_entry(res[key], item_stream, prev);
-                }
-            );
-        } else if constexpr (is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>) {
-            stream.iterate(
-                [&res, &prev](auto& key, auto& item_stream) {
-                    deserialize_entry(res[key], item_stream, prev);
-                }
-            );
-        } else if constexpr (is_flags_list_from<Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires is_flags_list_from<Type>
+        {
             auto arr_r = stream.read_list();
             auto& it = (*prev).*Type::preprocess_source_name::value;
             Type::for_each_set_flag_in_order(it, [&arr_r, &res]<class Ty>() {
@@ -285,7 +332,12 @@ namespace copper_server::util::encoding::nbt {
                         .force_all_collect();
                 });
             });
-        } else if constexpr (is_template_base_of<api::packets::value_optional, Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires is_template_base_of<api::packets::value_optional, Type>
+        {
             stream.read_compound()
                 .collect("opt", [&res, &prev](auto& opt_stream) {
                     opt_stream
@@ -309,79 +361,129 @@ namespace copper_server::util::encoding::nbt {
                         });
                 })
                 .make_collect();
-        } else if constexpr (is_limited_num<Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<3>)
+            requires is_limited_num<Type>
+        {
             stream.read_into(res.value);
-        } else if constexpr (is_convertible_to_nbt_form<Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<3>)
+            requires is_convertible_to_nbt_form<Type>
+        {
             res = Type::from_nbt(stream);
-        } else if constexpr (api::packets::is_convertible_to_packet_form<Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires api::packets::is_convertible_to_packet_form<Type>
+        {
             api::packets::convertible_to_packet_type<Type> tmp{};
             deserialize_entry(tmp, stream, prev);
             res = Type::from_packet(std::move(tmp));
-        } else if constexpr (api::id::is_source<Type>) {
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<3>)
+            requires api::id::is_source<Type>
+        {
             std::string tmp;
             stream.read_into(tmp);
             res = Type(tmp);
-        } else if constexpr (is_template_base_of<base_objects::pool, Type>) {
-            stream.iterate([&res, &prev](util::nbt_read_stream& pool_item) {
-                int32_t weight = 0;
-                typename Type::value_type data;
+        }
 
-                pool_item
-                    .read_compound()
-                    .collect_as("weight", weight)
-                    .collect("data", [&](auto& data_stream) {
-                        deserialize_entry(data, data_stream, prev);
-                    })
-                    .force_all_collect();
-                res.add(weight, std::move(data));
-            });
-        } else if constexpr (nbt_is_inline<Type> && reflect::fields_count<Type> == 1) {
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
+            requires nbt_is_inline<Type> && (reflect::fields_count<Type> == 1)
+        {
             reflect::visit_field<Type>(0, [&]<class T>() {
                 deserialize_entry(res, stream, prev);
             });
-        } else {
-            if constexpr (has_flattened_fields<Type>()) {
-                if (stream.get_type() != nbt_type::tag_compound)
-                    throw std::runtime_error("Expected Compound for struct");
+        }
 
-                nbt_enbt_convert converter;
-                stream.read_into(converter);
-                auto buffer = converter.get_as_normal();
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<2>)
+            requires(has_flattened_fields<Type>())
+        {
+            if (stream.get_type() != nbt_type::tag_compound)
+                throw std::runtime_error("Expected Compound for struct");
 
-                reflect::for_each_field_with_name(res, [&](auto& field, std::string_view name) {
+            nbt_convert converter;
+            stream.read_into(converter);
+            auto buffer = converter.get_as_normal();
+
+            reflect::for_each_field_with_name(res, [&](auto& field, std::string_view name) {
+                using FieldType = std::decay_t<decltype(field)>;
+                if constexpr (is_flattened_type_v<FieldType>) {
+                    std::stringstream ss(std::string((char*)buffer.data(), buffer.size()));
+                    util::nbt_read_stream replay_stream(ss);
+                    deserialize_entry(field, replay_stream, prev);
+                }
+            });
+
+            std::stringstream ss(std::string((char*)buffer.data(), buffer.size()));
+            util::nbt_read_stream normal_stream(ss);
+
+            normal_stream.iterate([&res, &prev](std::string_view name, util::nbt_read_stream& item_stream) {
+                reflect::visit_field(name, res, [&](auto& field) {
                     using FieldType = std::decay_t<decltype(field)>;
-                    if constexpr (is_flattened_type_v<FieldType>) {
-                        std::stringstream ss(std::string((char*)buffer.data(), buffer.size()));
-                        util::nbt_read_stream replay_stream(ss);
-                        deserialize_entry(field, replay_stream, prev);
-                    }
+                    if constexpr (!is_flattened_type_v<FieldType>)
+                        deserialize_entry(field, item_stream, prev);
+                    else
+                        item_stream.skip();
                 });
+            });
+        }
 
-                std::stringstream ss(std::string((char*)buffer.data(), buffer.size()));
-                util::nbt_read_stream normal_stream(ss);
-
-                normal_stream.iterate([&res, &prev](std::string_view name, util::nbt_read_stream& item_stream) {
-                    reflect::visit_field(name, res, [&](auto& field) {
-                        using FieldType = std::decay_t<decltype(field)>;
-                        if constexpr (!is_flattened_type_v<FieldType>)
-                            deserialize_entry(field, item_stream, prev);
-                        else
-                            item_stream.skip();
-                    });
-                });
-            } else if (stream.get_type() == nbt_type::tag_compound)
-                stream.iterate([&res, &prev](auto& name, auto& item_stream) {
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<1>)
+            requires(reflect::fields_count<Type>() == 1)
+        {
+            if (stream.get_type() == nbt_type::tag_compound) {
+                bool has_value = false;
+                stream.iterate([&res, &prev, &has_value](auto& name, auto& item_stream) {
                     reflect::visit_field(name, res, [&item_stream, &prev](auto& res_v) {
                         deserialize_entry(res_v, item_stream, prev);
                     });
+                    has_value = true;
                 });
-            else if constexpr (reflect::fields_count<Type>() == 1)
-                reflect::visit_field(0, res, [&stream, &prev](auto& res_v) {
-                    deserialize_entry(res_v, stream, prev);
+                if (!has_value)
+                    throw std::runtime_error("Invalid encoding");
+            } else {
+                reflect::visit_field<Type>(0, [&res, &stream, &prev]<class T>() {
+                    deserialize_entry(res, stream, prev);
                 });
-            else if constexpr (reflect::fields_count<Type>() != 0)
-                throw std::runtime_error("Invalid encoding");
+            }
         }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<0>) {
+            if (stream.get_type() == nbt_type::tag_compound) {
+                bool has_value = false;
+                stream.iterate([&res, &prev, &has_value](auto& name, auto& item_stream) {
+                    reflect::visit_field(name, res, [&item_stream, &prev](auto& res_v) {
+                        deserialize_entry(res_v, item_stream, prev);
+                    });
+                    has_value = true;
+                });
+                if (!has_value) {
+                    if constexpr (reflect::fields_count<Type>() != 0)
+                        throw std::runtime_error("Invalid encoding");
+                }
+            } else {
+                reflect::visit_field<Type>(0, [&res, &stream, &prev]<class T>() {
+                    deserialize_entry(res, stream, prev);
+                });
+            }
+        }
+    }
+
+    template <class T, class T_prev>
+    void deserialize_entry(T& res, util::nbt_read_stream& stream, T_prev& prev) {
+        detail::deserialize_impl(res, stream, prev, priority_tag<4>{});
     }
 
     template <class T>

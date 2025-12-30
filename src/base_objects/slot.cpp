@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <library/enbt/io.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/util/nbt_stream.hpp>
@@ -14,54 +13,6 @@
 namespace copper_server::base_objects {
     std::unordered_map<std::string, std::shared_ptr<static_slot_data>> slot_data::named_full_item_data;
     std::vector<std::shared_ptr<static_slot_data>> slot_data::full_item_data_;
-
-    slot_data slot_data::from_enbt(enbt::compound_const_ref compound) {
-        auto& id = compound.at("id").as_string();
-        base_objects::slot_data slot_data = base_objects::slot_data::create_item(id);
-        if (compound.contains("count"))
-            slot_data.count = compound.at("count");
-        for (auto& comp : compound.at("components").as_array())
-            slot_data.add_component(component::parse_component(comp));
-        return slot_data;
-    }
-
-    enbt::compound slot_data::to_enbt() const {
-        enbt::compound compound;
-        compound["id"] = id;
-        compound["count"] = count;
-        enbt::fixed_array comp;
-        comp.reserve(components.size());
-        for (auto& [c_id, value] : components)
-            comp.push_back(component::encode_component(value));
-        compound["components"] = std::move(comp);
-        return compound;
-    }
-
-    void slot_data::to_enbt(enbt::io_helper::value_write_stream& stream) const {
-        stream
-            .write_compound(3)
-            .write("id", id)
-            .write("count", count)
-            .write("components", [this](auto& components_stream) {
-                components_stream.write_array(components.size()).iterable(components, [this](auto& component, auto& component_stream) {
-                    component::encode_component(component.second, component_stream);
-                });
-            });
-    }
-
-    slot_data slot_data::from_enbt(enbt::io_helper::value_read_stream& stream) {
-        slot_data res;
-        stream.read_compound()
-            .collect_as("id", res.id)
-            .collect_as("count", res.count)
-            .collect_iterate("components", [&res](auto& component_stream) {
-                component c;
-                component::parse_component(c, component_stream);
-                res.add_component(std::move(c));
-            })
-            .make_collect();
-        return res;
-    }
 
     bool slot_data::operator==(const slot_data& other) const {
         if (id != other.id)
