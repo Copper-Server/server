@@ -85,12 +85,6 @@ namespace copper_server::base_objects::world {
         void gen_remove_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, api::ecs::world_local_registry& world);
 
         bool could_be_unloaded() const noexcept;
-
-    private:
-        friend class storage::world_data;
-        bool load(const std::filesystem::path& path, uint64_t tick_counter, storage::world_data& world);
-        bool load(const enbt::compound_const_ref& chunk_data, uint64_t tick_counter, storage::world_data& world);
-        bool save(const std::filesystem::path& path, uint64_t tick_counter, storage::world_data& world);
     };
 }
 

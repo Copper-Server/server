@@ -8,7 +8,7 @@
  */
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
-#include <library/enbt/io_tools.hpp>
+#include <boost/iostreams/stream.hpp>
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity.hpp>
@@ -21,6 +21,7 @@
 #include <src/base_objects/palette_container.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
+#include <src/util/nbt_stream.hpp>
 
 namespace copper_server::resources {
     list_array<base_objects::data_packs::known_pack>& loaded_packs() {
@@ -520,7 +521,7 @@ namespace copper_server::resources {
         api::registers::chat_type::decoration decoration;
         util::js_object chat_js = util::js_object::get_object(json);
         if (chat_js.contains("style"))
-            decoration.style = base_objects::chat::from_enbt(util::conversions::json::from_json(chat_js["style"].get()));
+            decoration.style = base_objects::chat::from_nbt(util::conversions::json::from_json(chat_js["style"].get()));
         decoration.translation_key = (std::string)chat_js["translation_key"];
         {
             auto params = chat_js["parameters"];
@@ -643,7 +644,7 @@ namespace copper_server::resources {
                 } else if (type == "score") {
                     base_objects::number_provider_score res;
                     res.score = (std::string)obj.at("score");
-                    res.scale = obj.contains("scale") ? std::optional<float>((float)obj["scale"]) : std::nullopt;
+                    res.scale = obj.contains("scale") ? (float)obj["scale"] : 1.0f;
                     auto target = util::js_object::get_object(obj.at("target"));
                     std::string score_type = target.at("type");
                     if (score_type == "fixed")
@@ -777,7 +778,7 @@ namespace copper_server::resources {
         song.send_via_network_body = send_via_network_body;
         song.comparator_output = song_js["comparator_output"];
         song.length_in_seconds = song_js["length_in_seconds"];
-        song.description = base_objects::chat::from_enbt(util::conversions::json::from_json(song_js["description"].get()));
+        song.description = base_objects::chat::from_nbt(util::conversions::json::from_json(song_js["description"].get()));
         auto sound_event_js = song_js["sound_event"];
         if (sound_event_js.is_string())
             song.sound_event = (std::string)sound_event_js;
@@ -814,7 +815,7 @@ namespace copper_server::resources {
             auto functions = util::js_array::get_array(loot_table_js["functions"]);
             item.functions.reserve(functions.size());
             for (auto&& function : functions) {
-                enbt::compound comp;
+                util::nbt_compound comp;
                 comp = util::conversions::json::from_json(function.get());
                 item.functions.emplace_back(comp);
             }
@@ -828,10 +829,10 @@ namespace copper_server::resources {
                 api::registers::loot_table_item::pool pool_;
                 if (pool.contains("conditions")) {
                     auto res = util::conversions::json::from_json(pool["conditions"].get());
-                    auto ref = res.as_array();
+                    auto& ref = res.get_list();
                     pool_.conditions.reserve(ref.size());
                     for (auto& it : ref)
-                        pool_.conditions.emplace_back(it.as_compound());
+                        pool_.conditions.emplace_back(std::move(it.get_compound()));
                 }
                 if (pool.contains("bonus_rolls"))
                     pool_.bonus_rolls = read_number_provider(pool["bonus_rolls"]);
@@ -840,7 +841,7 @@ namespace copper_server::resources {
                     auto functions = util::js_array::get_array(pool["functions"]);
                     pool_.functions.reserve(functions.size());
                     for (auto&& function : functions) {
-                        enbt::compound comp;
+                        util::nbt_compound comp;
                         comp = util::conversions::json::from_json(function.get());
                         pool_.functions.emplace_back(comp);
                     }
@@ -849,7 +850,7 @@ namespace copper_server::resources {
                 auto entries = util::js_array::get_array(pool.at("entries"));
                 pool_.entries.reserve(entries.size());
                 for (auto&& entry : entries) {
-                    enbt::compound comp;
+                    util::nbt_compound comp;
                     comp = util::conversions::json::from_json(entry.get());
                     pool_.functions.emplace_back(std::move(comp));
                 }
@@ -882,7 +883,7 @@ namespace copper_server::resources {
             if (desc.is_string())
                 pattern.description = (std::string)desc;
             else
-                pattern.description = base_objects::chat::from_enbt(util::conversions::json::from_json(desc.get()));
+                pattern.description = base_objects::chat::from_nbt(util::conversions::json::from_json(desc.get()));
         }
         api::registers::armor_trim_patterns[id] = std::move(pattern);
     }
@@ -905,7 +906,7 @@ namespace copper_server::resources {
             if (desc.is_string())
                 material.description = (std::string)desc;
             else
-                material.description = base_objects::chat::from_enbt(util::conversions::json::from_json(desc.get()));
+                material.description = base_objects::chat::from_nbt(util::conversions::json::from_json(desc.get()));
         }
         api::registers::armor_trim_materials[id] = std::move(material);
     }
@@ -1090,7 +1091,7 @@ namespace copper_server::resources {
         check_conflicts(api::registers::enchantments, id, "enchantments");
         api::registers::enchantment type;
         type.send_via_network_body = send_via_network_body;
-        type.description = base_objects::chat::from_enbt(util::conversions::json::from_json(type_js.at("description").get()));
+        type.description = base_objects::chat::from_nbt(util::conversions::json::from_json(type_js.at("description").get()));
         type.max_level = type_js.at("max_level");
         type.weight = type_js.at("weight");
         type.anvil_cost = type_js.at("anvil_cost");
@@ -1165,7 +1166,7 @@ namespace copper_server::resources {
     void load_file_instrument(util::js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(api::registers::instruments, id, "instruments");
         api::registers::instrument type;
-        type.description = base_objects::chat::from_enbt(util::conversions::json::from_json(type_js.at("description").get()));
+        type.description = base_objects::chat::from_nbt(util::conversions::json::from_json(type_js.at("description").get()));
         type.use_duration = type_js.at("use_duration");
         type.range = type_js.at("range");
         type.send_via_network_body = send_via_network_body;
@@ -1582,7 +1583,7 @@ namespace copper_server::resources {
         boost::iostreams::array_source source(resources::registry::blocks.data(), resources::registry::blocks.size());
         filter.push(boost::iostreams::zstd_decompressor());
         filter.push(source);
-        enbt::io_helper::value_read_stream read_stream(filter);
+        util::nbt_read_stream read_stream(filter);
 
 
         base_objects::block::access_full_block_data(std::function([&read_stream](list_array<std::unique_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, base_objects::static_block_data*>& named_full_block_data) {
@@ -1601,9 +1602,9 @@ namespace copper_server::resources {
             //states
 
 #pragma region block_state
-            enbt::io_helper::collection::compound_relaxed state_collector;
+            util::nbt_collection::compound_relaxed state_collector;
             state_collector
-                .collect("id", [&](enbt::io_helper::value_read_stream& item) {
+                .collect("id", [&](util::nbt_read_stream& item) {
                     base_objects::block_id_t id = 0;
                     item.read_as(id);
                     block_data->current_state = block_data_id = id;
@@ -1621,7 +1622,7 @@ namespace copper_server::resources {
                         has_default_state = true;
                     }
                 })
-                .collect("state_flags", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("state_flags", [&block_data](util::nbt_read_stream& item) {
                     // AIR = 0b0000000001
                     // BURNABLE = 0b0000000010
                     // TOOL_REQUIRED = 0b0000000100
@@ -1645,7 +1646,7 @@ namespace copper_server::resources {
                     block_data->has_random_ticks = states & 0b0100000000;
                     block_data->has_comparator_output = states & 0b1000000000;
                 })
-                .collect("side_flags", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("side_flags", [&block_data](util::nbt_read_stream& item) {
                     //DOWN_SIDE_SOLID = 0b00000001;
                     //UP_SIDE_SOLID = 0b00000010;
                     //NORTH_SIDE_SOLID = 0b00000100;
@@ -1666,22 +1667,22 @@ namespace copper_server::resources {
                     sides.down_center_solid = states & 0b01000000;
                     sides.up_center_solid = states & 0b10000000;
                 })
-                .collect("opacity", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("opacity", [&block_data](util::nbt_read_stream& item) {
                     item.read_as(block_data->opacity);
                 })
-                .collect("instrument", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("instrument", [&block_data](util::nbt_read_stream& item) {
                     item.read_as(block_data->instrument);
                 })
-                .collect("luminance", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("luminance", [&block_data](util::nbt_read_stream& item) {
                     item.read_as(block_data->luminance);
                 })
-                .collect("emits_redstone", [&block_data](enbt::io_helper::value_read_stream& item) {
-                    block_data->is_emits_redstone = item.read();
+                .collect("emits_redstone", [&block_data](util::nbt_read_stream& item) {
+                    block_data->is_emits_redstone = item.template read_as<bool>();
                 })
-                .collect("piston_behavior", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("piston_behavior", [&block_data](util::nbt_read_stream& item) {
                     item.read_as(block_data->piston_behavior);
                 })
-                .collect("default_state_id", [&](enbt::io_helper::value_read_stream& item) {
+                .collect("default_state_id", [&](util::nbt_read_stream& item) {
                     item.read_as(default_state);
                     block_data->is_default_state = true;
                     has_default_state = true;
@@ -1689,30 +1690,30 @@ namespace copper_server::resources {
                 .collect("hardness", [&block_data](auto& item) {
                     item.read_as(block_data->hardness);
                 })
-                .collect("properties", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("properties", [&block_data](util::nbt_read_stream& item) {
                     item.iterate(
                         [&properties = block_data->current_properties](auto size) { properties.reserve(size); },
-                        [&properties = block_data->current_properties](const std::string& name, enbt::io_helper::value_read_stream& item) { item.read_as(properties[name]); }
+                        [&properties = block_data->current_properties](const std::string& name, util::nbt_read_stream& item) { item.read_as(properties[name]); }
                     );
                 })
-                .collect("collision_shapes", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("collision_shapes", [&block_data](util::nbt_read_stream& item) {
                     item.iterate(
                         [&block_data](auto size) { block_data->collision_shapes.reserve(size); },
-                        [&block_data](enbt::io_helper::value_read_stream& item) {
+                        [&block_data](util::nbt_read_stream& item) {
                             size_t index = 0;
                             item.read_as(index);
                             block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(index));
                         }
                     );
                 })
-                .collect("block_entity_type", [&block_data](enbt::io_helper::value_read_stream& item) {
+                .collect("block_entity_type", [&block_data](util::nbt_read_stream& item) {
                     block_data->is_block_entity = true;
                     item.read_as(block_data->block_entity_id);
                 })
-                .collect("outline_shapes", [&](enbt::io_helper::value_read_stream& item) {
+                .collect("outline_shapes", [&](util::nbt_read_stream& item) {
                     item.iterate(
                         [&](auto size) { block_data->outline_shapes.reserve(size); },
-                        [&](enbt::io_helper::value_read_stream& item) {
+                        [&](util::nbt_read_stream& item) {
                             size_t index = 0;
                             item.read_as(index);
                             block_data->outline_shapes.push_back(&base_objects::static_block_data::all_shapes.at(index));
@@ -1721,9 +1722,9 @@ namespace copper_server::resources {
                 });
 #pragma endregion
 #pragma region block
-            enbt::io_helper::collection::compound_relaxed block_collector;
+            util::nbt_collection::compound_relaxed block_collector;
             block_collector
-                .collect("name", [&](auto& item) { default_state_data->display_name = base_objects::chat::from_enbt(item.read()); })
+                .collect("name", [&](auto& item) { default_state_data->display_name = base_objects::chat::from_nbt(item.template read_as<util::nbt>()); })
                 .collect("named_id", [&](auto& item) {
                     item.read_as(default_state_data->name);
                     if (named_full_block_data.contains(default_state_data->name))
@@ -1757,7 +1758,7 @@ namespace copper_server::resources {
                     item.read_as(default_state_data->map_color_rgb);
                 })
                 .collect("loot_table", [&](auto& item) {
-                    *(default_state_data->loot_table = std::make_shared<enbt::compound>()) = item.read();
+                    *(default_state_data->loot_table = std::make_shared<util::nbt>()) = item.template read_as<util::nbt>();
                 })
                 .collect("default_state_id", [&](auto& item) {
                     if (!has_default_state) {
@@ -1768,30 +1769,30 @@ namespace copper_server::resources {
                 .collect_iterate("exp_drop", [&default_state_data](auto& name, auto& data) {
                     if (name == "experience")
                         default_state_data->ore_data = base_objects::static_block_data::ore_data_t{
-                            .experience = base_objects::number_provider::parse_provider(data.read())
+                            .experience = base_objects::number_provider::parse_provider(data.template read_as<util::nbt>())
                         };
                     else if (name == "properties") {
-                        data.read(); //skip would not work for compressed streams
+                        data.skip(); //skip would not work for compressed streams
                     } else
                         throw std::runtime_error("Skipped value definitions");
                 })
                 .collect("properties", [&](auto& item) {
                     item.iterate(
                         [&properties = default_state_data->allowed_properties](size_t size) { properties.resize(size); },
-                        [&properties = default_state_data->allowed_properties, i = size_t(0)](enbt::io_helper::value_read_stream& item) mutable { item.read_as(properties[i++]); }
+                        [&properties = default_state_data->allowed_properties, i = size_t(0)](util::nbt_read_stream& item) mutable { item.read_as(properties[i++]); }
                     );
                 })
                 .collect("flammable", [&](auto& item) {
-                    enbt::compound comp;
-                    comp = item.read();
+                    util::nbt comp;
+                    comp = item.template read_as<util::nbt>();
                     default_state_data->flammable = base_objects::static_block_data::flammable_t{
-                        .spread_chance = comp.at("spread_chance"),
-                        .burn_chance = comp.at("burn_chance"),
+                        .spread_chance = comp.at("spread_chance").as_float(),
+                        .burn_chance = comp.at("burn_chance").as_float(),
                     };
                 })
                 .collect("experience", [&](auto& item) {
-                    enbt::compound comp;
-                    comp = item.read();
+                    util::nbt comp;
+                    comp = item.template read_as<util::nbt>();
                     default_state_data->ore_data = base_objects::static_block_data::ore_data_t{
                         .experience = base_objects::number_provider::parse_provider(comp.at("experience"))
                     };
@@ -1809,7 +1810,7 @@ namespace copper_server::resources {
 #pragma endregion
 
 
-            read_stream.iterate([&](enbt::io_helper::value_read_stream& decl) {
+            read_stream.iterate([&](util::nbt_read_stream& decl) {
                 default_state_data = std::make_unique<base_objects::static_block_data>();
                 init_states.clear();
                 associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
@@ -1861,7 +1862,11 @@ namespace copper_server::resources {
             slot.id = name;
             std::unordered_map<int32_t, base_objects::component> components;
             for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
-                auto component = base_objects::component::parse_component(component_name, util::conversions::json::from_json(value));
+                base_objects::component component;
+                auto nbt = util::nbt_convert::build(util::conversions::json::from_json(value)).take_data();
+                boost::iostreams::stream<boost::iostreams::array_source> ss(nbt.data(), nbt.size());
+                util::nbt_read_stream nss(ss);
+                base_objects::component::parse_component(component, component_name, nss);
                 auto id = component.get_id();
                 components[id] = std::move(component);
             }
@@ -1872,14 +1877,15 @@ namespace copper_server::resources {
 
     void prepare_versions() {
         auto res = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol));
-        for (auto& it : res.as_compound()) {
-            auto entries = it.second.at("entries").as_compound();
-            enbt::fixed_array invert(entries.size());
+        for (auto& it : res.get_compound()) {
+            auto& entries = it.second.at("entries").get_compound();
+            util::nbt_compound invert;
+            invert.reserve(entries.size());
 
-            for (auto& [key, value] : it.second.at("entries").as_compound())
-                invert.set(value.at("protocol_id"), key);
+            for (auto& [key, value] : it.second.at("entries").get_compound())
+                invert.set(key, value.at("protocol_id"));
 
-            it.second["proto_invert"] = std::move(invert);
+            it.second["proto_invert"] = std::move(invert).take_map();
         }
         api::registers::current_protocol_id = 773;
         api::registers::current_protocol_registers = std::move(res);
@@ -2157,9 +2163,9 @@ namespace copper_server::resources {
 
         {
             auto reg_attributes = boost::json::parse(resources::registry::entity_attributes);
-            auto current_attribute = api::registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
+            auto& current_attribute = api::registers::current_protocol_registers.at("minecraft:attribute").at("entries").get_compound();
             for (auto& [name, decl] : current_attribute)
-                api::registers::attributes[name] = api::registers::attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
+                api::registers::attributes[name] = api::registers::attribute{name, std::bit_cast<uint32_t>(decl.at("protocol_id").as_int()), reg_attributes.at(name).to_number<double>()};
             {
                 api::registers::attributes_cache.resize(api::registers::attributes.size());
                 auto it = api::registers::attributes.begin();
@@ -2292,7 +2298,12 @@ namespace copper_server::resources {
             for (auto&& [name, decl] : parsed_items.as_object()) {
                 std::unordered_map<int32_t, base_objects::component> components;
                 for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
-                    auto component = base_objects::component::parse_component(component_name, util::conversions::json::from_json(value));
+                    base_objects::component component;
+                    auto nbt = util::nbt_convert::build(util::conversions::json::from_json(value)).take_data();
+                    boost::iostreams::stream<boost::iostreams::array_source> ss(nbt.data(), nbt.size());
+                    util::nbt_read_stream nss(ss);
+                    base_objects::component::parse_component(component, component_name, nss);
+
                     auto id = component.get_id();
                     components[id] = std::move(component);
                 }

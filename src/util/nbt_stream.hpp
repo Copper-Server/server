@@ -88,6 +88,19 @@ namespace copper_server::util {
         nbt_read_stream& read_as(base_objects::uuid_hex& res);
         nbt_read_stream& read_as(base_objects::uuid_flat_hex& res);
 
+        template <class T>
+        T read_into() {
+            T res;
+            read_into(res);
+            return res;
+        }
+
+        template <class T>
+        T read_as() {
+            T res;
+            read_as(res);
+            return res;
+        }
 
         void skip();
 

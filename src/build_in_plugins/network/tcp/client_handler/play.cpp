@@ -108,7 +108,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             api::world::unregister_entity(*p_data.assigned_entity->get_assigned_world_id(), *p_data.assigned_entity);
 
                         api::players::save_player(std::move(hold->player_data), hold->data->uuid);
-                        hold->player_data.assigned_entity->remove<api::ecs::com::assigned_player>();
+                        hold->player_data.assigned_entity->remove<api::ecs::com::entities::assigned_player>();
                         hold->packets_state.internal_data.set([](auto& it) { it.extra_data = nullptr; });
                     }
                     for (auto& plugin : hold->compatible_plugins)
@@ -134,8 +134,8 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
 
                 auto client_ref = api::players::get_player(client);
                 client.player_data = api::players::load_player(client.data->uuid);
-                client.player_data.assigned_entity->modify<api::ecs::com::uuid>()->id = client.data->uuid;
-                client.player_data.assigned_entity->modify<api::ecs::com::assigned_player>()->player = client_ref;
+                client.player_data.assigned_entity->modify<api::ecs::com::entities::uuid>()->id = client.data->uuid;
+                client.player_data.assigned_entity->modify<api::ecs::com::entities::assigned_player>()->player = client_ref;
 
                 bool world_debug = false;
                 bool world_flat = false;
@@ -174,7 +174,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 });
                 auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
                 api::entity_id_map::assign_entity(player_entity_id, *client.player_data.assigned_entity);
-                client.player_data.assigned_entity->modify<api::ecs::com::protocol_id>()->value = player_entity_id;
+                client.player_data.assigned_entity->modify<api::ecs::com::entities::protocol_id>()->value = player_entity_id;
 
                 client << api::packets::client_bound::play::login{
                     .id = player_entity_id,
@@ -216,8 +216,8 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     .flying_speed = client.player_data.abilities.flying_speed,
                     .fov_modifier = client.player_data.abilities.field_of_view_modifier
                 };
-                client << api::packets::client_bound::play::set_held_slot{.slot = client.player_data.assigned_entity->get<api::ecs::com::held_slot>().hotbar_slot};
-                auto experience = client.player_data.assigned_entity->get<api::ecs::com::experience>();
+                client << api::packets::client_bound::play::set_held_slot{.slot = client.player_data.assigned_entity->get<api::ecs::com::entities::held_slot>().hotbar_slot};
+                auto experience = client.player_data.assigned_entity->get<api::ecs::com::entities::experience>();
 
                 client << api::packets::client_bound::play::set_experience{
                     .bar = experience.get_progress(),
@@ -229,7 +229,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 });
 
                 api::world::register_entity(world_id, *client.player_data.assigned_entity);
-                client.player_data.assigned_entity->modify<api::ecs::com::world_syncing>()->update_render_distance(client.view_distance);
+                client.player_data.assigned_entity->modify<api::ecs::com::entities::world_syncing>()->update_render_distance(client.view_distance);
 
 
                 for (auto& plugin : client.compatible_plugins)
@@ -257,7 +257,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             api::packets::processor(*this, [](block_entity_tag_query&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
                     if (client.player_data.assigned_entity->get_assigned_world_id()) {
-                        client.player_data.assigned_entity->get<api::ecs::com::world_syncing>().world->get_block(
+                        client.player_data.assigned_entity->get<api::ecs::com::entities::world_syncing>().world->get_block(
                             packet.location.x,
                             packet.location.y,
                             packet.location.z,
@@ -284,7 +284,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 client.particle_status = (base_objects::shared_client_data::ParticleStatus)packet.particle_status.get();
 
                 if (client.player_data.assigned_entity)
-                    client.player_data.assigned_entity->modify<api::ecs::com::world_syncing>()->update_render_distance(client.view_distance);
+                    client.player_data.assigned_entity->modify<api::ecs::com::entities::world_syncing>()->update_render_distance(client.view_distance);
 
                 api::players::handlers::on_skin_parts_changed(client);
             });
@@ -312,7 +312,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 if (entity)
                     client << api::packets::client_bound::play::tag_query{
                         .tag_query_id = packet.tag_query_id,
-                        .nbt = entity->get<api::ecs::com::nbt>().get() //TODO check if required adding more info to nbt
+                        .nbt = entity->get<api::ecs::com::entities::nbt>().get() //TODO check if required adding more info to nbt
                     };
             });
 
@@ -355,7 +355,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             api::packets::processor(*this, [](swing&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
                     if (client.player_data.assigned_entity->get_assigned_world_id()) {
-                        client.player_data.assigned_entity->get<api::ecs::com::world_syncing>().world->locked([&](auto& world) {
+                        client.player_data.assigned_entity->get<api::ecs::com::entities::world_syncing>().world->locked([&](auto& world) {
                             world.entity_animation(
                                 *client.player_data.assigned_entity,
                                 packet.hand == swing::hand_e::main

@@ -13,9 +13,9 @@
 #include <src/util/nbt.hpp>
 
 namespace copper_server::api::block_state_provider {
-    using handler = std::function<base_objects::block(const util::nbt& config, util::nbt& local_state)>;
+    using handler = std::function<base_objects::block(const util::nbt_compound& config, util::nbt_compound& local_state)>;
 
-    std::function<base_objects::block()> process_provider(const util::nbt& provider_config);
+    std::function<base_objects::block()> process_provider(const util::nbt_compound& provider_config);
     void register_handler(const std::string& name, handler handler);
     void unregister_handler(const std::string& name);
     const handler& get_handler(const std::string& name);

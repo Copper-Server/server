@@ -9,17 +9,18 @@
 #ifndef SRC_BASE_OBJECTS_NUMBER_PROVIDER
 #define SRC_BASE_OBJECTS_NUMBER_PROVIDER
 
-#include <library/enbt/enbt.hpp>
 #include <variant>
+
+#include <src/util/nbt.hpp>
 
 namespace copper_server::base_objects {
 
     struct number_provider {
         virtual float get_float() const noexcept = 0;
         virtual int32_t get_int() const noexcept = 0;
-        virtual enbt::value get_enbt() const = 0;
+        virtual util::nbt get_nbt() const = 0;
 
-        static std::shared_ptr<number_provider> parse_provider(const enbt::value& value);
+        static std::shared_ptr<number_provider> parse_provider(const util::nbt& value);
     };
 
     struct number_provider_constant final : public number_provider {
@@ -33,7 +34,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_uniform final : public number_provider {
@@ -81,7 +82,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_clamped_normal final : public number_provider {
@@ -95,7 +96,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_trapezoid final : public number_provider {
@@ -108,7 +109,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_clamped final : public number_provider {
@@ -157,7 +158,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_weighted_list final : public number_provider {
@@ -171,7 +172,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_biased_to_bottom final : public number_provider {
@@ -219,7 +220,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_binomial final : public number_provider {
@@ -231,7 +232,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_score final : public number_provider {
@@ -241,11 +242,11 @@ namespace copper_server::base_objects {
         } target;
 
         std::string score;
-        std::optional<float> scale;
+        float scale = 1.0f;
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_storage final : public number_provider {
@@ -256,7 +257,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 
     struct number_provider_enchantment_level final : public number_provider {
@@ -266,7 +267,7 @@ namespace copper_server::base_objects {
 
         float get_float() const noexcept override;
         int32_t get_int() const noexcept override;
-        enbt::value get_enbt() const override;
+        util::nbt get_nbt() const override;
     };
 }
 #endif /* SRC_BASE_OBJECTS_NUMBER_PROVIDER */

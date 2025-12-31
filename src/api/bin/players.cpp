@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <library/enbt/io.hpp>
 #include <library/fast_task/include/files.hpp>
 #include <library/list_array.hpp>
 #include <src/api/configuration.hpp>
@@ -17,6 +16,7 @@
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/util/nbt_stream.hpp>
 
 namespace copper_server::api::network::tcp {
     class session;
@@ -385,10 +385,10 @@ namespace copper_server::api::players {
     void save_player(base_objects::player&& player, base_objects::uuid uuid) {
         auto path = api::configuration::get().server.get_storage_path() / "players";
         std::filesystem::create_directories(path);
-        fast_task::files::atomic_async_ofstream file(path / (uuid.to_string() + ".enbt"));
+        fast_task::files::atomic_async_ofstream file(path / (uuid.to_string() + ".dat"));
         if (!file.is_open())
-            throw std::runtime_error("Failed to open file: " + (path / (uuid.to_string() + ".enbt")).string());
-        enbt::io_helper::value_write_stream write(file);
+            throw std::runtime_error("Failed to open file: " + (path / (uuid.to_string() + ".dat")).string());
+        copper_server::util::nbt_write_stream write(file);
         auto compound = write.write_compound();
         compound
             .write("abilities", [&player](auto& writer) {
@@ -422,10 +422,10 @@ namespace copper_server::api::players {
                     .write("prev_gamemode", player.prev_gamemode);
             })
             .write("permission_groups", [&player](auto& writer) {
-                writer.write_array(player.permission_groups.size()).iterable(player.permission_groups);
+                writer.write_list(player.permission_groups.size(), util::nbt_type::tag_string).iterable(player.permission_groups);
             })
             .write("local_data", [&player](auto& writer) {
-                writer.write(player.local_data);
+                writer.write(player.local_data.get_map());
             });
 
         if (player.last_death_location.has_value()) {
@@ -447,7 +447,7 @@ namespace copper_server::api::players {
 
     base_objects::player load_player(base_objects::uuid uuid) {
         auto path = api::configuration::get().server.get_storage_path() / "players";
-        auto file_path = path / (uuid.to_string() + ".enbt");
+        auto file_path = path / (uuid.to_string() + ".dat");
         std::filesystem::create_directories(path);
         base_objects::player player;
 
@@ -466,35 +466,35 @@ namespace copper_server::api::players {
             }
             return load_player(uuid);
         }
-        enbt::io_helper::value_read_stream(file)
+        util::nbt_read_stream(file)
             .read_compound()
-            .collect("abilities", [&](enbt::io_helper::value_read_stream& stream) {
+            .collect("abilities", [&](util::nbt_read_stream& stream) {
                 stream
                     .read_compound()
-                    .collect("flags", [&](enbt::io_helper::value_read_stream& stream) {
+                    .collect("flags", [&](util::nbt_read_stream& stream) {
                         stream
                             .read_compound()
-                            .collect("creative_mode", [&](enbt::io_helper::value_read_stream& stream) { player.abilities.flags.creative_mode = stream.read(); })
-                            .collect("walking_speed", [&](enbt::io_helper::value_read_stream& stream) { player.abilities.flags.walking_speed = stream.read(); })
-                            .collect("flying_speed", [&](enbt::io_helper::value_read_stream& stream) { player.abilities.flags.flying_speed = stream.read(); })
-                            .collect("invulnerable", [&](enbt::io_helper::value_read_stream& stream) { player.abilities.flags.invulnerable = stream.read(); })
-                            .collect("allow_flying", [&](enbt::io_helper::value_read_stream& stream) { player.abilities.flags.allow_flying = stream.read(); })
-                            .collect("flying", [&](enbt::io_helper::value_read_stream& stream) { player.abilities.flags.flying = stream.read(); })
+                            .collect("creative_mode", [&](util::nbt_read_stream& stream) { player.abilities.flags.creative_mode = stream.template read_as<bool>();; })
+                            .collect("walking_speed", [&](util::nbt_read_stream& stream) { player.abilities.flags.walking_speed = stream.template read_as<bool>();; })
+                            .collect("flying_speed", [&](util::nbt_read_stream& stream) { player.abilities.flags.flying_speed = stream.template read_as<bool>();; })
+                            .collect("invulnerable", [&](util::nbt_read_stream& stream) { player.abilities.flags.invulnerable = stream.template read_as<bool>();; })
+                            .collect("allow_flying", [&](util::nbt_read_stream& stream) { player.abilities.flags.allow_flying = stream.template read_as<bool>(); })
+                            .collect("flying", [&](util::nbt_read_stream& stream) { player.abilities.flags.flying = stream.template read_as<bool>();; })
                             .force_all_collect();
                     })
                     .collect_as("flying_speed", player.abilities.flying_speed)
                     .collect_as("field_of_view_modifier", player.abilities.field_of_view_modifier)
                     .make_collect();
             })
-            .collect("flags", [&](enbt::io_helper::value_read_stream& stream) {
+            .collect("flags", [&](util::nbt_read_stream& stream) {
                 stream
                     .read_compound()
-                    .collect("reduced_debug_info", [&](enbt::io_helper::value_read_stream& stream) { player.reduced_debug_info = stream.read(); })
-                    .collect("show_death_screen", [&](enbt::io_helper::value_read_stream& stream) { player.show_death_screen = stream.read(); })
-                    .collect("hardcore_hearts", [&](enbt::io_helper::value_read_stream& stream) { player.hardcore_hearts = stream.read(); })
+                    .collect("reduced_debug_info", [&](util::nbt_read_stream& stream) { player.reduced_debug_info = stream.template read_as<bool>();; })
+                    .collect("show_death_screen", [&](util::nbt_read_stream& stream) { player.show_death_screen = stream.template read_as<bool>();; })
+                    .collect("hardcore_hearts", [&](util::nbt_read_stream& stream) { player.hardcore_hearts = stream.template read_as<bool>();; })
                     .force_all_collect();
             })
-            .collect("gamemode", [&](enbt::io_helper::value_read_stream& stream) {
+            .collect("gamemode", [&](util::nbt_read_stream& stream) {
                 stream
                     .read_compound()
                     .collect_as("prev_gamemode", player.prev_gamemode)
@@ -504,10 +504,9 @@ namespace copper_server::api::players {
             })
             .collect_iterate( //
                 "permission_groups",
-                [&player](auto size) { player.permission_groups.reserve(size); },
-                [&player](enbt::io_helper::value_read_stream& stream) { player.permission_groups.push_back(stream.read()); }
+                [&player](util::nbt_read_stream& stream) { player.permission_groups.push_back(stream.template read_into<std::string>()); }
             )
-            .collect("death_location", [&player](enbt::io_helper::value_read_stream& stream) {
+            .collect("death_location", [&player](util::nbt_read_stream& stream) {
                 player.last_death_location.emplace();
                 stream
                     .read_compound()
@@ -517,11 +516,11 @@ namespace copper_server::api::players {
                     .collect_as("world_id", player.last_death_location->world_id)
                     .force_all_collect();
             })
-            .collect("assigned_entity", [&player](enbt::io_helper::value_read_stream& stream) {
+            .collect("assigned_entity", [&player](util::nbt_read_stream& stream) {
                 player.assigned_entity = api::entity::load_from_file(stream);
             })
-            .collect("local_data", [&player](enbt::io_helper::value_read_stream& stream) {
-                player.local_data = stream.read();
+            .collect("local_data", [&player](util::nbt_read_stream& stream) {
+                player.local_data = stream.template read_into<util::nbt>();
             })
             .make_collect();
         if (!player.assigned_entity)

@@ -17,7 +17,6 @@
 #include <string>
 #include <vector>
 
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/api/ecs.hpp>
 #include <src/base_objects/block.hpp>
@@ -34,7 +33,9 @@
 #include <src/base_objects/world/loading_point_ticket.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
 
+#include <src/storage/anvil.hpp>
 #include <src/util/calculations.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server::storage {
     class world_data;
@@ -212,9 +213,10 @@ namespace copper_server::storage {
         std::string preview_world_name();
         std::filesystem::path path;
 
+        anvil region_manager;
         fast_task::task_query limit_on_load;
         boost::unordered_flat_map<util::xy<int32_t>, fast_task::future_ptr<std::shared_ptr<base_objects::world::chunk_data>>, std::hash<util::xy<int32_t>>> on_load_process;
-        boost::unordered_flat_map<util::xy<int32_t>, fast_task::future_ptr<bool>, std::hash<util::xy<int32_t>>> on_save_process;
+        boost::unordered_flat_map<util::xy<int32_t>, fast_task::future_ptr<void>, std::hash<util::xy<int32_t>>> on_save_process;
         boost::unordered_flat_map<size_t, api::ecs::entity> entities;
         boost::unordered_flat_map<size_t, api::ecs::entity> to_load_entities;
         size_t local_entity_id_generator = 0;
@@ -289,7 +291,7 @@ namespace copper_server::storage {
         void set_seed(int32_t seed);
 
         //metadata
-        void load(const enbt::compound_const_ref& load_from_nbt);
+        void load(const util::nbt_compound& load_from_nbt);
         //metadata
         void load();
         //metadata
@@ -302,13 +304,13 @@ namespace copper_server::storage {
             };
 
             std::unordered_map<base_objects::block_id_t, liquid_data> liquid;
-            enbt::compound other;
+            util::nbt_compound other;
         } general_world_data;
 
-        enbt::compound world_game_rules;
-        enbt::compound world_generator_data;
-        enbt::compound world_light_processor_data; //not saved
-        enbt::compound world_records;
+        util::nbt_compound world_game_rules;
+        util::nbt_compound world_generator_data;
+        util::nbt_compound world_light_processor_data; //not saved
+        util::nbt_compound world_records;
 
         base_objects::uuid wandering_trader_id = base_objects::uuid::as_null();
         float wandering_trader_spawn_chance = 0;

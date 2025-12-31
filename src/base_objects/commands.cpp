@@ -21,9 +21,9 @@ namespace copper_server::base_objects {
     void command_context::apply_executor_data() {
         if (!executor.player_data.assigned_entity)
             return;
-        auto pos = executor.player_data.assigned_entity->get<api::ecs::com::position>();
-        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->get<api::ecs::com::rotation>());
-        auto mot = executor.player_data.assigned_entity->get<api::ecs::com::motion>();
+        auto pos = executor.player_data.assigned_entity->get<api::ecs::com::entities::position>();
+        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->get<api::ecs::com::entities::rotation>());
+        auto mot = executor.player_data.assigned_entity->get<api::ecs::com::entities::motion>();
 
         if (api::entity(*executor.player_data.assigned_entity).current_world()) {
             other_data["world_id"] = api::entity(*executor.player_data.assigned_entity).current_world()->world_id;

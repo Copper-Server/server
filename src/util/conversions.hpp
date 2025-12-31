@@ -42,7 +42,7 @@ namespace copper_server::util::conversions {
 
     namespace json {
         boost::json::value to_json(const util::nbt& nbt);
-        util::nbt from_json_nbt(const boost::json::value& json);
+        util::nbt from_json(const boost::json::value& json);
     }
 }
 #endif /* SRC_UTIL_CONVERSIONS */

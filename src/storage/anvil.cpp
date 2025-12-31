@@ -328,10 +328,10 @@ namespace copper_server::storage {
         );
     }
 
-    fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, region_storage::compression_type type, bool use_external_file) {
+    fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, uint64_t tick_clock, region_storage::compression_type type, bool use_external_file) {
         return fast_task::future<void>::make_ready();
     }
 
-    fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, const std::string& type, bool use_external_file) {
+    fast_task::future_ptr<void> anvil::write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, uint64_t tick_clock, const std::string& type, bool use_external_file) {
     }
 }

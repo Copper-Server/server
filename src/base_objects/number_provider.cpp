@@ -17,37 +17,37 @@ namespace copper_server::base_objects {
         return engine;
     }
 
-    std::shared_ptr<number_provider> number_provider::parse_provider(const enbt::value& other_data) {
-        if (other_data.get_type() == enbt::type::floating)
-            return std::make_shared<number_provider_constant>((float)other_data);
-        else if (other_data.is_numeric() || other_data.is_none()) {
-            return std::make_shared<number_provider_constant>((int32_t)other_data);
+    std::shared_ptr<number_provider> number_provider::parse_provider(const util::nbt& other_data) {
+        if (other_data.is_floating())
+            return std::make_shared<number_provider_constant>(other_data.as_float());
+        else if (other_data.is_numeric()) {
+            return std::make_shared<number_provider_constant>(other_data.as_int());
         } else if (other_data.is_compound()) {
             if (other_data.contains("type")) {
-                auto& type = other_data.at("type").as_string();
+                auto& type = other_data.at("type").get_string();
                 if (type == "constant" || type == "minecraft:constant") {
-                    if (other_data.get_type() == enbt::type::floating)
-                        return std::make_shared<number_provider_constant>((float)other_data);
+                    if (other_data.is_floating())
+                        return std::make_shared<number_provider_constant>(other_data.as_float());
                     else
-                        return std::make_shared<number_provider_constant>((int32_t)other_data);
+                        return std::make_shared<number_provider_constant>(other_data.as_int());
                 } else if (type == "uniform" || type == "minecraft:uniform") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
                     if (other_data.contains("min")) {
-                        auto& min_ = other_data["min"];
-                        min = min_.type_equal(enbt::type::floating) ? (float)min_ : (int32_t)min_;
+                        auto& min_ = other_data.at("min");
+                        min = min_.is_floating() ? min_.get_float() : min_.get_int();
                     } else if (other_data.contains("min_inclusive")) {
-                        auto& min_ = other_data["min_inclusive"];
-                        min = min_.type_equal(enbt::type::floating) ? (float)min_ : (int32_t)min_;
+                        auto& min_ = other_data.at("min_inclusive");
+                        min = min_.is_floating() ? min_.get_float() : min_.get_int();
                     } else
                         min = std::numeric_limits<int32_t>::min();
 
                     if (other_data.contains("max")) {
-                        auto max_ = other_data["max"];
-                        max = max_.type_equal(enbt::type::floating) ? (float)max_ : (int32_t)max_;
+                        auto max_ = other_data.at("max");
+                        max = max_.is_floating() ? max_.get_float() : max_.get_int();
                     } else if (other_data.contains("max_inclusive")) {
-                        auto max_ = other_data["max_inclusive"];
-                        max = max_.type_equal(enbt::type::floating) ? (float)max_ : (int32_t)max_;
+                        auto max_ = other_data.at("max_inclusive");
+                        max = max_.is_floating() ? max_.get_float() : max_.get_int();
                     } else
                         max = std::numeric_limits<int32_t>::max();
 
@@ -58,45 +58,45 @@ namespace copper_server::base_objects {
                         parse_provider(other_data.at("p"))
                     );
                 } else if (type == "clamped_normal" || type == "minecraft:clamped_normal") {
-                    float mean = other_data.at("mean");
-                    float deviation = other_data.at("deviation");
-                    int32_t min_inclusive = other_data.at("min_inclusive");
-                    int32_t max_inclusive = other_data.at("max_inclusive");
+                    float mean = other_data.at("mean").get_float();
+                    float deviation = other_data.at("deviation").get_float();
+                    int32_t min_inclusive = other_data.at("min_inclusive").get_int();
+                    int32_t max_inclusive = other_data.at("max_inclusive").get_int();
                     return std::make_shared<number_provider_clamped_normal>(mean, deviation, min_inclusive, max_inclusive);
                 } else if (type == "clamped" || type == "minecraft:clamped") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
 
                     if (other_data.contains("min")) {
-                        auto& min_ = other_data["min"];
-                        min = min_.type_equal(enbt::type::floating) ? (float)min_ : (int32_t)min_;
+                        auto& min_ = other_data.at("min");
+                        min = min_.is_floating() ? min_.get_float() : min_.get_int();
                     } else if (other_data.contains("min_inclusive")) {
-                        auto& min_ = other_data["min_inclusive"];
-                        min = min_.type_equal(enbt::type::floating) ? (float)min_ : (int32_t)min_;
+                        auto& min_ = other_data.at("min_inclusive");
+                        min = min_.is_floating() ? min_.get_float() : min_.get_int();
                     } else
                         min = std::numeric_limits<int32_t>::min();
 
                     if (other_data.contains("max")) {
-                        auto max_ = other_data["max"];
-                        max = max_.type_equal(enbt::type::floating) ? (float)max_ : (int32_t)max_;
+                        auto max_ = other_data.at("max");
+                        max = max_.is_floating() ? (float)max_.get_float() : max_.get_int();
                     } else if (other_data.contains("max_inclusive")) {
-                        auto max_ = other_data["max_inclusive"];
-                        max = max_.type_equal(enbt::type::floating) ? (float)max_ : (int32_t)max_;
+                        auto max_ = other_data.at("max_inclusive");
+                        max = max_.is_floating() ? max_.get_float() : max_.get_int();
                     } else
                         max = std::numeric_limits<int32_t>::max();
 
                     return std::make_shared<number_provider_clamped>(min, max, parse_provider(other_data.at("source")));
                 } else if (type == "trapezoid" || type == "minecraft:trapezoid") {
-                    int32_t min = other_data.at("min");
-                    int32_t max = other_data.at("max");
-                    int32_t plateau = other_data.at("plateau");
+                    int32_t min = other_data.at("min").get_int();
+                    int32_t max = other_data.at("max").get_int();
+                    int32_t plateau = other_data.at("plateau").get_int();
                     return std::make_shared<number_provider_trapezoid>(min, max, plateau);
                 } else if (type == "weighted_list" || type == "minecraft:weighted_list") {
                     std::vector<std::pair<std::shared_ptr<number_provider>, double>> values;
-                    auto values_e = other_data.at("values").as_array();
+                    auto values_e = other_data.at("values").get_list();
                     values.reserve(values_e.size());
                     for (auto&& val : values_e) {
-                        auto weight = val.contains("weight") ? (float)val["weight"] : 1.0;
+                        auto weight = val.contains("weight") ? val.at("weight").get_float() : 1.0;
                         values.push_back({parse_provider(val.at("data")), weight});
                     }
                     return std::make_shared<number_provider_weighted_list>(values);
@@ -105,51 +105,51 @@ namespace copper_server::base_objects {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
                     if (other_data.contains("min")) {
-                        auto& min_ = other_data["min"];
-                        min = min_.type_equal(enbt::type::floating) ? (float)min_ : (int32_t)min_;
+                        auto& min_ = other_data.at("min");
+                        min = min_.is_floating() ? min_.as_float() : min_.get_int();
                     } else if (other_data.contains("min_inclusive")) {
-                        auto& min_ = other_data["min_inclusive"];
-                        min = min_.type_equal(enbt::type::floating) ? (float)min_ : (int32_t)min_;
+                        auto& min_ = other_data.at("min_inclusive");
+                        min = min_.is_floating() ? min_.as_float() : min_.get_int();
                     } else
                         min = std::numeric_limits<int32_t>::min();
 
                     if (other_data.contains("max")) {
-                        auto max_ = other_data["max"];
-                        max = max_.type_equal(enbt::type::floating) ? (float)max_ : (int32_t)max_;
+                        auto max_ = other_data.at("max");
+                        max = max_.is_floating() ? max_.as_float() : max_.get_int();
                     } else if (other_data.contains("max_inclusive")) {
-                        auto max_ = other_data["max_inclusive"];
-                        max = max_.type_equal(enbt::type::floating) ? (float)max_ : (int32_t)max_;
+                        auto max_ = other_data.at("max_inclusive");
+                        max = max_.is_floating() ? max_.as_float() : max_.get_int();
                     } else
                         max = std::numeric_limits<int32_t>::max();
                     return std::make_shared<number_provider_biased_to_bottom>(min, max);
                 } else if (type == "score" || type == "minecraft:score") {
                     base_objects::number_provider_score res;
-                    res.score = (std::string)other_data.at("score");
-                    res.scale = other_data.contains("scale") ? std::optional<float>((float)other_data["scale"]) : std::nullopt;
-                    auto target = other_data.at("target").as_compound();
-                    std::string score_type = target.at("type");
+                    res.score = other_data.at("score").as_string();
+                    res.scale = other_data.get_compound().contains("scale") ? other_data.at("scale").as_float() : 1.0f;
+                    auto& target = other_data.at("target").get_compound();
+                    std::string score_type = target.at("type").as_string();
                     if (score_type == "fixed")
-                        res.target.value = (std::string)target.at("name");
+                        res.target.value = target.at("name").as_string();
                     else if (score_type == "context")
-                        res.target.value = (std::string)target.at("target");
+                        res.target.value = target.at("target").as_string();
                     else
                         throw std::runtime_error("Invalid target type: " + score_type);
                     res.target.type = score_type;
                     return std::make_shared<number_provider_score>(std::move(res));
                 } else if (type == "storage" || type == "minecraft:storage") {
-                    return std::make_shared<number_provider_storage>((std::string)other_data.at("storage"), (std::string)other_data.at("path"));
+                    return std::make_shared<number_provider_storage>(other_data.at("storage").as_string(), other_data.at("path").as_string());
                 } else if (type == "enchantment_level" || type == "minecraft:enchantment_level")
-                    return std::make_shared<number_provider_enchantment_level>((std::string)other_data.at("amount"));
+                    return std::make_shared<number_provider_enchantment_level>(other_data.at("amount").as_string());
                 else
                     throw std::runtime_error("Invalid number provider type: " + type);
             } else {
-                if (other_data.at("min").get_type() == enbt::type::floating)
-                    return std::make_shared<number_provider_uniform>((float)other_data.at("min"), (float)other_data.at("max"));
+                if (other_data.at("min").get_type() == util::nbt_type::tag_float)
+                    return std::make_shared<number_provider_uniform>(other_data.at("min").as_float(), other_data.at("max").as_float());
                 else
-                    return std::make_shared<number_provider_uniform>((int32_t)other_data.at("min"), (int32_t)other_data.at("max"));
+                    return std::make_shared<number_provider_uniform>(other_data.at("min").as_int(), other_data.at("max").as_int());
             }
         } else
-            return std::make_shared<number_provider_constant>((int32_t)other_data);
+            return std::make_shared<number_provider_constant>(other_data.as_int());
     }
 
     float number_provider_constant::get_float() const noexcept {
@@ -170,8 +170,8 @@ namespace copper_server::base_objects {
         );
     }
 
-    enbt::value number_provider_constant::get_enbt() const {
-        return std::visit([](auto it) -> enbt::value { return it; }, value);
+    util::nbt number_provider_constant::get_nbt() const {
+        return std::visit([](auto it) -> util::nbt { return it; }, value);
     }
 
     float number_provider_uniform::get_float() const noexcept {
@@ -182,12 +182,12 @@ namespace copper_server::base_objects {
         return std::uniform_int_distribution<int>(get_min_inclusive_int(), get_max_exclusive_int())(get_thread_local_engine());
     }
 
-    enbt::value number_provider_uniform::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_uniform::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:uniform"},
-            {"min", std::visit([](auto it) -> enbt::value { return it; }, min_inclusive)},
-            {"max", std::visit([](auto it) -> enbt::value { return it; }, max_exclusive)}
-        };
+            {"min", std::visit([](auto it) -> util::nbt { return it; }, min_inclusive)},
+            {"max", std::visit([](auto it) -> util::nbt { return it; }, max_exclusive)}
+        }.take_map();
     }
 
     float number_provider_clamped_normal::get_float() const noexcept {
@@ -198,14 +198,14 @@ namespace copper_server::base_objects {
         return std::clamp<int32_t>((int32_t)std::normal_distribution<float>(mean, deviation)(get_thread_local_engine()), min, max);
     }
 
-    enbt::value number_provider_clamped_normal::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_clamped_normal::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:clamped_normal"},
             {"mean", mean},
             {"deviation", deviation},
             {"min", min},
             {"max", max}
-        };
+        }.take_map();
     }
 
     float number_provider_trapezoid::get_float() const noexcept {
@@ -242,13 +242,13 @@ namespace copper_server::base_objects {
         return min + dist1(engine) + dist2(engine);
     }
 
-    enbt::value number_provider_trapezoid::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_trapezoid::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:trapezoid"},
             {"min", min},
             {"max", max},
             {"plateau", plateau}
-        };
+        }.take_map();
     }
 
     float number_provider_clamped::get_float() const noexcept {
@@ -259,13 +259,13 @@ namespace copper_server::base_objects {
         return std::clamp<int32_t>(source->get_int(), get_min_inclusive_int(), get_max_inclusive_int());
     }
 
-    enbt::value number_provider_clamped::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_clamped::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:clamped"},
-            {"min", std::visit([](auto it) -> enbt::value { return it; }, min_inclusive)},
-            {"max", std::visit([](auto it) -> enbt::value { return it; }, max_inclusive)},
-            {"source", source->get_enbt()}
-        };
+            {"min", std::visit([](auto it) -> util::nbt { return it; }, min_inclusive)},
+            {"max", std::visit([](auto it) -> util::nbt { return it; }, max_inclusive)},
+            {"source", source->get_nbt()}
+        }.take_map();
     }
 
     float number_provider_weighted_list::get_float() const noexcept {
@@ -294,16 +294,16 @@ namespace copper_server::base_objects {
         return values.back().first->get_int();
     }
 
-    enbt::value number_provider_weighted_list::get_enbt() const {
-        enbt::fixed_array arr;
+    util::nbt number_provider_weighted_list::get_nbt() const {
+        list_array<util::nbt> arr;
         arr.reserve(values.size());
         for (auto& it : values)
-            arr.push_back(enbt::compound{{"data", it.first->get_enbt()}, {"weight", it.second}});
+            arr.push_back(util::nbt_compound{{"data", it.first->get_nbt()}, {"weight", it.second}}.take_map());
 
-        return enbt::compound{
+        return util::nbt_compound{
             {"type", "minecraft:weighted_list"},
             {"values", std::move(arr)}
-        };
+        }.take_map();
     }
 
     float number_provider_biased_to_bottom::get_float() const noexcept {
@@ -316,12 +316,12 @@ namespace copper_server::base_objects {
         return std::min(dist(get_thread_local_engine()), dist(get_thread_local_engine()));
     }
 
-    enbt::value number_provider_biased_to_bottom::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_biased_to_bottom::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:biased_to_bottom"},
-            {"min", std::visit([](auto it) -> enbt::value { return it; }, min_inclusive)},
-            {"max", std::visit([](auto it) -> enbt::value { return it; }, max_exclusive)}
-        };
+            {"min", std::visit([](auto it) -> util::nbt { return it; }, min_inclusive)},
+            {"max", std::visit([](auto it) -> util::nbt { return it; }, max_exclusive)}
+        }.take_map();
     }
 
     float number_provider_binomial::get_float() const noexcept {
@@ -332,12 +332,12 @@ namespace copper_server::base_objects {
         return std::binomial_distribution<int32_t>(n->get_int(), static_cast<double>(p->get_float()))(get_thread_local_engine());
     }
 
-    enbt::value number_provider_binomial::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_binomial::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:binomial"},
-            {"n", n->get_enbt()},
-            {"p", p->get_enbt()}
-        };
+            {"n", n->get_nbt()},
+            {"p", p->get_nbt()}
+        }.take_map();
     }
 
     float number_provider_score::get_float() const noexcept {
@@ -348,21 +348,21 @@ namespace copper_server::base_objects {
         return 0; //TODO
     }
 
-    enbt::value number_provider_score::get_enbt() const {
+    util::nbt number_provider_score::get_nbt() const {
         if (target.type == "fixed") {
-            return enbt::compound{
+            return util::nbt_compound{
                 {"type", "minecraft:score"},
                 {"scale", scale},
                 {"score", score},
-                {"target", enbt::compound{{"type", target.type}, {"name", target.value}}}
-            };
+                {"target", util::nbt_compound{{"type", target.type}, {"name", target.value}}.take_map()}
+            }.take_map();
         } else {
-            return enbt::compound{
+            return util::nbt_compound{
                 {"type", "minecraft:score"},
                 {"scale", scale},
                 {"score", score},
-                {"target", enbt::compound{{"type", target.type}, {"target", target.value}}}
-            };
+                {"target", util::nbt_compound{{"type", target.type}, {"target", target.value}}.take_map()}
+            }.take_map();
         }
     }
 
@@ -374,12 +374,12 @@ namespace copper_server::base_objects {
         return 0; //TODO
     }
 
-    enbt::value number_provider_storage::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_storage::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:storage"},
             {"storage", storage},
             {"path", path}
-        };
+        }.take_map();
     }
 
     float number_provider_enchantment_level::get_float() const noexcept {
@@ -390,10 +390,10 @@ namespace copper_server::base_objects {
         return 0; //TODO
     }
 
-    enbt::value number_provider_enchantment_level::get_enbt() const {
-        return enbt::compound{
+    util::nbt number_provider_enchantment_level::get_nbt() const {
+        return util::nbt_compound{
             {"type", "minecraft:enchantment_level"},
             {"amount", amount}
-        };
+        }.take_map();
     }
 }

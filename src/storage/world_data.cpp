@@ -8,9 +8,6 @@
  */
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
-#include <library/enbt/io.hpp>
-#include <library/enbt/io_tools.hpp>
-#include <library/enbt/senbt.hpp>
 #include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>
@@ -117,14 +114,9 @@ namespace copper_server::storage {
     void world_data::make_save(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_region> item, bool also_unload) {
         if (auto process = on_save_process.find({chunk_x, chunk_z}); process == on_save_process.end()) {
             auto& chunk = item->get(static_cast<uint8_t>(chunk_x), static_cast<uint8_t>(chunk_z));
-            on_save_process[{chunk_x, chunk_z}] = fast_task::future<bool>::start(
+            on_save_process[{chunk_x, chunk_z}] = fast_task::future<void>::start(
                 [this, chunk, chunk_x, chunk_z, also_unload, item] {
-                    try {
-                        if (chunk)
-                            chunk->save(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter, *this);
-                    } catch (...) {
-                        return false;
-                    }
+                    region_manager.write_chunk(chunk_x, chunk_z, chunk, tick_counter)->wait();
                     std::unique_lock lock(mutex);
                     on_save_process.erase({chunk_x, chunk_z});
                     if (also_unload) {
@@ -196,18 +188,19 @@ namespace copper_server::storage {
 
     std::shared_ptr<base_objects::world::chunk_data> world_data::load_chunk_sync(int32_t chunk_x, int32_t chunk_z) {
         try {
-            auto chunk = std::make_shared<base_objects::world::chunk_data>(chunk_x, chunk_z);
+
+            auto chunk = region_manager.get_chunk(chunk_x, chunk_z)->take();
+            if (!chunk) {
+                chunk = std::make_shared<base_objects::world::chunk_data>(chunk_x, chunk_z);
+                chunk->sub_chunks.resize(get_chunk_y_count());
+                chunk->generator_stage = 0;
+            }
+
             {
                 int32_t rx = chunk_x >> 5;
                 int32_t rz = chunk_z >> 5;
                 std::unique_lock lock(mutex);
                 regions[region_key(rx, rz)]->set(static_cast<uint8_t>(chunk_x), static_cast<uint8_t>(chunk_z), chunk);
-            }
-
-
-            if (!chunk->load(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter, *this)) {
-                chunk->sub_chunks.resize(get_chunk_y_count());
-                chunk->generator_stage = 0;
             }
 
             if (chunk->generator_stage != 0xFF) {
@@ -701,7 +694,7 @@ namespace copper_server::storage {
     }
 
     void world_data::tick_update_weather() {
-        if (world_game_rules["doWeatherCycle"]) {
+        if (world_game_rules["doWeatherCycle"].as_byte()) {
             if (weather_time > 0) {
                 --weather_time;
                 if (weather_time == 0) {
@@ -720,7 +713,7 @@ namespace copper_server::storage {
     }
 
     void world_data::tick_update_day_light() {
-        if (world_game_rules["doDaylightCycle"]) {
+        if (world_game_rules["doDaylightCycle"].as_byte()) {
             if (time / 24'000 != 0) {
                 day_time += time / 24'000;
                 time = 0;
@@ -750,73 +743,72 @@ namespace copper_server::storage {
         hashed_seed_value = hash.to_part_hash();
     }
 
-    void world_data::load(const enbt::compound_const_ref& load_from_nbt) {
+    void world_data::load(const util::nbt_compound& load_from_nbt) {
         general_world_data.other = load_from_nbt.at("general_world_data");
         if (general_world_data.other.contains("liquid"))
-            for (auto& [block, settings] : general_world_data.other.at("liquid").as_compound())
-                general_world_data.liquid[base_objects::block::get_block(block).general_block_id] = {.spread_size = settings.at("spread_size"), .spread_ticks = settings.at("spread_ticks")};
+            for (auto& [block, settings] : general_world_data.other.at("liquid").get_compound())
+                general_world_data.liquid[base_objects::block::get_block(block).general_block_id] = {.spread_size = settings.at("spread_size").as_short(), .spread_ticks = std::bit_cast<uint16_t>(settings.at("spread_ticks").as_short())};
         else
             general_world_data.liquid.clear();
         world_game_rules = load_from_nbt.at("world_game_rules");
         world_generator_data = load_from_nbt.at("world_generator_data");
         world_records = load_from_nbt.at("world_records");
 
-        set_seed(load_from_nbt.at("world_seed"));
-        wandering_trader_id = base_objects::uuid::to_uuid(load_from_nbt.at("wandering_trader_id"));
+        set_seed(load_from_nbt.at("world_seed").as_int());
+        wandering_trader_id = load_from_nbt.at("wandering_trader_id").as_uuid();
 
-
-        wandering_trader_spawn_chance = load_from_nbt.at("wandering_trader_spawn_chance");
-        wandering_trader_spawn_delay = load_from_nbt.at("wandering_trader_spawn_delay");
-        world_name = (std::string)load_from_nbt.at("world_name");
-        set_world_type((std::string)load_from_nbt.at("world_type"));
-        light_processor_id = (std::string)load_from_nbt.at("light_processor_id");
-        generator_id = (std::string)load_from_nbt.at("generator_id");
+        wandering_trader_spawn_chance = load_from_nbt.at("wandering_trader_spawn_chance").as_float();
+        wandering_trader_spawn_delay = load_from_nbt.at("wandering_trader_spawn_delay").as_int();
+        world_name = load_from_nbt.at("world_name").as_string();
+        set_world_type(load_from_nbt.at("world_type").as_string());
+        light_processor_id = load_from_nbt.at("light_processor_id").as_string();
+        generator_id = load_from_nbt.at("generator_id").as_string();
 
         {
-            auto _spawn_data = load_from_nbt.at("spawn_data").as_compound();
-            spawn_data.yaw = _spawn_data.at("yaw");
-            spawn_data.pitch = _spawn_data.at("pitch");
-            spawn_data.radius = _spawn_data.at("radius");
-            spawn_data.x = _spawn_data.at("x");
-            spawn_data.y = _spawn_data.at("y");
-            spawn_data.z = _spawn_data.at("z");
+            auto& _spawn_data = load_from_nbt.at("spawn_data").get_compound();
+            spawn_data.yaw = _spawn_data.at("yaw").as_float();
+            spawn_data.pitch = _spawn_data.at("pitch").as_float();
+            spawn_data.radius = _spawn_data.at("radius").as_int();
+            spawn_data.x = _spawn_data.at("x").as_int();
+            spawn_data.y = _spawn_data.at("y").as_int();
+            spawn_data.z = _spawn_data.at("z").as_int();
         }
 
-        border_center_x = load_from_nbt.at("border_center_x");
-        border_center_z = load_from_nbt.at("border_center_z");
-        border_size = load_from_nbt.at("border_size");
-        border_safe_zone = load_from_nbt.at("border_safe_zone");
-        border_damage_per_block = load_from_nbt.at("border_damage_per_block");
-        border_lerp_target = load_from_nbt.at("border_lerp_target");
-        border_lerp_time = load_from_nbt.at("border_lerp_time");
-        border_warning_blocks = load_from_nbt.at("border_warning_blocks");
-        border_warning_time = load_from_nbt.at("border_warning_time");
-        day_time = load_from_nbt.at("day_time");
-        time = load_from_nbt.at("time");
-        ticks_per_second = load_from_nbt.at("ticks_per_second");
-        portal_teleport_boundary = load_from_nbt.at("portal_teleport_boundary");
-        ticking_frozen = load_from_nbt.at("ticking_frozen");
+        border_center_x = load_from_nbt.at("border_center_x").as_double();
+        border_center_z = load_from_nbt.at("border_center_z").as_double();
+        border_size = load_from_nbt.at("border_size").as_double();
+        border_safe_zone = load_from_nbt.at("border_safe_zone").as_double();
+        border_damage_per_block = load_from_nbt.at("border_damage_per_block").as_double();
+        border_lerp_target = load_from_nbt.at("border_lerp_target").as_double();
+        border_lerp_time = load_from_nbt.at("border_lerp_time").as_long();
+        border_warning_blocks = load_from_nbt.at("border_warning_blocks").as_double();
+        border_warning_time = load_from_nbt.at("border_warning_time").as_double();
+        day_time = load_from_nbt.at("day_time").as_long();
+        time = load_from_nbt.at("time").as_int();
+        ticks_per_second = load_from_nbt.at("ticks_per_second").as_long();
+        portal_teleport_boundary = load_from_nbt.at("portal_teleport_boundary").as_int();
+        ticking_frozen = load_from_nbt.at("ticking_frozen").as_byte();
 
-        chunk_lifetime = std::chrono::milliseconds((int64_t)load_from_nbt.at("chunk_lifetime"));
-        world_lifetime = std::chrono::milliseconds((int64_t)load_from_nbt.at("world_lifetime"));
-        clear_weather_time = load_from_nbt.at("clear_weather_time");
-        weather_time = load_from_nbt.at("weather_time");
-        current_weather = base_objects::weather::from_string(load_from_nbt.at("current_weather"));
+        chunk_lifetime = std::chrono::milliseconds(load_from_nbt.at("chunk_lifetime").as_long());
+        world_lifetime = std::chrono::milliseconds(load_from_nbt.at("world_lifetime").as_long());
+        clear_weather_time = load_from_nbt.at("clear_weather_time").as_int();
+        weather_time = load_from_nbt.at("weather_time").as_int();
+        current_weather = base_objects::weather::from_string(load_from_nbt.at("current_weather").get_string());
 
-        internal_version = load_from_nbt.at("internal_version");
-        difficulty = load_from_nbt.at("difficulty");
-        default_gamemode = load_from_nbt.at("default_gamemode");
-        difficulty_locked = load_from_nbt.at("difficulty_locked");
-        is_hardcore = load_from_nbt.at("is_hardcore");
-        initialized = load_from_nbt.at("initialized");
-        has_skylight = load_from_nbt.at("has_skylight");
-        increase_time = load_from_nbt.at("increase_time");
+        internal_version = load_from_nbt.at("internal_version").get_int();
+        difficulty = load_from_nbt.at("difficulty").get_byte();
+        default_gamemode = load_from_nbt.at("default_gamemode").get_byte();
+        difficulty_locked = load_from_nbt.at("difficulty_locked").get_byte();
+        is_hardcore = load_from_nbt.at("is_hardcore").get_byte();
+        initialized = load_from_nbt.at("initialized").get_byte();
+        has_skylight = load_from_nbt.at("has_skylight").get_byte();
+        increase_time = load_from_nbt.at("increase_time").get_byte();
     }
 
     void world_data::load() {
         std::unique_lock lock(mutex);
         fast_task::files::async_iofstream file(
-            path / "world.senbt",
+            path / "world.snbt",
             fast_task::files::open_mode::read,
             fast_task::files::on_open_action::open,
             fast_task::files::_sync_flags{}
@@ -824,25 +816,25 @@ namespace copper_server::storage {
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        load(senbt::parse(res).as_compound());
+        load(util::nbt::from_snbt(res));
     }
 
     void world_data::save() {
         std::unique_lock lock(mutex);
         std::filesystem::create_directories(path);
-        enbt::compound world_data_file;
+        util::nbt_compound world_data_file;
         {
-            enbt::compound res;
+            util::nbt_compound res;
             res.reserve(general_world_data.liquid.size());
             for (auto& [it, data] : general_world_data.liquid)
-                res[base_objects::block::get_block(it).name] = enbt::compound{{"spread_size", data.spread_size}, {"spread_ticks", data.spread_ticks}};
-            general_world_data.other["liquid"] = std::move(res);
+                res[base_objects::block::get_block(it).name] = util::nbt_compound{{"spread_size", data.spread_size}, {"spread_ticks", data.spread_ticks}}.take_map();
+            general_world_data.other["liquid"] = std::move(res).take_map();
         }
 
-        world_data_file["general_world_data"] = general_world_data.other;
-        world_data_file["world_game_rules"] = world_game_rules;
-        world_data_file["world_generator_data"] = world_generator_data;
-        world_data_file["world_records"] = world_records;
+        world_data_file["general_world_data"] = general_world_data.other.get_map();
+        world_data_file["world_game_rules"] = world_game_rules.get_map();
+        world_data_file["world_generator_data"] = world_generator_data.get_map();
+        world_data_file["world_records"] = world_records.get_map();
 
         world_data_file["world_seed"] = world_seed;
         world_data_file["wandering_trader_id"] = wandering_trader_id;
@@ -855,14 +847,14 @@ namespace copper_server::storage {
         world_data_file["light_processor_id"] = light_processor_id;
         world_data_file["generator_id"] = generator_id;
 
-        world_data_file["spawn_data"] = enbt::compound{
+        world_data_file["spawn_data"] = util::nbt_compound{
             {"yaw", spawn_data.yaw},
             {"pitch", spawn_data.pitch},
             {"radius", spawn_data.radius},
             {"x", spawn_data.x},
             {"y", spawn_data.y},
             {"z", spawn_data.z}
-        };
+        }.take_map();
 
         world_data_file["border_center_x"] = border_center_x;
         world_data_file["border_center_z"] = border_center_z;
@@ -870,19 +862,19 @@ namespace copper_server::storage {
         world_data_file["border_safe_zone"] = border_safe_zone;
         world_data_file["border_damage_per_block"] = border_damage_per_block;
         world_data_file["border_lerp_target"] = border_lerp_target;
-        world_data_file["border_lerp_time"] = border_lerp_time;
+        world_data_file["border_lerp_time"] = std::bit_cast<int64_t>(border_lerp_time);
         world_data_file["border_warning_blocks"] = border_warning_blocks;
         world_data_file["border_warning_time"] = border_warning_time;
         world_data_file["day_time"] = day_time;
         world_data_file["time"] = time;
-        world_data_file["ticks_per_second"] = ticks_per_second;
+        world_data_file["ticks_per_second"] = std::bit_cast<int64_t>(ticks_per_second);
         world_data_file["portal_teleport_boundary"] = portal_teleport_boundary;
         world_data_file["ticking_frozen"] = ticking_frozen;
 
         world_data_file["chunk_lifetime"] = chunk_lifetime.count();
         world_data_file["world_lifetime"] = world_lifetime.count();
-        world_data_file["clear_weather_time"] = clear_weather_time;
-        world_data_file["weather_time"] = weather_time;
+        world_data_file["clear_weather_time"] = std::bit_cast<int32_t>(clear_weather_time);
+        world_data_file["weather_time"] = std::bit_cast<int32_t>(weather_time);
         world_data_file["current_weather"] = current_weather.to_string();
 
         world_data_file["internal_version"] = internal_version;
@@ -894,9 +886,9 @@ namespace copper_server::storage {
         world_data_file["has_skylight"] = has_skylight;
         world_data_file["increase_time"] = increase_time;
 
-        auto stringized = senbt::serialize(world_data_file, false, true);
+        auto stringized = world_data_file.take_map().as_snbt();
         std::filesystem::create_directories(path);
-        fast_task::files::atomic_async_ofstream file(path / "world.senbt");
+        fast_task::files::atomic_async_ofstream file(path / "world.snbt");
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         file.write(stringized.data(), stringized.size());
@@ -905,7 +897,7 @@ namespace copper_server::storage {
     std::string world_data::preview_world_name() {
         std::unique_lock lock(mutex);
         fast_task::files::async_iofstream file(
-            path / "world.senbt",
+            path / "world.snbt",
             fast_task::files::open_mode::read,
             fast_task::files::on_open_action::open,
             fast_task::files::_sync_flags{}
@@ -913,7 +905,7 @@ namespace copper_server::storage {
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        return (std::string)(std::string)senbt::parse(res)["world_name"];
+        return util::nbt::from_snbt(res)["world_name"].as_string();
     }
 
     void world_data::sync_weather() {
@@ -928,7 +920,7 @@ namespace copper_server::storage {
     }
 
     world_data::world_data(int32_t world_id, const std::filesystem::path& path)
-        : path(path), world_id(world_id), limit_on_load(api::configuration::get().world.load_speed), current_world_reg(world_id) {
+        : path(path), world_id(world_id), limit_on_load(api::configuration::get().world.load_speed), current_world_reg(world_id), region_manager(path) {
         world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
         if (!std::filesystem::exists(path))
             std::filesystem::create_directories(path);
@@ -1180,11 +1172,11 @@ namespace copper_server::storage {
 
     void world_data::await_save_chunks() {
         std::unique_lock lock(mutex);
-        list_array<fast_task::future_ptr<bool>> to_await;
+        list_array<fast_task::future_ptr<void>> to_await;
         for (auto& [location, future] : on_save_process)
             to_await.push_back(future);
         lock.unlock();
-        to_await.for_each([](fast_task::future_ptr<bool>& i) { i->wait(); });
+        to_await.for_each([](fast_task::future_ptr<void>& i) { i->wait(); });
     }
 
     void world_data::save_chunks(bool unload, bool ignore_limits) {
@@ -2069,7 +2061,7 @@ namespace copper_server::storage {
                 to_load_entities.erase(id);
         }
         tick_counter++;
-        size_t random_tick_speed = world_game_rules["randomTickSpeed"];
+        size_t random_tick_speed = (size_t)world_game_rules["randomTickSpeed"].as_long();
         chunk_tick_result rr;
         if (!profiling.enable_world_profiling) {
             tick_run_local_functions(); //tick/load
@@ -2447,7 +2439,7 @@ namespace copper_server::storage {
         if (cached_ids.empty())
             get_ids();
         size_t found = cached_ids.find_if([this, &name](int32_t id) {
-            if (std::filesystem::exists(base_path / std::to_string(id) / "world.senbt"))
+            if (std::filesystem::exists(base_path / std::to_string(id) / "world.snbt"))
                 return world_data(id, base_path / std::to_string(id)).preview_world_name() == name;
             else
                 return false;

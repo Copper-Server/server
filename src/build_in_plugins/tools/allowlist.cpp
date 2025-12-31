@@ -24,7 +24,7 @@ namespace copper_server::build_in_plugins::tools {
         ~allow_list_plugin() noexcept {};
 
         void on_initialization(const plugin_registration_ptr&) override {
-            api::configuration::get() ^ "allow_list" ^ "on_kick_message" |= enbt::compound{{"text", "You are not in allowlist."}, {"color", "red"}};
+            api::configuration::get() ^ "allow_list" ^ "on_kick_message" |= util::nbt_compound{{"text", "You are not in allowlist."}, {"color", "red"}}.take_map();
         }
 
         void on_post_load(const plugin_registration_ptr&) override {
@@ -42,7 +42,7 @@ namespace copper_server::build_in_plugins::tools {
                 return false;
             });
             register_event(api::allowlist::on_kick, base_objects::events::priority::low, [](const base_objects::client_data_holder& client) {
-                api::players::calls::on_player_kick({client, base_objects::chat::from_enbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")});
+                api::players::calls::on_player_kick({client, base_objects::chat::from_nbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")});
                 return false;
             });
             register_event(api::allowlist::on_add, base_objects::events::priority::low, [this](const std::string name) {
@@ -125,7 +125,7 @@ namespace copper_server::build_in_plugins::tools {
                             }
                             context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
                         }
-                        return listed.size();
+                        return std::bit_cast<ptrdiff_t>(listed.size());
                     });
                 allowlist.add_child({"mode"})
                     .add_child({"mode", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})

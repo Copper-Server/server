@@ -339,7 +339,7 @@ namespace copper_server::build_in_plugins::base {
                 states.at(state) = value;
             }
             base_objects::block block(static_block_data.assigned_states_to_properties->right.at(states));
-            if (block_data.data_tags.is_none())
+            if (block_data.data_tags.is_end())
                 return block;
             else
                 return base_objects::block_entity(block, block_data.data_tags);

@@ -10,6 +10,7 @@
 #include <ctre.hpp>
 #include <istream>
 #include <regex>
+#include <src/base_objects/uuid.hpp>
 #include <src/util/endian.hpp>
 #include <src/util/nbt.hpp>
 
@@ -97,6 +98,12 @@ namespace copper_server::util {
     nbt::nbt(const list_array<int64_t>& value) : data(new list_array<int64_t>(value)), type(nbt_type::tag_long_array) {}
 
     nbt::nbt(list_array<int64_t>&& value) : data(new list_array<int64_t>(std::move(value))), type(nbt_type::tag_long_array) {}
+
+    nbt::nbt(const base_objects::uuid& u) : nbt(list_array<int32_t>((int32_t*)u.data, 4)) {}
+
+    nbt::nbt(const base_objects::uuid_hex& u) : nbt(u.to_string()) {}
+
+    nbt::nbt(const base_objects::uuid_flat_hex& u) : nbt(u.to_string_flat()) {}
 
     nbt::nbt(const nbt& copy) {
         data = nullptr;
@@ -346,6 +353,7 @@ namespace copper_server::util {
     bool nbt::is_end() const {
         return type == nbt_type::tag_end;
     }
+
     bool nbt::is_byte() const {
         return type == nbt_type::tag_byte;
     }
@@ -529,12 +537,55 @@ namespace copper_server::util {
         }
     }
 
-    nbt& nbt::at(const std::string& key){
+    base_objects::uuid nbt::as_uuid() const {
+        switch (type) {
+        case nbt_type::tag_byte_array: {
+            if (get_int_array().size() != 16)
+                throw std::runtime_error("Invalid array size");
+            return *std::launder<base_objects::uuid>((base_objects::uuid*)get_int_array().data());
+        }
+        case nbt_type::tag_int_array: {
+            if (get_int_array().size() != 4)
+                throw std::runtime_error("Invalid array size");
+            return *std::launder<base_objects::uuid>((base_objects::uuid*)get_int_array().data());
+        }
+        case nbt_type::tag_long_array: {
+            if (get_int_array().size() != 2)
+                throw std::runtime_error("Invalid array size");
+            return *std::launder<base_objects::uuid>((base_objects::uuid*)get_int_array().data());
+        }
+        case nbt_type::tag_string: {
+            base_objects::uuid res;
+            base_objects::uuid::from_uuid_string(res, get_string(), true);
+            return res;
+        }
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    nbt& nbt::operator[](const std::string& key) {
+        return get_compound()[key];
+    }
+
+    nbt& nbt::at(const std::string& key) {
         return get_compound().at(key);
     }
 
     const nbt& nbt::at(const std::string& key) const {
         return get_compound().at(key);
+    }
+
+    bool nbt::contains(const std::string& key) const {
+        return get_compound().contains(key);
+    }
+
+    void nbt::remove(const std::string& key) {
+        get_compound().erase(key);
+    }
+
+    nbt& nbt::operator[](size_t index) {
+        return get_list()[index];
     }
 
     nbt& nbt::at(size_t index) {
@@ -676,6 +727,7 @@ namespace copper_server::util {
 #pragma region NBT_COMPOUND
 
     nbt_compound::nbt_compound() = default;
+
     nbt_compound::nbt_compound(const std::unordered_map<std::string, nbt>& data) : compound_data(data) {}
 
     nbt_compound::nbt_compound(std::unordered_map<std::string, nbt>&& data) : compound_data(std::move(data)) {}
@@ -688,12 +740,12 @@ namespace copper_server::util {
 
     nbt_compound::nbt_compound(nbt&& nbt_val) : compound_data(std::move(nbt_val.get_compound())) {}
 
-    nbt_compound& nbt_compound::operator=(const nbt_compound& copy){
+    nbt_compound& nbt_compound::operator=(const nbt_compound& copy) {
         compound_data = copy.compound_data;
         return *this;
     }
 
-    nbt_compound& nbt_compound::operator=(nbt_compound&& move){
+    nbt_compound& nbt_compound::operator=(nbt_compound&& move) {
         compound_data = std::move(move.compound_data);
         return *this;
     }
@@ -708,52 +760,59 @@ namespace copper_server::util {
         return *this;
     }
 
-    nbt& nbt_compound::operator[](const std::string& key){
+    nbt& nbt_compound::operator[](const std::string& key) {
         return compound_data[key];
     }
 
-    const nbt& nbt_compound::operator[](const std::string& key) const{
+    const nbt& nbt_compound::operator[](const std::string& key) const {
         return compound_data.at(key);
     }
 
-    nbt& nbt_compound::at(const std::string& key){
-        return compound_data.at(key);
-    }
-    const nbt& nbt_compound::at(const std::string& key) const{
+    nbt& nbt_compound::at(const std::string& key) {
         return compound_data.at(key);
     }
 
-    void nbt_compound::set(const std::string& key, const nbt& value){
+    const nbt& nbt_compound::at(const std::string& key) const {
+        return compound_data.at(key);
+    }
+
+    void nbt_compound::set(const std::string& key, const nbt& value) {
         compound_data[key] = value;
     }
-    void nbt_compound::set(const std::string& key, nbt&& value){
+
+    void nbt_compound::set(const std::string& key, nbt&& value) {
         compound_data[key] = std::move(value);
     }
 
-    bool nbt_compound::contains(const std::string& key) const{
+    bool nbt_compound::contains(const std::string& key) const {
         return compound_data.contains(key);
     }
 
     void nbt_compound::remove(const std::string& key) {
-         compound_data.erase(key);
+        compound_data.erase(key);
     }
 
     size_t nbt_compound::size() const {
         return compound_data.size();
     }
 
-    void nbt_compound::clear(){
+    void nbt_compound::clear() {
         compound_data.clear();
     }
 
-    bool nbt_compound::empty() const{
+    bool nbt_compound::empty() const {
         return compound_data.empty();
     }
 
-    std::unordered_map<std::string, nbt>& nbt_compound::get_map(){
+    void nbt_compound::reserve(size_t max_count) {
+        return compound_data.reserve(max_count);
+    }
+
+    std::unordered_map<std::string, nbt>& nbt_compound::get_map() {
         return compound_data;
     }
-    const std::unordered_map<std::string, nbt>& nbt_compound::get_map() const{
+
+    const std::unordered_map<std::string, nbt>& nbt_compound::get_map() const {
         return compound_data;
     }
 
@@ -770,7 +829,6 @@ namespace copper_server::util {
     }
 
 #pragma endregion
-
 
     template <class T>
     void nbt_convert::insertValue(T val, size_t max) {

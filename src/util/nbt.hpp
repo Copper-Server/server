@@ -13,6 +13,12 @@
 #include <library/list_array.hpp>
 #include <unordered_map>
 
+namespace copper_server::base_objects {
+    struct uuid;
+    struct uuid_hex;
+    struct uuid_flat_hex;
+}
+
 namespace copper_server::util {
     enum class nbt_type : uint8_t {
         tag_end = 0,
@@ -60,6 +66,9 @@ namespace copper_server::util {
         nbt(list_array<int32_t>&&);
         nbt(const list_array<int64_t>&);
         nbt(list_array<int64_t>&&);
+        nbt(const base_objects::uuid&);
+        nbt(const base_objects::uuid_hex&);
+        nbt(const base_objects::uuid_flat_hex&);
 
         nbt(const nbt& copy);
         nbt(nbt&& move);
@@ -115,6 +124,14 @@ namespace copper_server::util {
         bool is_int_array() const;
         bool is_long_array() const;
 
+        bool is_numeric() const {
+            return is_byte() || is_short() || is_int() || is_long() || is_float() || is_double();
+        }
+
+        bool is_floating() const {
+            return is_float() || is_double();
+        }
+
         int8_t as_byte() const;
         int16_t as_short() const;
         int32_t as_int() const;
@@ -123,10 +140,15 @@ namespace copper_server::util {
         double as_double() const;
         std::string as_string() const;
 
+        base_objects::uuid as_uuid() const;
 
+        nbt& operator[](const std::string& key);
         nbt& at(const std::string& key);
         const nbt& at(const std::string& key) const;
+        bool contains(const std::string& key) const;
+        void remove(const std::string& key);
 
+        nbt& operator[](size_t index);
         nbt& at(size_t index);
         const nbt& at(size_t index) const;
 
@@ -139,6 +161,8 @@ namespace copper_server::util {
 
     public:
         nbt_compound();
+
+        nbt_compound(std::initializer_list<std::unordered_map<std::string, nbt>::value_type> data) : compound_data(std::move(data)) {}
         nbt_compound(const std::unordered_map<std::string, nbt>& data);
         nbt_compound(std::unordered_map<std::string, nbt>&& data);
         nbt_compound(const nbt_compound& copy);
@@ -165,6 +189,8 @@ namespace copper_server::util {
         size_t size() const;
         void clear();
         bool empty() const;
+
+        void reserve(size_t max_count);
 
         std::unordered_map<std::string, nbt>& get_map();
         const std::unordered_map<std::string, nbt>& get_map() const;

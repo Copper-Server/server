@@ -14,7 +14,7 @@ namespace copper_server::api::block_state_provider {
 
     std::function<base_objects::block()> process_provider(const util::nbt_compound& provider_config) {
         auto& handler = handlers.at(registers::normalize_entry(provider_config["type"].as_string()));
-        return {[handler = handler, provider_config = provider_config, state = util::nbt()]() mutable {
+        return {[handler = handler, provider_config = provider_config, state = util::nbt_compound()]() mutable {
             return handler(provider_config, state);
         }};
     }

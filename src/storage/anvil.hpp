@@ -19,8 +19,8 @@ namespace copper_server::storage {
 
         fast_task::future_ptr<std::shared_ptr<base_objects::world::chunk_data>> get_chunk(int32_t chunk_x, int32_t chunk_z);
 
-        fast_task::future_ptr<void> write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, region_storage::compression_type type = region_storage::compression_type::zlib, bool use_external_file = false);
-        fast_task::future_ptr<void> write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, const std::string& type, bool use_external_file = false);
+        fast_task::future_ptr<void> write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, uint64_t tick_clock, region_storage::compression_type type = region_storage::compression_type::zlib, bool use_external_file = false);
+        fast_task::future_ptr<void> write_chunk(int32_t chunk_x, int32_t chunk_z, std::shared_ptr<base_objects::world::chunk_data> chunk, uint64_t tick_clock, const std::string& type, bool use_external_file = false);
     };
 }
 

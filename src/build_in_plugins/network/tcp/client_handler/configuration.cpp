@@ -30,7 +30,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         struct extra_data_t {
             keep_alive_solution ka_solution;
             list_array<plugin_registration_ptr> active_plugins{};
-            std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
+            std::unordered_map<base_objects::uuid, ResourcePackData> pending_resource_packs;
             bool code_of_conduct_is_accepted = false;
             bool packs_requested = false;
 
@@ -96,7 +96,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
 
         template <class RegistryT, class FN>
         static base_objects::network::response registry_data_serialize_entry(const std::string& identifier, list_array<typename std::unordered_map<std::string, RegistryT>::iterator>& values, FN&& serializer) {
-            list_array<std::pair<std::string, enbt::value>> fixed_data;
+            list_array<std::pair<std::string, util::nbt>> fixed_data;
             fixed_data.resize(values.size());
             for (auto& _it : values) {
                 auto& [name, it] = *_it;
@@ -109,10 +109,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             api::packets::client_bound::config::registry_data res;
             res.registry_id = identifier;
             res.entries.reserve(fixed_data.size());
-            fixed_data.for_each([&](const std::string& name, enbt::value& data) {
+            fixed_data.for_each([&](const std::string& name, util::nbt& data) {
                 api::packets::client_bound::config::registry_data::entry entry;
                 entry.entry_id = name;
-                if (data.get_type() != enbt::type::none)
+                if (!data.is_end())
                     if (data.size())
                         entry.data = std::move(data);
                 res.entries.push_back(std::move(entry));
@@ -124,43 +124,44 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             static base_objects::network::response data;
             if (!data.has_data()) {
                 { // minecraft:trim_material
-                    data += registry_data_serialize_entry<api::registers::armor_trim_material>("minecraft:trim_material", api::registers::armor_trim_materials_cache, [](api::registers::armor_trim_material& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::armor_trim_material>("minecraft:trim_material", api::registers::armor_trim_materials_cache, [](api::registers::armor_trim_material& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_name"] = it.asset_name;
                         if (std::holds_alternative<std::string>(it.description))
                             element["description"] = std::get<std::string>(it.description);
                         else
-                            element["description"] = std::get<base_objects::chat>(it.description).to_enbt();
-                        return element;
+                            element["description"] = std::get<base_objects::chat>(it.description).to_nbt();
+                        return element.take_map();
                     });
                 }
                 { // minecraft:trim_pattern
-                    data += registry_data_serialize_entry<api::registers::armor_trim_pattern>("minecraft:trim_pattern", api::registers::armor_trim_patterns_cache, [](api::registers::armor_trim_pattern& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::armor_trim_pattern>("minecraft:trim_pattern", api::registers::armor_trim_patterns_cache, [](api::registers::armor_trim_pattern& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
                         if (std::holds_alternative<std::string>(it.description))
                             element["description"] = std::get<std::string>(it.description);
                         else
-                            element["description"] = std::get<base_objects::chat>(it.description).to_enbt();
+                            element["description"] = std::get<base_objects::chat>(it.description).to_nbt();
                         element["decal"] = it.decal;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:worldgen/biome
-                    data += registry_data_serialize_entry<api::registers::biome>("minecraft:worldgen/biome", api::registers::biomes_cache, [](api::registers::biome& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::biome>("minecraft:worldgen/biome", api::registers::biomes_cache, [](api::registers::biome& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["has_precipitation"] = it.has_precipitation;
                         element["temperature"] = it.temperature;
-                        element["temperature_modifier"] = it.temperature_modifier;
+                        if (it.temperature_modifier)
+                            element["temperature_modifier"] = *it.temperature_modifier;
                         element["downfall"] = it.downfall;
                         { //effects
-                            enbt::compound effects;
+                            util::nbt_compound effects;
                             effects["fog_color"] = it.effects.fog_color;
                             effects["water_color"] = it.effects.water_color;
                             effects["water_fog_color"] = it.effects.water_fog_color;
@@ -172,91 +173,91 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             if (it.effects.grass_color_modifier)
                                 effects["grass_color_modifier"] = *it.effects.grass_color_modifier;
                             if (it.effects.particle) {
-                                enbt::compound particle;
+                                util::nbt_compound particle;
                                 particle["probability"] = it.effects.particle->probability;
                                 particle["options"] = it.effects.particle->options.options;
                                 particle["options"]["type"] = it.effects.particle->options.type.to_string();
-                                effects["particle"] = std::move(particle);
+                                effects["particle"] = std::move(particle).take_map();
                             }
                             if (it.effects.ambient_sound) {
                                 if (std::holds_alternative<std::string>(*it.effects.ambient_sound))
                                     effects["ambient_sound"] = std::get<std::string>(*it.effects.ambient_sound);
                                 else if (std::holds_alternative<api::registers::biome::ambient_sound>(*it.effects.ambient_sound)) {
-                                    enbt::compound ambient_sound;
+                                    util::nbt_compound ambient_sound;
                                     ambient_sound["sound"] = std::get<api::registers::biome::ambient_sound>(*it.effects.ambient_sound).sound.to_string();
                                     ambient_sound["range"] = std::get<api::registers::biome::ambient_sound>(*it.effects.ambient_sound).range;
-                                    effects["ambient_sound"] = std::move(ambient_sound);
+                                    effects["ambient_sound"] = std::move(ambient_sound).take_map();
                                 }
                             }
                             if (it.effects.mood_sound) {
-                                enbt::compound mood_sound;
+                                util::nbt_compound mood_sound;
                                 mood_sound["sound"] = it.effects.mood_sound->sound.to_string();
                                 mood_sound["tick_delay"] = it.effects.mood_sound->tick_delay;
                                 mood_sound["block_search_extent"] = it.effects.mood_sound->block_search_extent;
                                 mood_sound["offset"] = it.effects.mood_sound->offset;
-                                effects["mood_sound"] = std::move(mood_sound);
+                                effects["mood_sound"] = std::move(mood_sound).take_map();
                             }
                             if (it.effects.additions_sound) {
-                                enbt::compound additions_sound;
+                                util::nbt_compound additions_sound;
                                 additions_sound["sound"] = it.effects.additions_sound->sound.to_string();
                                 additions_sound["tick_chance"] = it.effects.additions_sound->tick_chance;
-                                effects["additions_sound"] = std::move(additions_sound);
+                                effects["additions_sound"] = std::move(additions_sound).take_map();
                             }
                             {
-                                enbt::fixed_array music_arr;
+                                list_array<util::nbt> music_arr;
                                 for (auto& music_it : it.effects.music) {
-                                    enbt::compound music;
+                                    util::nbt_compound music;
                                     music["sound"] = music_it.sound.to_string();
                                     music["min_delay"] = music_it.min_delay;
                                     music["max_delay"] = music_it.max_delay;
                                     music["replace_current_music"] = music_it.replace_current_music;
-                                    music_arr.push_back(enbt::compound{{"weight", music_it.music_weight}, {"data", std::move(music)}});
+                                    music_arr.push_back(util::nbt_compound{{"weight", music_it.music_weight}, {"data", std::move(music).take_map()}}.take_map());
                                 }
                                 effects["music"] = std::move(music_arr);
                             }
-                            element["effects"] = std::move(effects);
+                            element["effects"] = std::move(effects).take_map();
                         }
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:chat_type
-                    data += registry_data_serialize_entry<api::registers::chat_type>("minecraft:chat_type", api::registers::chat_types_cache, [](api::registers::chat_type& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::chat_type>("minecraft:chat_type", api::registers::chat_types_cache, [](api::registers::chat_type& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         if (it.chat) {
-                            enbt::compound chat;
+                            util::nbt_compound chat;
                             chat["translation_key"] = it.chat->translation_key;
                             if (it.chat->style) {
                                 it.chat->style->get_extra().clear();
                                 it.chat->style->set_text("");
-                                enbt::value style = it.chat->style->to_enbt();
+                                util::nbt style = it.chat->style->to_nbt();
                                 style.remove("text");
                                 chat["style"] = std::move(style);
                             }
                             if (std::holds_alternative<std::string>(it.chat->parameters))
                                 chat["parameters"] = std::get<std::string>(it.chat->parameters);
                             else
-                                chat["parameters"] = std::get<std::vector<std::string>>(it.chat->parameters);
-                            element["chat"] = std::move(chat);
+                                chat["parameters"] = list_array<util::nbt>(std::get<std::vector<std::string>>(it.chat->parameters));
+                            element["chat"] = std::move(chat).take_map();
                         }
                         if (it.narration) {
-                            enbt::compound narration;
+                            util::nbt_compound narration;
                             narration["translation_key"] = it.narration->translation_key;
                             if (std::holds_alternative<std::string>(it.narration->parameters))
                                 narration["parameters"] = std::get<std::string>(it.narration->parameters);
                             else
-                                narration["parameters"] = std::get<std::vector<std::string>>(it.narration->parameters);
-                            element["narration"] = std::move(narration);
+                                narration["parameters"] = list_array<util::nbt>(std::get<std::vector<std::string>>(it.narration->parameters));
+                            element["narration"] = std::move(narration).take_map();
                         }
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:damage_type
-                    data += registry_data_serialize_entry<api::registers::damage_type>("minecraft:damage_type", api::registers::damage_types_cache, [](api::registers::damage_type& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::damage_type>("minecraft:damage_type", api::registers::damage_types_cache, [](api::registers::damage_type& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["message_id"] = it.message_id;
                         {
                             const char* scaling = nullptr;
@@ -320,20 +321,20 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             if (death_message_type)
                                 element["death_message_type"] = death_message_type;
                         }
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:dimension_type
-                    data += registry_data_serialize_entry<api::registers::dimension_type>("minecraft:dimension_type", api::registers::dimension_types_cache, [](api::registers::dimension_type& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::dimension_type>("minecraft:dimension_type", api::registers::dimension_types_cache, [](api::registers::dimension_type& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                             element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
                         else
-                            element["monster_spawn_light_level"] = std::get<std::shared_ptr<base_objects::number_provider>>(it.monster_spawn_light_level)->get_enbt();
+                            element["monster_spawn_light_level"] = std::get<std::shared_ptr<base_objects::number_provider>>(it.monster_spawn_light_level)->get_nbt();
                         if (it.fixed_time)
-                            element["fixed_time"] = *it.fixed_time;
+                            element["fixed_time"] = std::bit_cast<ptrdiff_t>(*it.fixed_time);
                         element["infiniburn"] = it.infiniburn;
                         element["effects"] = it.effects;
                         element["coordinate_scale"] = it.coordinate_scale;
@@ -350,130 +351,130 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         element["has_raids"] = it.has_raids;
                         element["respawn_anchor_works"] = it.respawn_anchor_works;
                         element["bed_works"] = it.bed_works;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:wolf_variant
-                    data += registry_data_serialize_entry<api::registers::wolf_variant>("minecraft:wolf_variant", api::registers::wolf_variants_cache, [](api::registers::wolf_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::wolf_variant>("minecraft:wolf_variant", api::registers::wolf_variants_cache, [](api::registers::wolf_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
-                        element["assets"] = it.assets;
+                            return util::nbt{};
+                        util::nbt_compound element;
+                        element["assets"] = it.assets.get_map();
                         element["spawn_conditions"] = it.spawn_conditions;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:painting_variant
-                    data += registry_data_serialize_entry<api::registers::painting_variant>("minecraft:painting_variant", api::registers::painting_variants_cache, [](api::registers::painting_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::painting_variant>("minecraft:painting_variant", api::registers::painting_variants_cache, [](api::registers::painting_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
-                        element["height"] = it.height;
-                        element["width"] = it.width;
-                        element["title"] = it.title.to_enbt();
-                        element["author"] = it.author.to_enbt();
-                        return element;
+                        element["height"] = std::bit_cast<int32_t>(it.height);
+                        element["width"] = std::bit_cast<int32_t>(it.width);
+                        element["title"] = it.title.to_nbt();
+                        element["author"] = it.author.to_nbt();
+                        return element.take_map();
                     });
                 }
                 { // minecraft:instrument
-                    data += registry_data_serialize_entry<api::registers::instrument>("minecraft:instrument", api::registers::instruments_cache, [](api::registers::instrument& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::instrument>("minecraft:instrument", api::registers::instruments_cache, [](api::registers::instrument& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["range"] = it.range;
                         element["use_duration"] = it.use_duration;
-                        element["description"] = it.description.to_enbt();
+                        element["description"] = it.description.to_nbt();
                         std::visit(
                             [&](auto& it) {
                                 using T = std::decay_t<decltype(it)>;
                                 if constexpr (api::id::is_source<T>) {
                                     element["sound_event"] = it.to_string();
                                 } else {
-                                    enbt::compound sound_event;
+                                    util::nbt_compound sound_event;
                                     sound_event["sound_name"] = it.sound_name.to_string();
                                     if (it.fixed_range)
                                         sound_event["fixed_range"] = *it.fixed_range;
-                                    element["sound_event"] = sound_event;
+                                    element["sound_event"] = sound_event.take_map();
                                 }
                             },
                             it.sound_event
                         );
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:cat_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cat_variant", api::registers::cat_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cat_variant", api::registers::cat_variants_cache, [](api::registers::entity_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
                             element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:chicken_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:chicken_variant", api::registers::chicken_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:chicken_variant", api::registers::chicken_variants_cache, [](api::registers::entity_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
                             element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:cow_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cow_variant", api::registers::cow_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cow_variant", api::registers::cow_variants_cache, [](api::registers::entity_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
                             element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:frog_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:frog_variant", api::registers::frog_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:frog_variant", api::registers::frog_variants_cache, [](api::registers::entity_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
                             element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:pig_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:pig_variant", api::registers::pig_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:pig_variant", api::registers::pig_variants_cache, [](api::registers::entity_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
                             element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
-                        return element;
+                        return element.take_map();
                     });
                 }
                 { // minecraft:wolf_sound_variant
-                    data += registry_data_serialize_entry<api::registers::wolf_sound_variant>("minecraft:wolf_sound_variant", api::registers::wolf_sound_variants_cache, [](api::registers::wolf_sound_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::wolf_sound_variant>("minecraft:wolf_sound_variant", api::registers::wolf_sound_variants_cache, [](api::registers::wolf_sound_variant& it) -> util::nbt {
                         if (!it.send_via_network_body)
-                            return enbt::value{};
-                        enbt::compound element;
+                            return util::nbt{};
+                        util::nbt_compound element;
                         element["ambient_sound"] = it.ambient_sound.to_string();
                         element["death_sound"] = it.death_sound.to_string();
                         element["growl_sound"] = it.growl_sound.to_string();
                         element["hurt_sound"] = it.hurt_sound.to_string();
                         element["pant_sound"] = it.pant_sound.to_string();
                         element["whine_sound"] = it.whine_sound.to_string();
-                        return element;
+                        return element.take_map();
                     });
                 }
             }

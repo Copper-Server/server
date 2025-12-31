@@ -578,7 +578,7 @@ namespace copper_server::util::conversions {
             }
         }
 
-        util::nbt from_json_nbt(const boost::json::value& json) {
+        util::nbt from_json(const boost::json::value& json) {
             switch (json.kind()) {
             case boost::json::kind::null:
                 return util::nbt();
@@ -597,7 +597,7 @@ namespace copper_server::util::conversions {
                 list_array<util::nbt> result;
                 result.reserve(arr.size());
                 for (auto& item : arr)
-                    result.emplace_back(from_json_nbt(item));
+                    result.emplace_back(from_json(item));
                 return result;
             }
             case boost::json::kind::object: {
@@ -605,7 +605,7 @@ namespace copper_server::util::conversions {
                 std::unordered_map<std::string, util::nbt> result;
                 result.reserve(obj.size());
                 for (auto& [key, value] : obj)
-                    result[key] = from_json_nbt(value);
+                    result[key] = from_json(value);
                 return result;
             }
             default:
