@@ -14,60 +14,111 @@
 
 namespace copper_server::reflect {
     template <class T>
-    consteval std::string_view type_name();
-
-    template <class T>
-    consteval size_t fields_count() {
-        return 0;
-    }
-
-    template <class T>
     struct enum_data {};
 
     template <class T>
-    struct for_each_type_s {};
+    struct meta_for_type_s {};
 
     template <class T>
-    struct for_each_type_with_name_s {};
+    consteval size_t fields_count() {
+        if constexpr (requires { meta_for_type_s<T>::fields_count; })
+            return meta_for_type_s<T>::fields_count;
+        else
+            return 0;
+    }
 
-    template <class T>
-    struct visit_field_s {};
+    template <class T, class FN>
+    constexpr void for_each_field(T& val, FN&& fn) {
+        meta_for_type_s<T>::for_each_field(val, std::move(fn));
+    }
 
-    template <class T>
-    struct visit_field_with_name_s {};
+    template <class T, class FN>
+    constexpr void for_each_field(const T& val, FN&& fn) {
+        meta_for_type_s<T>::for_each_field(val, std::move(fn));
+    }
 
     template <class T, class FN>
     constexpr void for_each_type(FN&& fn) {
-        for_each_type_s<T>::each(std::move(fn));
+        meta_for_type_s<T>::for_each_type(std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void for_each_field_with_name(T& val, FN&& fn) {
+        meta_for_type_s<T>::for_each_field_with_name(val, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void for_each_field_with_name(const T& val, FN&& fn) {
+        meta_for_type_s<T>::for_each_field_with_name(val, std::move(fn));
     }
 
     template <class T, class FN>
     constexpr void for_each_type_with_name(FN&& fn) {
-        for_each_type_with_name_s<T>::each(std::move(fn));
+        meta_for_type_s<T>::for_each_type_with_name(std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field(std::string_view name, T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field(name, val, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field(std::string_view name, const T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field(name, val, std::move(fn));
     }
 
     template <class T, class FN>
     constexpr void visit_field(std::string_view name, FN&& fn) {
-        visit_field_s<T>::visit(name, std::move(fn));
+        meta_for_type_s<T>::visit_field(name, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field_with_name(std::string_view name, T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field_with_name(name, val, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field_with_name(std::string_view name, const T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field_with_name(name, val, std::move(fn));
     }
 
     template <class T, class FN>
     constexpr void visit_field_with_name(std::string_view name, FN&& fn) {
-        visit_field_with_name_s<T>::visit(name, std::move(fn));
+        meta_for_type_s<T>::visit_field_with_name(name, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field(size_t index, T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field(index, val, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field(size_t index, const T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field(index, val, std::move(fn));
     }
 
     template <class T, class FN>
     constexpr void visit_field(size_t index, FN&& fn) {
-        visit_field_s<T>::visit(index, std::move(fn));
+        meta_for_type_s<T>::visit_field(index, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field_with_name(size_t index, T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field_with_name(index, val, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field_with_name(size_t index, const T& val, FN&& fn) {
+        meta_for_type_s<T>::visit_field_with_name(index, val, std::move(fn));
     }
 
     template <class T, class FN>
     constexpr void visit_field_with_name(size_t index, FN&& fn) {
-        visit_field_with_name_s<T>::visit(index, std::move(fn));
+        meta_for_type_s<T>::visit_field_with_name(index, std::move(fn));
     }
 
     template <class T>
-    consteval std::string_view type_name() {
+    consteval std::string_view type_name_compile_time() {
 #if defined(__clang__) || defined(__GNUC__)
         constexpr std::string_view func = __PRETTY_FUNCTION__;
         constexpr std::string_view prefix = "T = ";
@@ -83,6 +134,15 @@ namespace copper_server::reflect {
 #else
         return "unknown";
 #endif
+    }
+
+    template <class T>
+    consteval std::string_view type_name() {
+        if constexpr (requires { meta_for_type_s<T>::type_name(); }) {
+            return meta_for_type_s<T>::type_name();
+        } else {
+            return type_name_compile_time<T>();
+        }
     }
 
     template <class T>

@@ -53,9 +53,7 @@ namespace copper_server::base_objects {
 
     void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
         auto& static_data = getStaticData();
-        if (static_data.as_entity_on_tick)
-            static_data.as_entity_on_tick(world, sub_chunk, *this, sub_chunk.get_block_entity_data(local_x, local_y, local_z), chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);
-        else if (static_data.on_tick)
+        if (static_data.on_tick)
             static_data.on_tick(world, sub_chunk, *this, chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);
     }
 

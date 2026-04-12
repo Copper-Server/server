@@ -17,45 +17,6 @@
 
 //entity component system
 namespace copper_server::api::ecs {
-    enum class relation_type : uint8_t {
-        strong,
-        weak
-    };
-
-    struct relation_entry {
-        ecs::entity target;
-        relation_type type;
-
-        relation_entry(ecs::entity e, relation_type t = relation_type::strong)
-            : target(e), type(t) {}
-    };
-
-    struct relation_visitor {
-        struct context_t {
-            void (*on_unlink)(void*, ecs::entity self, ecs::entity target_holder);
-            void* component;
-
-            void make_unlink(ecs::entity self, ecs::entity target_holder) const {
-                on_unlink(component, self, target_holder);
-            }
-        };
-
-        std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)> callback;
-        context_t context;
-
-        relation_visitor(std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)>&& callback)
-            : callback(std::move(callback)) {}
-
-        relation_visitor(const relation_visitor&) = delete;
-        relation_visitor(relation_visitor&&) = delete;
-        relation_visitor& operator=(const relation_visitor&) = delete;
-        relation_visitor& operator=(relation_visitor&&) = delete;
-
-        void push(entity e, relation_type type) {
-            callback(e, type, context);
-        }
-    };
-
     //Low level api, use entity_definition instead of this
     struct entity_recipe {
         entity_recipe();
@@ -197,12 +158,12 @@ namespace copper_server::api::ecs {
 
         template <class T>
         [[nodiscard]] bool has_tag(int32_t value) const {
-            return detail::has_entity_component(id, generation, detail::get_tag_entry<component>(value));
+            return detail::has_entity_component(id, generation, detail::get_tag_entry<T>(value));
         }
 
         template <class T>
         [[nodiscard]] bool has_tag(uint32_t value) const {
-            return detail::has_entity_component(id, generation, detail::get_tag_entry<component>(value));
+            return detail::has_entity_component(id, generation, detail::get_tag_entry<T>(value));
         }
 
         template <detail::tag_component T>
@@ -283,18 +244,17 @@ namespace copper_server::api::ecs {
     struct query {
         query() : id() {}
 
-        query(query&& mov) noexcept : id(mov.id), with_relations(std::move(mov.with_relations)), with_tag_components(std::move(with_tag_components)), without_tag_components(std::move(without_tag_components)) {}
+        query(query&& mov) noexcept : id(mov.id), with_tag_components(std::move(with_tag_components)), without_tag_components(std::move(without_tag_components)) {}
 
-        query(const query& copy) : id(copy.id), with_relations(copy.with_relations), with_tag_components(with_tag_components), without_tag_components(without_tag_components) {}
+        query(const query& copy) : id(copy.id), with_tag_components(with_tag_components), without_tag_components(without_tag_components) {}
 
         query(int32_t world_id) : id(world_id) {}
 
-        query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations, list_array<whole_component_id>&& with_tag_components, list_array<whole_component_id>&& without_tag_components)
-            : id(id), with_relations(std::move(with_relations)), with_tag_components(std::move(with_tag_components)), without_tag_components(std::move(without_tag_components)) {}
+        query(std::optional<int32_t> id, list_array<whole_component_id>&& with_tag_components, list_array<whole_component_id>&& without_tag_components)
+            : id(id), with_tag_components(std::move(with_tag_components)), without_tag_components(std::move(without_tag_components)) {}
 
         query& operator=(query&& mov) noexcept {
             id = mov.id;
-            with_relations = std::move(mov.with_relations);
             with_tag_components = std::move(mov.with_tag_components);
             without_tag_components = std::move(mov.without_tag_components);
             return *this;
@@ -302,7 +262,6 @@ namespace copper_server::api::ecs {
 
         query& operator=(const query& copy) {
             id = copy.id;
-            with_relations = copy.with_relations;
             with_tag_components = copy.with_tag_components;
             without_tag_components = copy.without_tag_components;
             return *this;
@@ -310,67 +269,67 @@ namespace copper_server::api::ecs {
 
         template <class... with_components>
         [[nodiscard]] query<params..., detail::query_with<with_components...>> with() && {
-            return query<params..., detail::query_with<with_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_with<with_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         template <class... without_components>
         [[nodiscard]] query<params..., detail::query_without<without_components...>> without() && {
-            return query<params..., detail::query_without<without_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_without<without_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         template <class with_tag_component>
         [[nodiscard]] query<params...> with_tag(int32_t value) && {
-            return query<params...>{id, std::move(with_relations), std::move(with_tag_components).push_back(detail::get_tag_entry<with_tag_component>(value)), std::move(mov.without_tag_components)};
+            return query<params...>{id, std::move(with_tag_components).push_back(detail::get_tag_entry<with_tag_component>(value)), std::move(without_tag_components)};
         }
 
         template <class with_tag_component>
         [[nodiscard]] query<params...> with_tag(uint32_t value) && {
-            return query<params...>{id, std::move(with_relations), std::move(with_tag_components).push_back(detail::get_tag_entry<with_tag_component>(value)), std::move(mov.without_tag_components)};
+            return query<params...>{id, std::move(with_tag_components).push_back(detail::get_tag_entry<with_tag_component>(value)), std::move(without_tag_components)};
         }
 
         template <detail::tag_component with_tag_component>
         [[nodiscard]] query<params...> with_tag(const with_tag_component& value) && {
-            return query<params...>{id, std::move(with_relations), std::move(with_tag_components).push_back(detail::get_tag_entry(value)), std::move(mov.without_tag_components)};
+            return query<params...>{id, std::move(with_tag_components).push_back(detail::get_tag_entry(value)), std::move(without_tag_components)};
         }
 
         template <class without_tag_component>
         [[nodiscard]] query<params...> without_tag(int32_t value) && {
-            return query<params...>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components).push_back(detail::get_tag_entry<without_tag_component>(value))};
+            return query<params...>{id, std::move(with_tag_components), std::move(without_tag_components).push_back(detail::get_tag_entry<without_tag_component>(value))};
         }
 
         template <class without_tag_component>
         [[nodiscard]] query<params...> without_tag(uint32_t value) && {
-            return query<params...>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components).push_back(detail::get_tag_entry<without_tag_component>(value))};
+            return query<params...>{id, std::move(with_tag_components), std::move(without_tag_components).push_back(detail::get_tag_entry<without_tag_component>(value))};
         }
 
         template <detail::tag_component without_tag_component>
         [[nodiscard]] query<params...> without_tag(const without_tag_component& value) && {
-            return query<params...>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components).push_back(detail::get_tag_entry(value))};
+            return query<params...>{id, std::move(with_tag_components), std::move(without_tag_components).push_back(detail::get_tag_entry(value))};
         }
 
         template <class... reads_components>
         [[nodiscard]] query<params..., detail::query_reads<reads_components...>> reads() && {
-            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         template <class... writes_components>
         [[nodiscard]] query<params..., detail::query_writes<writes_components...>> writes() && {
-            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         template <class... with_dirty_components>
         [[nodiscard]] query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() && {
-            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         template <class... with_clear_components>
         [[nodiscard]] query<params..., detail::query_with_clear<with_clear_components...>> with_clear() && {
-            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         template <class... with_changed_components>
         [[nodiscard]] query<params..., detail::query_with_changes<with_changed_components...>> with_changes() && {
-            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations), std::move(with_tag_components), std::move(mov.without_tag_components)};
+            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_tag_components), std::move(without_tag_components)};
         }
 
         //this operation marks all written components as dirty,
@@ -476,10 +435,10 @@ namespace copper_server::api::ecs {
         std::shared_ptr<detail::iteration_topology> begin_topology() {
             if constexpr (explicit_marking) {
                 if (!exp_mark_cached_topology) {
-                    exp_mark_cached_version = detail::get_state_version(_q.id);
+                    exp_mark_cached_version = detail::get_state_version(id);
                     return exp_mark_cached_topology = begin_topology_create<explicit_marking>();
                 } else {
-                    auto current_version = detail::get_state_version(_q.id);
+                    auto current_version = detail::get_state_version(id);
                     if (exp_mark_cached_version == current_version)
                         return exp_mark_cached_topology;
                     else {
@@ -489,10 +448,10 @@ namespace copper_server::api::ecs {
                 }
             } else {
                 if (!cached_topology) {
-                    cached_version = detail::get_state_version(_q.id);
+                    cached_version = detail::get_state_version(id);
                     return cached_topology = begin_topology_create<explicit_marking>();
                 } else {
-                    auto current_version = detail::get_state_version(_q.id);
+                    auto current_version = detail::get_state_version(id);
                     if (cached_version == current_version)
                         return cached_topology;
                     else {
@@ -522,7 +481,7 @@ namespace copper_server::api::ecs {
 
         template <bool explicit_marking>
         auto begin_impl() {
-            return begin_wrap(begin_handle<explicit_marking>());
+            return begin_wrap<explicit_marking>(begin_handle<explicit_marking>());
         }
 
         std::optional<int32_t> id;
@@ -644,15 +603,6 @@ namespace copper_server::api::ecs {
             return detail::create_entity_r_cc(std::nullopt, recipe, std::forward<components>(args)...)->take();
         }
 
-        template <class... Params>
-        std::vector<entity> execute_query_immediate(query<Params...>&& query_obj) {
-            fast_task::unique_lock lock(detail::immediate_lock());
-            std::vector<entity> entity;
-            for (auto&& req : query_obj)
-                entity.push_back(std::get<0>(req).current_entity());
-            return entity;
-        }
-
         entity load_ecs_entity(const std::string& id, util::nbt_read_stream& stream) {
             return detail::load_ecs_entity(id, stream, std::nullopt);
         }
@@ -679,22 +629,6 @@ namespace copper_server::api::ecs {
 
         void global_tick();
     }
-
-    struct system_interface {
-        using reads = dependent<>;
-        using writes = dependent<>;
-
-        virtual ~system_interface() noexcept = default;
-
-        virtual void tick(world_local_registry& world) = 0;
-    };
-
-    enum class tick_phase {
-        early_processing, //for cleanup or for other things before processing anything
-
-        mobile_entity,
-        block_entity,
-    };
 
     struct scheduler {
         template <class... params>
@@ -801,8 +735,8 @@ namespace copper_server::api::ecs {
             using Traits = detail::function_traits<std::decay_t<FN>>;
             using ArgsTuple = typename Traits::args_tuple;
 
-            using QueryType = typename detail::deduce_query_params<ArgsTuple>::type<query>;
-            using SystemType = typename detail::deduce_query_params<ArgsTuple>::type<system_builder>;
+            using QueryType = typename detail::deduce_query_params<ArgsTuple>::template type<query>;
+            using SystemType = typename detail::deduce_query_params<ArgsTuple>::template type<system_builder>;
 
             auto wrapper = [sys = std::forward<FN>(inline_system)](QueryType& q) mutable {
                 auto invoker = [&](auto&&... args) {
@@ -829,8 +763,8 @@ namespace copper_server::api::ecs {
             using Traits = detail::function_traits<std::decay_t<FN>>;
             using ArgsTuple = typename Traits::args_tuple;
 
-            using QueryType = typename detail::deduce_query_params<ArgsTuple>::type<query>;
-            using SystemType = typename detail::deduce_query_params<ArgsTuple>::type<system_builder>;
+            using QueryType = typename detail::deduce_query_params<ArgsTuple>::template type<query>;
+            using SystemType = typename detail::deduce_query_params<ArgsTuple>::template type<system_builder>;
 
             constexpr bool has_view = (std::tuple_size_v<ArgsTuple> > 0) && detail::is_view_type<std::tuple_element_t<0, ArgsTuple>>::value;
 
@@ -872,7 +806,7 @@ namespace copper_server::api::ecs {
 
 template <copper_server::util::CTS path>
 struct ecs_nbt_path {
-    static inline constexpr std::string_view value = []() { return custom_name.data; }();
+    static inline constexpr std::string_view value = []() { return path.data; }();
 };
 
 #include <src/api/ecs/late_definition.hpp>

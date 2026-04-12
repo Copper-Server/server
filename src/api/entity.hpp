@@ -39,7 +39,6 @@ namespace copper_server {
         }
 
         struct block;
-        struct block_entity;
     }
 }
 

@@ -209,7 +209,7 @@ namespace copper_server::api::ecs::com {
             bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
                 if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
                     return false;
-                if (!processing_region.in_bounds(pos_x, pos_z))
+                if (!processing_region.in_bounds((int32_t)pos_x, (int32_t)pos_z))
                     return false;
 
                 int64_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
@@ -222,14 +222,14 @@ namespace copper_server::api::ecs::com {
             bool chunk_in_bounds(int64_t pos_x, int64_t pos_z) const {
                 if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
                     return false;
-                return processing_region.in_bounds(pos_x, pos_z);
+                return processing_region.in_bounds((int32_t)pos_x, (int32_t)pos_z);
             }
 
             bool chunk_processed(int64_t pos_x, int64_t pos_z) const {
                 if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
                     return false;
 
-                if (!processing_region.in_bounds(pos_x, pos_z))
+                if (!processing_region.in_bounds((int32_t)pos_x, (int32_t)pos_z))
                     return false;
                 uint64_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
                 uint64_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);

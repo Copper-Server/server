@@ -833,7 +833,7 @@ namespace copper_server::api::id::detail {
     }
 
     int32_t to_registry_source_entity(api::ecs::entity value) {
-        return value.get<api::ecs::com::protocol_id>().value;
+        return value.template get<api::ecs::com::entities::protocol_id>().value;
     }
 
     int32_t to_registry_source_entity(const base_objects::uuid& value) {

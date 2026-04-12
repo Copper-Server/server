@@ -119,7 +119,7 @@ namespace copper_server {
                 return hardness < break_strength;
             }
 
-            //on tick first checks `is_block_entity` and if true, checks `as_entity_on_tick` if one of them false/undefined then checks `on_tick`, if undefined then do nothing
+            //on tick checks `on_tick`, if undefined then do nothing, otherwise call the callback
             std::function<void(storage::world_data&, world::sub_chunk_data&, block& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> on_tick;
 
             //used to check properties usage
@@ -171,7 +171,6 @@ namespace copper_server {
                   has_comparator_output(copy.has_comparator_output),
                   transparent_sides(copy.transparent_sides),
                   on_tick(copy.on_tick),
-                  as_entity_on_tick(copy.as_entity_on_tick),
                   allowed_properties(copy.allowed_properties),
                   assigned_states_to_properties(copy.assigned_states_to_properties),
                   current_properties(copy.current_properties),
@@ -212,7 +211,6 @@ namespace copper_server {
                   has_comparator_output(copy.has_comparator_output),
                   transparent_sides(std::move(copy.transparent_sides)),
                   on_tick(std::move(copy.on_tick)),
-                  as_entity_on_tick(std::move(copy.as_entity_on_tick)),
                   allowed_properties(std::move(copy.allowed_properties)),
                   assigned_states_to_properties(std::move(copy.assigned_states_to_properties)),
                   current_properties(std::move(copy.current_properties)),

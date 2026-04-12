@@ -161,6 +161,8 @@ namespace copper_server::api::ecs {
 
         void flatten_tree(const nbt_schema_node* node, const detail::archetype_layout& layout, serialization_plan& plan, bool prev_is_complex) const;
 
+        static std::vector<std::string> parse_path(std::string_view path);
+
         template <class T>
         entity_definition& map_component(const std::string& nbt_path) {
             auto parts = parse_path(nbt_path);
@@ -202,8 +204,7 @@ namespace copper_server::api::ecs {
         template <class T>
         void try_auto_map() {
             if constexpr (detail::has_nbt_path<T>::value)
-                if constexpr (detail::has_nbt_auto<T>::value || detail::has_nbt_fields<T>::value || std::is_empty_v<T>)
-                    map_component<T>(std::string(detail::get_nbt_path_v<T>()));
+                map_component<T>(std::string(detail::get_nbt_path_v<T>()));
         }
 
     public:
@@ -305,19 +306,9 @@ namespace copper_server::api::ecs {
             return *this;
         }
 
-        component_remove_act get_remove_action(component_id id) const {
-            if (rule_lookup.contains(id))
-                return rules[rule_lookup.at(id)].remove_action;
-            return component_remove_act::optional;
-        }
-
-        const entity_recipe& get_recipe() const {
-            return base_recipe;
-        }
-
-        const entity_recipe& get_stripped_recipe() const {
-            return stripped_recipe;
-        }
+        component_remove_act get_remove_action(component_id id) const;
+        const entity_recipe& get_recipe() const;
+        const entity_recipe& get_stripped_recipe() const;
 
         void to_nbt(util::nbt_write_stream& stream, entity entity) const;
         entity from_nbt(util::nbt_read_stream& stream, std::optional<world*> world_opt = std::nullopt) const;

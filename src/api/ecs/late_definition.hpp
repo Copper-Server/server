@@ -40,7 +40,7 @@ namespace copper_server::api::ecs::detail {
 
         data.components_reference.resize(sizeof...(components));
         [&data]<size_t... I>(std::index_sequence<I...>) {
-            data.components_reference.at(I) = {detail::get_component_id<decltype(std::get<I>(data.components))>(), (void*)&std::get<I>(data.components)};
+            (..., (data.components_reference.at(I) = {detail::get_component_id<decltype(std::get<I>(data.components))>(), (void*)&std::get<I>(data.components)}));
         }(std::make_index_sequence<std::tuple_size_v<std::tuple<components...>>>());
 
         return detail::create_entity(world_id, std::move(data));
@@ -58,7 +58,7 @@ namespace copper_server::api::ecs::detail {
 
         data.components_reference.resize(sizeof...(components));
         [&data]<size_t... I>(std::index_sequence<I...>) {
-            data.components_reference.at(I) = {detail::get_component_id<decltype(std::get<I>(data.components))>(), (void*)&std::get<I>(data.components)};
+            (..., (data.components_reference.at(I) = {detail::get_component_id<decltype(std::get<I>(data.components))>(), (void*)&std::get<I>(data.components)}));
         }(std::make_index_sequence<std::tuple_size_v<std::tuple<components...>>>());
 
         return detail::create_entity(world_id, recipe, std::move(data));

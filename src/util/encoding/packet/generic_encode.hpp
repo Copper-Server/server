@@ -141,6 +141,8 @@ namespace copper_server::util::encoding::packet {
             });
             return res;
         }
+        template <class T>
+        concept need_preprocess_result_v = detail::need_preprocess_result<T>();
 
         template <class Type>
         void serialize_impl(base_objects::network::response_item& res, base_objects::shared_client_data& context, Type&& value, priority_tag<2>)
@@ -643,7 +645,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_no_size<T>)
         {
-
             if constexpr (is_template_base_of<_list_array_impl::list_array, T>)
                 if (value.size() != T::get_depended_size(context, prev))
                     throw std::overflow_error("The size of list_array did not equals to depended values.");
@@ -662,7 +663,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_list_array_fixed<T>)
         {
-
             if (value.size() != T::required_size)
                 throw std::overflow_error("The list_array size not equal required one.");
             if constexpr (need_preprocess_result_v<typename T::value_type>)
@@ -674,7 +674,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_std_array<T> || is_template_base_of<_list_array_impl::list_array, T>)
         {
-
             if constexpr (need_preprocess_result_v<typename T::value_type>)
                 for (auto& it : value)
                     preprocess_structure(context, it, prev);
@@ -684,7 +683,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_string_sized<T>)
         {
-
             if (value.value.size() > T::max_size)
                 throw std::overflow_error("The string size is over the limit.");
         }
@@ -693,7 +691,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_list_array_sized<T>)
         {
-
             if (value.size() > T::max_size)
                 throw std::overflow_error("The list_array size is over the limit.");
             if constexpr (need_preprocess_result_v<typename T::value_type>)
@@ -705,7 +702,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<std::optional, T>)
         {
-
             if constexpr (need_preprocess_result_v<typename T::value_type>)
                 if (value)
                     preprocess_structure(context, *value, prev);
@@ -715,7 +711,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_limited_num<T>)
         {
-
             if (value.value > T::check_max)
                 throw std::overflow_error("The value is too big");
             if (value.value < T::check_min)
@@ -726,7 +721,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<base_objects::value_optional, T>)
         {
-
             if constexpr (need_preprocess_result_v<typename T::value_type>)
                 if (value.rest)
                     preprocess_structure(context, *value.rest, prev);
@@ -736,7 +730,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_flags_list_from<T> || is_template_base_of<base_objects::flags_list, T>)
         {
-
             value.for_each([&]<class IT>(IT& it) {
                 if constexpr (need_preprocess_result_v<IT>)
                     preprocess_structure(context, it, prev);
@@ -747,7 +740,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<base_objects::enum_switch, T> || is_template_base_of<base_objects::partial_enum_switch, T>)
         {
-
             std::visit(
                 [&]<class IT>(IT& it) {
                     if constexpr (need_preprocess_result_v<IT>)
@@ -761,7 +753,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<base_objects::box, T>)
         {
-
             if constexpr (need_preprocess_result_v<typename T::value_type>)
                 preprocess_structure(context, *value, prev);
         }
@@ -770,7 +761,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<base_objects::depends_next, T> || is_template_base_of<base_objects::sized_entry, T> || is_template_base_of<base_objects::packet_compress, T>)
         {
-
             if constexpr (need_preprocess_result_v<typename T::value_type>)
                 preprocess_structure(context, value.value, prev);
         }
@@ -779,7 +769,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<base_objects::or_, T> || is_template_base_of<base_objects::bool_or, T>)
         {
-
             std::visit(
                 [&]<class Y>(Y& it) {
                     if constexpr (need_preprocess_result_v<Y>)
@@ -822,7 +811,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_ordered_id<T>)
         {
-
             value.value = context.packets_state.internal_data.set([](auto& data) {
                 return ++data.id_tracker[T::id_source];
             });
@@ -833,7 +821,6 @@ namespace copper_server::util::encoding::packet {
         void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev, priority_tag<1>)
             requires(is_template_base_of<base_objects::enum_set, T>)
         {
-
             using Tupple_T = std::decay_t<decltype(value.values)>;
             util::for_each_type<Tupple_T>::each([&]<class T_Elem>() {
                 if constexpr (need_preprocess_result_v<typename T_Elem::value_type>) {
@@ -863,19 +850,17 @@ namespace copper_server::util::encoding::packet {
 
     template <class T, class... VisitedTypes>
     bool need_preprocess_result() {
-        return detail::need_preprocess_result<T, ... VisitedTypes>();
+        return detail::need_preprocess_result<T, VisitedTypes...>();
     }
-    template <class T>
-    concept need_preprocess_result_v = detail::need_preprocess_result<T>();
 
     template <class T>
     void serialize_entry(base_objects::network::response_item& res, base_objects::shared_client_data& context, T&& value) {
-        detail::serialize_impl(res, context, std::forward<T>(value));
+        detail::serialize_impl(res, context, std::forward<T>(value), priority_tag<3>{});
     }
 
     template <class T, class T_prev>
     void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev) {
-        detail::preprocess_structure(context, value, prev);
+        detail::preprocess_structure(context, value, prev, priority_tag<3>{});
     }
 
     template <class T>
@@ -909,7 +894,7 @@ namespace copper_server::util::encoding::packet {
 
     template <class Type>
     void make_preprocess(base_objects::shared_client_data& context, Type& value) {
-        if constexpr (need_preprocess_result_v<Type>) {
+        if constexpr (detail::need_preprocess_result_v<Type>) {
             preprocess_structure(context, value, value);
             if constexpr (base_objects::could_be_preprocessed<Type, Type>)
                 value.preprocess(value);

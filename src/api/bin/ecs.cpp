@@ -16,6 +16,17 @@
 #include <stacktrace>
 
 namespace copper_server::api::ecs {
+    void relation_visitor::context_t::make_unlink(ecs::entity self, ecs::entity target_holder) const {
+        on_unlink(component, self, target_holder);
+    }
+
+    relation_visitor::relation_visitor(std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)>&& callback)
+        : callback(std::move(callback)) {}
+
+    void relation_visitor::push(entity e, relation_type type) {
+        callback(e, type, context);
+    }
+
     struct entity_allocation_request {
         const entity_recipe& recipe;
         std::optional<world*> world_id;
@@ -1222,6 +1233,10 @@ namespace copper_server::api::ecs {
             return w->id;
         }
 
+        int32_t get_world_id(world_local_registry& w) {
+            return w.get_id();
+        }
+
         world* get_world_by_id(int32_t id) {
             return manager::instance().get_world(id);
         }
@@ -1479,7 +1494,7 @@ namespace copper_server::api::ecs {
                 if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
                     return it;
                 } else
-                    return it.get<com::entities::uuid>().id;
+                    return it.template get<com::entities::uuid>().id;
             },
             value
         );
@@ -1521,9 +1536,9 @@ namespace copper_server::api::ecs {
                         if constexpr (std::is_same_v<T0, T1>) {
                             return it == other_it;
                         } else if constexpr (std::is_same_v<T0, base_objects::uuid>) {
-                            return it == other_it.get<com::entities::uuid>().id;
+                            return it == other_it.template get<com::entities::uuid>().id;
                         } else
-                            return it.get<com::entities::uuid>().id == other_it;
+                            return it.template get<com::entities::uuid>().id == other_it;
                     },
                     other.value
                 );

@@ -264,11 +264,11 @@ public:
 
     const api::entity_data& const_data() const { return get<api::ecs::com::entities::entity_type>().const_data(); }
 
-    enbt::compound& nbt() { return modify<api::ecs::com::entities::nbt>()->get(); }
-    const enbt::compound& nbt() const { return get<api::ecs::com::entities::nbt>().get(); }
+    util::nbt_compound& nbt() { return modify<api::ecs::com::entities::nbt>()->get(); }
+    const util::nbt_compound& nbt() const { return get<api::ecs::com::entities::nbt>().get(); }
 
-    enbt::compound& server_nbt() { return modify<api::ecs::com::entities::server_nbt>()->get(); }
-    const enbt::compound& server_nbt() const { return get<api::ecs::com::entities::server_nbt>().get(); }
+    util::nbt_compound& server_nbt() { return modify<api::ecs::com::entities::server_nbt>()->get(); }
+    const util::nbt_compound& server_nbt() const { return get<api::ecs::com::entities::server_nbt>().get(); }
 
     api::ecs::com::entities::bounding_box& bounding_box() { return modify<api::ecs::com::entities::bounding_box>(); }
     const api::ecs::com::entities::bounding_box& bounding_box() const { return get<api::ecs::com::entities::bounding_box>(); }
@@ -376,11 +376,11 @@ using generic_entity = entity_wrapper<>;
             out << "    float& saturation() { return modify<api::ecs::com::entities::saturation>()->value; }\n";
             out << "    const float& saturation() const { return get<api::ecs::com::entities::saturation>().value; }\n\n";
 
-            out << "    std::unordered_map<uint32_t, base_objects::slot_data>& inventory() { return modify<api::ecs::com::entities::inventory>()->get(); }\n";
-            out << "    const std::unordered_map<uint32_t, base_objects::slot_data>& inventory() const { return get<api::ecs::com::entities::inventory>().get(); }\n\n";
+            out << "    std::unordered_map<uint32_t, base_objects::slot>& inventory() { return modify<api::ecs::com::entities::inventory>()->get(); }\n";
+            out << "    const std::unordered_map<uint32_t, base_objects::slot>& inventory() const { return get<api::ecs::com::entities::inventory>().get(); }\n\n";
 
-            out << "    std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& custom_inventory() { return modify<api::ecs::com::entities::custom_inventory>()->get(); }\n";
-            out << "    const std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& custom_inventory() const { return get<api::ecs::com::entities::custom_inventory>().get(); }\n\n";
+            out << "    std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>& custom_inventory() { return modify<api::ecs::com::entities::custom_inventory>()->get(); }\n";
+            out << "    const std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>& custom_inventory() const { return get<api::ecs::com::entities::custom_inventory>().get(); }\n\n";
         }
 
         out << "};\n\n";

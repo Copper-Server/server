@@ -251,165 +251,78 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             } else
                 tmpl_decl = "template<class FN>";
 
-            //for_each_field
-            func << tmpl_decl;
-            func << "constexpr void for_each_field([[maybe_unused]] ";
+
+            //meta_for_type_s
+            func << "template<" << tmpl_args << ">";
+            func << "struct meta_for_type_s<";
             for (const auto& ns : namespace_stack)
                 if (!ns.empty())
                     func << ns << "::";
             for (const auto& s : struct_stack)
                 func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << real_struct_name << "> {\n";
+
+            func << "using meta_type = ";
+            for (const auto& ns : namespace_stack)
+                if (!ns.empty())
+                    func
+                        << ns << "::";
+            for (const auto& s : struct_stack)
+                func << s << "::";
+            func << real_struct_name << ";\n";
+
+            //for_each_field
+            func << "template<class FN>static constexpr void for_each_field([[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  fn(obj." << f << ");\n";
             func << "}\n";
 
             //for_each_field const
-            func << tmpl_decl;
-            func << "constexpr void for_each_field([[maybe_unused]] const ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void for_each_field([[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  fn(obj." << f << ");\n";
             func << "}\n";
 
+
             //for_each_type_s
-            func << "template<" << tmpl_args << ">";
-            func << "struct for_each_type_s<";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "> {\n";
-            func << "template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void for_each_type([[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields) {
-                func << "  fn.template operator()<decltype(std::declval<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func
-                            << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">()." << f << ")>();\n";
+                func << "  fn.template operator()<decltype(std::declval<meta_type>()." << f << ")>();\n";
             }
-            func << "}\n};\n";
-
-            //for_each_type_with_name_s
-            func << "template<" << tmpl_args << ">";
-            func << "struct for_each_type_with_name_s<";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "> {\n";
-
-            func << "template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){\n";
-            for (const auto& f : fields) {
-                func << "  fn.template operator()<decltype(std::declval<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func
-                            << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">()." << f << ")>(\"" << f << "\");\n";
-            }
-            func << "}\n};\n";
-
+            func << "}\n";
 
             //for_each_field_with_name
-            func << tmpl_decl;
-            func << "constexpr void for_each_field_with_name([[maybe_unused]] ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void for_each_field_with_name([[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  fn(obj." << f << ", \"" << f << "\");\n";
             func << "}\n";
 
             //for_each_field_with_name const
-            func << tmpl_decl;
-            func << "constexpr void for_each_field_with_name([[maybe_unused]] const ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void for_each_field_with_name([[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  fn(obj." << f << ", \"" << f << "\");\n";
             func << "}\n";
 
             //visit_field
-            func << tmpl_decl;
-            func << "constexpr void visit_field([[maybe_unused]]std::string_view name, [[maybe_unused]] ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field([[maybe_unused]]std::string_view name, [[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  if(name == \"" << f << "\") { fn(obj." << f << "); return; }\n";
             func << "}\n";
 
             //visit_field const
-            func << tmpl_decl;
-            func << "constexpr void visit_field([[maybe_unused]]std::string_view name, [[maybe_unused]] const ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field([[maybe_unused]]std::string_view name, [[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  if(name == \"" << f << "\") { fn(obj." << f << "); return; }\n";
             func << "}\n";
 
-            //visit_field_with_name
-            func << tmpl_decl;
-            func << "constexpr void visit_field_with_name([[maybe_unused]]std::string_view name, [[maybe_unused]] ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
-            for (const auto& f : fields)
-                func << "  if(name == \"" << f << "\") { fn(obj." << f << ", \"" << f << "\"); return; }\n";
-            func << "}\n";
-
             //visit_field_with_name const
-            func << tmpl_decl;
-            func << "constexpr void visit_field_with_name([[maybe_unused]]std::string_view name, [[maybe_unused]] const ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field_with_name([[maybe_unused]]std::string_view name, [[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields)
                 func << "  if(name == \"" << f << "\") { fn(obj." << f << ", \"" << f << "\"); return; }\n";
             func << "}\n";
 
             //visit_field(index)
-            func << tmpl_decl;
-            func << "constexpr void visit_field(size_t index, [[maybe_unused]] ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field(size_t index, [[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             func << "  switch(index) {\n";
             for (size_t i = 0; i < fields.size(); ++i)
                 func << "    case " << i << ": fn(obj." << fields[i] << "); return;\n";
@@ -417,14 +330,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             func << "}\n";
 
             //visit_field const(index)
-            func << tmpl_decl;
-            func << "constexpr void visit_field(size_t index, [[maybe_unused]] const ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field(size_t index, [[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             func << "  switch(index) {\n";
             for (size_t i = 0; i < fields.size(); ++i)
                 func << "    case " << i << ": fn(obj." << fields[i] << "); return;\n";
@@ -432,14 +338,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             func << "}\n";
 
             //visit_field_with_name(index)
-            func << tmpl_decl;
-            func << "constexpr void visit_field_with_name(size_t index, [[maybe_unused]] ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field_with_name(size_t index, [[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             func << "  switch(index) {\n";
             for (size_t i = 0; i < fields.size(); ++i)
                 func << "    case " << i << ": fn(obj." << fields[i] << ", \"" << fields[i] << "\"); return;\n";
@@ -447,14 +346,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             func << "}\n";
 
             //visit_field_with_name const(index)
-            func << tmpl_decl;
-            func << "constexpr void visit_field_with_name(size_t index, [[maybe_unused]] const ";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "& obj, [[maybe_unused]] FN&& fn){\n";
+            func << "template<class FN>static constexpr void visit_field_with_name(size_t index, [[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
             func << "  switch(index) {\n";
             for (size_t i = 0; i < fields.size(); ++i)
                 func << "    case " << i << ": fn(obj." << fields[i] << ", \"" << fields[i] << "\"); return;\n";
@@ -462,104 +354,54 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             func << "}\n";
 
 
-            //visit_field_s
-            func << "template<" << tmpl_args << ">";
-            func << "struct visit_field_s<";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "> {\n";
-            func << "template<class FN>static constexpr void visit([[maybe_unused]]std::string_view name, [[maybe_unused]] FN&& fn){\n";
+            //visit_field(name)
+            func << "template<class FN>static constexpr void visit_field([[maybe_unused]]std::string_view name, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields) {
-                func << "  if(name == \"" << f << "\") { fn.template operator()<decltype(std::declval<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">()." << f << ")>(); return; }\n";
+                func << "  if(name == \"" << f << "\") { fn.template operator()<decltype(std::declval<meta_type>()." << f << ")>(); return; }\n";
             }
             func << "}\n";
+
+            //visit_field const(name)
             func << "template<class FN>static constexpr void visit(size_t index, [[maybe_unused]] FN&& fn){\n";
             func << "  switch(index) {\n";
             for (size_t i = 0; i < fields.size(); ++i) {
-                func << "    case " << i << ": fn.template operator()<decltype(std::declval<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">()." << fields[i] << ")>(); return;\n";
+                func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(); return;\n";
             }
             func << "  }\n";
             func << "}\n";
-            func << "};\n";
 
-            //visit_field_with_name_s
-            func << "template<" << tmpl_args << ">";
-            func << "struct visit_field_with_name_s<";
-            for (const auto& ns : namespace_stack)
-                if (!ns.empty())
-                    func << ns << "::";
-            for (const auto& s : struct_stack)
-                func << s << "::";
-            func << real_struct_name << "> {\n";
-
-            func << "template<class FN>static constexpr void visit([[maybe_unused]]std::string_view name, [[maybe_unused]] FN&& fn){\n";
+            //visit_field_with_name (name)
+            func << "template<class FN>static constexpr void visit_field_with_name([[maybe_unused]]std::string_view name, [[maybe_unused]] FN&& fn){\n";
             for (const auto& f : fields) {
-                func << "  if(name == \"" << f << "\") { fn.template operator()<decltype(std::declval<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">()." << f << ")>(\"" << f << "\"); return; }\n";
+                func << "  if(name == \"" << f << "\") { fn.template operator()<decltype(std::declval<meta_type>()." << f << ")>(\"" << f << "\"); return; }\n";
             }
             func << "}\n";
-            func << "template<class FN>static constexpr void visit(size_t index, [[maybe_unused]] FN&& fn){\n";
+
+            //visit_field_with_name const (name)
+            func << "template<class FN>static constexpr void visit_field_with_name(size_t index, [[maybe_unused]] FN&& fn){\n";
             func << "  switch(index) {\n";
             for (size_t i = 0; i < fields.size(); ++i) {
-                func << "    case " << i << ": fn.template operator()<decltype(std::declval<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">()." << fields[i] << ")>(\"" << fields[i] << "\"); return;\n";
+                func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(\"" << fields[i] << "\"); return;\n";
             }
             func << "  }\n";
             func << "}\n";
-            func << "};\n";
-
             //type_name
+
             if (!is_template) {
-                func << "template<>consteval std::string_view type_name<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">() { return \"";
+                func << "consteval std::string_view type_name() { return \"";
                 for (const auto& ns : namespace_stack)
                     if (!ns.empty())
                         func << ns << "::";
                 for (const auto& s : struct_stack)
                     func << s << "::";
                 func << real_struct_name << "\"; }\n";
+            } else {
+                func << "static consteval std::string_view type_name() { return type_name_compile_time<meta_type>(); }\n";
             }
+            func << "static constexpr inline size_t fields_count = " << fields.size() << ";\n";
 
-            //fields_count
-            if (!is_template && fields.size()) {
-                func << "template<>consteval size_t fields_count<";
-                for (const auto& ns : namespace_stack)
-                    if (!ns.empty())
-                        func << ns << "::";
-                for (const auto& s : struct_stack)
-                    func << s << "::";
-                func << real_struct_name << ">() { return " << fields.size() << "; }\n";
-            }
+            func << "};\n";
+
 
             cached_output.push_back(func.str());
         };

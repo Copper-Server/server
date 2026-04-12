@@ -37,6 +37,8 @@ namespace copper_server::util {
 namespace copper_server::base_objects {
     struct slot;
     struct slot_data;
+    struct component;
+    struct partial_component;
 
     struct item_firework_explosion {
         enum class shape_e : uint8_t {
@@ -557,12 +559,12 @@ namespace copper_server::base_objects {
         };
 
         struct blocks_attacks : public enum_item<33> {
-            struct damage_reductions {
+            struct damage_reduction {
                 float horizontal_blocking_angle = 90.0f;
                 std::optional<id_set<var_int32::damage_type>> type = std::nullopt;
                 float base = 0.0f;
                 float factor = 1.0f;
-                bool operator==(const damage_reductions& other) const = default;
+                bool operator==(const damage_reduction& other) const = default;
             };
 
             struct item_damage_t {
@@ -573,7 +575,7 @@ namespace copper_server::base_objects {
 
             float block_delay_seconds = 0.0f;
             float disable_cooldown_scale = 1.0f;
-            list_array<damage_reductions> damage_reductions = {{}};
+            list_array<damage_reduction> damage_reductions = {{}};
             std::optional<item_damage_t> item_damage = std::make_optional<item_damage_t>();
             std::optional<identifier> bypassed_by = std::nullopt;
             std::optional<or_<var_int32::sound_event, sound_event_t>> block_sound = std::nullopt;

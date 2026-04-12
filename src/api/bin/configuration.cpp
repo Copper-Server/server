@@ -262,7 +262,7 @@ namespace copper_server::api::configuration {
     }
 
     void merge_configs_plugins(server_configuration& cfg, util::js_object& data) {
-        auto nbt = util::conversions::json::from_json_nbt(util::js_object::get_object(data["plugins"]).get());
+        auto nbt = util::conversions::json::from_json(util::js_object::get_object(data["plugins"]).get());
         merge_compounds(_get_plugins_(cfg).get_compound(), nbt.get_compound());
         data["plugins"] = util::conversions::json::to_json(_get_plugins_(cfg));
     }

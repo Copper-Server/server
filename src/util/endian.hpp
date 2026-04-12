@@ -20,21 +20,21 @@ namespace copper_server::util {
 
     template <class T>
     T convert_endian(std::endian endian, T val) {
-        if constexpr (std::endian::native == endian)
+        if (std::endian::native == endian)
             endian_swap(&val, sizeof(T));
         return val;
     }
 
     template <class T>
     void convert_endian_arr(std::endian endian, T* val, std::size_t size) {
-        if constexpr (std::endian::native == endian)
+        if (std::endian::native == endian)
             for (std::size_t i = 0; i < size; i++)
                 endian_swap(&val[i], sizeof(T));
     }
 
     template <class T>
     void convert_endian_arr(std::endian endian, std::vector<T>& val) {
-        if constexpr (std::endian::native == endian)
+        if (std::endian::native == endian)
             for (auto& it : val)
                 endian_swap(&it, sizeof(T));
     }

@@ -6,11 +6,11 @@
 
 namespace copper_server::api::ecs {
 
-    entity_definition::entity_definition(const std::string& id) : identifier(id) {
+    entity_definition::entity_definition(const std::string& id) : identifier(id), schema_root(std::make_unique<nbt_schema_node>()) {
         add_locked(ecs::com::type_definition(this));
     }
 
-    entity_definition::entity_definition(std::string&& id) : identifier(std::move(id)) {
+    entity_definition::entity_definition(std::string&& id) : identifier(std::move(id)), schema_root(std::make_unique<nbt_schema_node>()) {
         add_locked(ecs::com::type_definition(this));
     }
 
@@ -32,7 +32,7 @@ namespace copper_server::api::ecs {
         return stripped_recipe;
     }
 
-    static std::vector<std::string> parse_path(std::string_view path) {
+    std::vector<std::string> entity_definition::parse_path(std::string_view path) {
         std::vector<std::string> parts;
         if (path.empty())
             return parts;
@@ -52,25 +52,15 @@ namespace copper_server::api::ecs {
         return parts;
     }
 
-    entity_definition::nbt_schema_node* entity_definition::nbt_schema_node::get_or_create_child(const std::string& name) {
+    entity_definition::nbt_schema_node* entity_definition::nbt_schema_node::get_or_create_child(const std::string& name_) {
         for (auto& child : children) {
-            if (child->name == name)
+            if (child->name == name_)
                 return child.get();
         }
         auto new_node = std::make_unique<nbt_schema_node>();
-        new_node->name = name;
+        new_node->name = name_;
         children.push_back(std::move(new_node));
         return children.back().get();
-    }
-
-    entity_definition::entity_definition(const std::string& id)
-        : identifier(id), schema_root(std::make_unique<nbt_schema_node>()) {}
-
-    entity_definition::entity_definition(std::string&& id)
-        : identifier(std::move(id)), schema_root(std::make_unique<nbt_schema_node>()) {}
-
-    void entity_definition::finish() {
-        base_recipe.freeze();
     }
 
     void entity_definition::flatten_tree(

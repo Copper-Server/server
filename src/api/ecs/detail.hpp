@@ -27,9 +27,54 @@ namespace copper_server::api::ecs {
     struct entity_recipe;
     struct entity;
     struct world;
+    struct archetype;
+    struct world_local_registry;
+
+    enum class relation_type : uint8_t {
+        strong,
+        weak
+    };
+
+    enum class tick_phase {
+        early_processing, //for cleanup or for other things before processing anything
+
+        mobile_entity,
+        block_entity,
+    };
 
     template <class... components>
     struct dependent {};
+
+    struct system_interface {
+        using reads = dependent<>;
+        using writes = dependent<>;
+
+        virtual ~system_interface() noexcept = default;
+
+        virtual void tick(world_local_registry& world) = 0;
+    };
+
+    struct relation_visitor {
+        struct context_t {
+            void (*on_unlink)(void*, ecs::entity self, ecs::entity target_holder);
+            void* component;
+
+            void make_unlink(ecs::entity self, ecs::entity target_holder) const;
+        };
+
+        std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)> callback;
+        context_t context;
+
+        relation_visitor(std::move_only_function<void(ecs::entity target, relation_type type, context_t& context)>&& callback);
+
+        relation_visitor(const relation_visitor&) = delete;
+        relation_visitor(relation_visitor&&) = delete;
+        relation_visitor& operator=(const relation_visitor&) = delete;
+        relation_visitor& operator=(relation_visitor&&) = delete;
+
+        void push(entity e, relation_type type);
+    };
+
 
     enum class structural_changes {
         no_changes,
@@ -286,6 +331,7 @@ namespace copper_server::api::ecs {
 
 
         int32_t get_world_id(world*);
+        int32_t get_world_id(world_local_registry&);
         world* get_world_by_id(int32_t);
         world* register_world(int32_t);
         void unregister_world(world*);
@@ -682,6 +728,15 @@ namespace copper_server::api::ecs {
         template <class... TArgs>
         inline constexpr bool is_requires_shifting_v = is_requires_shifting<TArgs...>::value;
 
+        template <class... T>
+        dependent<T...> to_deps_tuple_help(std::tuple<T...>&& t) {
+            return {};
+        }
+
+        template <class T>
+        using to_deps = decltype(to_deps_tuple_help(std::declval<T>()));
+
+
         template <bool requires_shifting, class iterator_viewer, class... components>
         struct query_iterator {
             using value_type = std::tuple<iterator_viewer, components&...>;
@@ -937,9 +992,9 @@ namespace copper_server::api::ecs {
         template <class Func, class Query>
         class lambda_system_adapter : public system_interface {
         public:
-            using extractor = detail::query_dependency_extractor<Query>;
-            using reads = typename extractor::reads_t;
-            using writes = typename extractor::writes_t;
+            using traits = query_traits<Query>;
+            using reads = to_deps<typename traits::ReadTypes>;
+            using writes = to_deps<typename traits::WriteTypes>;
 
         private:
             Func function;
@@ -954,10 +1009,10 @@ namespace copper_server::api::ecs {
 
             void tick(world_local_registry& world) override {
                 Query local_query(query_prototype);
-                local_query.set
+                local_query.set_world_id(get_world_id(world));
 
-                    if constexpr (std::is_invocable_r_v<void, Func, Query&>)
-                        function(local_query);
+                if constexpr (std::is_invocable_r_v<void, Func, Query&>)
+                    function(local_query);
                 else {
                     auto task = function(local_query);
                     if constexpr (requires { task.await_task(); })
@@ -1025,17 +1080,17 @@ namespace copper_server::api::ecs {
         struct deduce_query_params<std::tuple<Args...>> {
             using meta_tuple = decltype(std::tuple_cat(typename map_arg_to_query<Args>::type{}...));
 
-            template <class T>
+            template <class T, template <class...> class wrap_in>
             struct make_wrap;
 
-            template <class wrap_in, class... Params>
-            struct make_wrap<std::tuple<Params...>> {
+            template <template <class...> class wrap_in, class... Params>
+            struct make_wrap<std::tuple<Params...>, wrap_in> {
                 using type = wrap_in<Params...>;
             };
 
 
-            template <class wrap_in>
-            using type = typename make_wrap<wrap_in, meta_tuple>::type;
+            template <template <class...> class wrap_in>
+            using type = typename make_wrap<meta_tuple, wrap_in>::type;
         };
 
 #pragma endregion
@@ -1056,7 +1111,7 @@ namespace copper_server::api::ecs {
             ChunkView& chunk_view;
             size_t index;
 
-            entity current_entity() {
+            auto current_entity() {
                 return chunk_view.current_entity(index);
             }
 

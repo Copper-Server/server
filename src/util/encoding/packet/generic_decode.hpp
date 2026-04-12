@@ -574,7 +574,7 @@ namespace copper_server::util::encoding::packet {
         static_assert(std::is_move_constructible_v<T>);
         static_assert(std::is_copy_assignable_v<T>);
         static_assert(std::is_move_assignable_v<T>);
-        detail::decode_impl(context, stream, value, prev);
+        detail::decode_impl(context, stream, value, prev, priority_tag<2>{});
     }
 
     template <class Ops, class T>
@@ -592,7 +592,7 @@ namespace copper_server::util::encoding::packet {
         else if constexpr (std::is_base_of_v<api::packets::switches_to::play, Type>)
             context << api::packets::switches_to::play{};
 
-        Ops::processor().notify(std::forward<T>(value), context);
+        Ops::processor().notify(std::move(value), context);
 
         return true;
     }

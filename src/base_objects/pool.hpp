@@ -60,7 +60,7 @@ namespace copper_server::base_objects {
         }
 
         T& make_select() {
-            int64_t value = std::uniform_int_distribution<int64_t>(0, total_pool)(get_thread_local_engine());
+            int64_t random = std::uniform_int_distribution<int64_t>(0, total_pool)(get_thread_local_engine());
 
             for (auto& [weight, value] : data) {
                 random -= weight;
@@ -71,7 +71,7 @@ namespace copper_server::base_objects {
         }
 
         const T& make_select() const {
-            int64_t value = std::uniform_int_distribution<int64_t>(0, total_pool)(get_thread_local_engine());
+            int64_t random = std::uniform_int_distribution<int64_t>(0, total_pool)(get_thread_local_engine());
 
             for (const auto& [weight, value] : data) {
                 random -= weight;

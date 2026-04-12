@@ -324,7 +324,7 @@ namespace copper_server::api::ecs {
                 layout.dirty_flags_offsets.resize(component_ids.size());
                 size_t current_offset = sizeof(int32_t) * CHUNK_CAPACITY;
                 for (uint32_t i = 0; i < component_ids.size(); ++i) {
-                    whole_component_id id = component_ids[i];
+                    component_id id = component_ids[i];
                     const auto& info = detail::component_info_registry[id];
 
                     current_offset = (current_offset + info.alignment - 1) & ~(info.alignment - 1);
@@ -495,7 +495,7 @@ namespace copper_server::api::ecs {
                 component_ids.reserve(sorted_ids.size());
                 for (auto component : sorted_ids)
                     if (component <= UINT32_MAX)
-                        component_ids.push_back(component);
+                        component_ids.push_back((component_id)component);
                 component_ids.shrink_to_fit();
             }
             new_archetype_ptr->hash = hash;
@@ -516,9 +516,10 @@ namespace copper_server::api::ecs {
             std::sort(next_key.begin(), next_key.end());
 
             archetype* next_archetype = map_get_archetype(next_key);
-
-            old->add_transition_cache[new_id] = next_archetype;
-            next_archetype->remove_transition_cache[new_id] = old;
+            if (new_id <= UINT32_MAX) {
+                old->add_transition_cache[(component_id)new_id] = next_archetype;
+                next_archetype->remove_transition_cache[(component_id)new_id] = old;
+            }
             return next_archetype;
         }
 
@@ -527,8 +528,11 @@ namespace copper_server::api::ecs {
             if (auto it = std::find(next_key.begin(), next_key.end(), old_id); next_key.end() != it) {
                 next_key.erase(it);
                 archetype* next_archetype = map_get_archetype(next_key);
-                old->remove_transition_cache[old_id] = next_archetype;
-                next_archetype->add_transition_cache[old_id] = old;
+
+                if (old_id <= UINT32_MAX) {
+                    old->remove_transition_cache[(component_id)old_id] = next_archetype;
+                    next_archetype->add_transition_cache[(component_id)old_id] = old;
+                }
                 return next_archetype;
             } else
                 return old;
