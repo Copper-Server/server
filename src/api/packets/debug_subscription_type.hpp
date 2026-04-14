@@ -6,15 +6,15 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#ifndef SRC_API_PACKETS_DEBUG_SUB_SCRIPTION_TYPE
-#define SRC_API_PACKETS_DEBUG_SUB_SCRIPTION_TYPE
+#ifndef SRC_API_PACKETS_DEBUG_SUBSCRIPTION_TYPE
+#define SRC_API_PACKETS_DEBUG_SUBSCRIPTION_TYPE
 #include <optional>
 #include <src/api/packets/types.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/util/calculations.hpp>
 
 namespace copper_server::api::packets {
-    struct debug_sub_scription_type {
+    struct debug_subscription_type {
         struct dedicated_server_tick_time : public enum_item<0> {};
 
         struct bees : public enum_item<1> {
@@ -238,4 +238,4 @@ namespace copper_server::api::packets {
             game_events>;
     };
 }
-#endif /* SRC_API_PACKETS_DEBUG_SUB_SCRIPTION_TYPE */
+#endif /* SRC_API_PACKETS_DEBUG_SUBSCRIPTION_TYPE */

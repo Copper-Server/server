@@ -61,8 +61,8 @@ namespace copper_server::base_objects {
                 auto entity = api::entity::create("minecraft:item");
                 api::entity_proxy::item proxy(entity);
                 proxy.stack() = item;
-                entity.set<api::ecs::com::position>(assigned_entity.handle.get<api::ecs::com::position>());
-                *entity.modify<api::ecs::com::motion>() = util::moved<double>(assigned_entity.handle.get<api::ecs::com::rotation>(), 2);
+                entity.template set<api::ecs::com::entities::position>(assigned_entity.handle.template get<api::ecs::com::entities::position>());
+                *entity.template modify<api::ecs::com::entities::motion>() = util::moved<double>(assigned_entity.handle.template get<api::ecs::com::entities::rotation>(), 2);
                 assigned_entity.current_world()->register_entity(entity);
             }
         }

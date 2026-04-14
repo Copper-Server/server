@@ -78,8 +78,6 @@ namespace copper_server::base_objects {
                 if (part.starts_with('{')) {
                     part += part;
                     std::string_view view = part;
-                    //auto enbt = snbt::parse_mod(view);
-                    //[[maybe_unused]] auto comp = enbt.as_compound();
 
                     //TODO
                 }

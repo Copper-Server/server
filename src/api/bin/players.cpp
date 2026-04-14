@@ -425,7 +425,7 @@ namespace copper_server::api::players {
                 writer.write_list(player.permission_groups.size(), util::nbt_type::tag_string).iterable(player.permission_groups);
             })
             .write("local_data", [&player](auto& writer) {
-                writer.write(player.local_data.get_map());
+                writer.write(player.local_data);
             });
 
         if (player.last_death_location.has_value()) {

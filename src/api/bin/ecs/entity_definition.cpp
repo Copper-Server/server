@@ -19,8 +19,8 @@ namespace copper_server::api::ecs {
     }
 
     auto entity_definition::get_remove_action(component_id id) const -> component_remove_act {
-        if (rule_lookup.contains(id))
-            return rules[rule_lookup.at(id)].remove_action;
+        if (auto it = rule_lookup.find(id); it != rule_lookup.end())
+            return rules[it->second].remove_action;
         return component_remove_act::optional;
     }
 

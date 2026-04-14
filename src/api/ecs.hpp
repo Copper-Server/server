@@ -465,7 +465,7 @@ namespace copper_server::api::ecs {
         template <bool explicit_marking>
         detail::iteration_handle begin_handle() {
             using traits = detail::query_traits<params...>;
-            return detail::make_handle(begin_topology(), traits::get_all_component_count());
+            return detail::make_handle(begin_topology<explicit_marking>(), traits::get_all_component_count());
         }
 
         template <bool explicit_marking>

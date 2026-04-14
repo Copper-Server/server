@@ -122,7 +122,7 @@ namespace copper_server::api::registers {
 
     list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& items) {
         auto& entries = view_registry_proto_invert(registry);
-        return items.convert<std::string>([&entries](const auto& item) { return entries.at(item).as_int(); });
+        return items.convert<std::string>([&entries](const auto& item) { return (const std::string&)entries.at(item); });
     }
 
     list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& items) {

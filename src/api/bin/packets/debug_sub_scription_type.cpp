@@ -7,12 +7,12 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include <src/api/packets/debug_sub_scription_type.hpp>
 #include <array>
+#include <src/api/packets/debug_subscription_type.hpp>
 
 namespace copper_server::api::packets {
     namespace deb_red_wire {
-        using direction = debug_sub_scription_type::redstone_wire_orientations::direction;
+        using direction = debug_subscription_type::redstone_wire_orientations::direction;
         // --- Helper Data & Functions ---
 
         // a precomputed lookup table that defines the canonical order of the four
@@ -55,32 +55,32 @@ namespace copper_server::api::packets {
 
     // --- wire_orientation member function implementations ---
 
-    auto debug_sub_scription_type::redstone_wire_orientations::get_up() const -> direction {
+    auto debug_subscription_type::redstone_wire_orientations::get_up() const -> direction {
         return static_cast<direction>(up_val);
     }
 
-    auto debug_sub_scription_type::redstone_wire_orientations::get_bias() const -> side_bias {
+    auto debug_subscription_type::redstone_wire_orientations::get_bias() const -> side_bias {
         return static_cast<side_bias>(bias_val);
     }
 
-    auto debug_sub_scription_type::redstone_wire_orientations::get_front() const -> direction {
+    auto debug_subscription_type::redstone_wire_orientations::get_front() const -> direction {
         const auto& orthogonals = deb_red_wire::get_orthogonals(get_up());
         return orthogonals[front_ortho_idx];
     }
 
-    void debug_sub_scription_type::redstone_wire_orientations::set_up(direction up) {
+    void debug_subscription_type::redstone_wire_orientations::set_up(direction up) {
         up_val = static_cast<uint8_t>(up);
     }
 
-    void debug_sub_scription_type::redstone_wire_orientations::set_bias(side_bias bias) {
+    void debug_subscription_type::redstone_wire_orientations::set_bias(side_bias bias) {
         bias_val = static_cast<uint8_t>(bias);
     }
 
-    void debug_sub_scription_type::redstone_wire_orientations::set_front(direction front) {
+    void debug_subscription_type::redstone_wire_orientations::set_front(direction front) {
         front_ortho_idx = deb_red_wire::get_front_ortho_index(front, get_up());
     }
 
-    uint8_t debug_sub_scription_type::redstone_wire_orientations::to_packet() const {
+    uint8_t debug_subscription_type::redstone_wire_orientations::to_packet() const {
         uint8_t up_idx = up_val;
         uint8_t front_idx = front_ortho_idx;
         uint8_t bias_idx = bias_val;
@@ -88,7 +88,7 @@ namespace copper_server::api::packets {
         return (up_idx * 4 + front_idx) * 2 + bias_idx;
     }
 
-    auto debug_sub_scription_type::redstone_wire_orientations::from_packet(uint8_t val) -> redstone_wire_orientations {
+    auto debug_subscription_type::redstone_wire_orientations::from_packet(uint8_t val) -> redstone_wire_orientations {
         if (val >= 48)
             throw std::out_of_range("Value must be between 0 and 47");
         redstone_wire_orientations orientation;

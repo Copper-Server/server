@@ -116,6 +116,8 @@ namespace copper_server::base_objects {
         std::optional<util::nbt> nbt = std::nullopt;
         list_array<component> full_components_match;            //for block entity
         list_array<partial_component> partial_components_match; //for block entity
+
+        bool operator==(const block_predicate& other) const = default;
     };
 
     struct consume_effect {
@@ -594,12 +596,14 @@ namespace copper_server::base_objects {
 
         struct dyed_color : public enum_item<35> {
             int32_t rgb = 0xFFA0'6540;
+            dyed_color() = default;
             bool operator==(const dyed_color& other) const = default;
             using nbt_inline = void;
         };
 
         struct map_color : public enum_item<36> {
             int32_t rgb = 0x0046'402E;
+            map_color() = default;
             bool operator==(const map_color& other) const = default;
             using nbt_inline = void;
         };

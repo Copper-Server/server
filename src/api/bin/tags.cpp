@@ -174,10 +174,10 @@ namespace copper_server::api::tags {
                 return state_ids_cache;
         }
 
-        bool contains(builtin_entry entry, int32_t id) const {
+        bool contains(builtin_entry entry, int32_t check_id) const {
             if (need_update)
                 ids_update(entry);
-            return entry != builtin_entry::block_state ? check_cache.contains(id) : state_check_cache.contains(id);
+            return entry != builtin_entry::block_state ? check_cache.contains(check_id) : state_check_cache.contains(check_id);
         }
 
         void ids_update(builtin_entry entry) const {
@@ -288,6 +288,11 @@ namespace copper_server::api::tags {
         std::unordered_map<std::string, int32_t> string_to_id_;
         std::unordered_map<int32_t, std::string> id_to_string_;
 
+        entry_handle(int32_t id) : id(id) {}
+
+        entry_handle(entry_handle&&) = delete;
+        entry_handle(const entry_handle&) = delete;
+
         int32_t get_or_create_id(const std::string& tag_string) {
             {
                 fast_task::read_lock lock(mutex_);
@@ -305,9 +310,9 @@ namespace copper_server::api::tags {
             return new_id;
         }
 
-        std::optional<std::string> get_string(int32_t id) {
+        std::optional<std::string> get_string(int32_t check_id) {
             fast_task::read_lock lock(mutex_);
-            if (auto it = id_to_string_.find(id); it != id_to_string_.end()) {
+            if (auto it = id_to_string_.find(check_id); it != id_to_string_.end()) {
                 return it->second;
             }
             return std::nullopt;
@@ -319,6 +324,11 @@ namespace copper_server::api::tags {
     struct entry_map {
         mutable std::atomic_int32_t next_entry_id = 0;
         mutable std::unordered_map<std::string, entry_handle, string_hash, string_eq> map;
+
+        entry_map() {}
+
+        entry_map(entry_map&&) = delete;
+        entry_map(const entry_map&) = delete;
 
         entry_handle& get_entry_raw(std::string_view entry) {
             if (auto it = map.find(entry); it != map.end())
@@ -399,7 +409,7 @@ namespace copper_server::api::tags {
     static const list_array<int32_t>& unfold_direct_tag(builtin_entry entry, std::string_view namespace_, std::string_view tag) {
         return data.get([&](auto& tags) -> const list_array<int32_t>& {
             static list_array<int32_t> empty;
-            auto& ns = tags.tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
+            auto& ns = tags.get_entry(builtin_entry_to_string[(uint8_t)entry]);
             auto t = ns.data.find(namespace_);
             if (t == ns.data.end())
                 return empty;
@@ -580,12 +590,10 @@ namespace copper_server::api::tags {
 
     std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> view_entry(std::string_view custom_entry) {
         return data.get([&](auto& tags) -> std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> {
-            auto ns = fixed_entry_map(custom_entry, tags);
-            if (ns == tags.end())
-                return {};
+            auto& ns = tags.get_entry(custom_entry);
             std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> res;
-            res.reserve(ns->second.size());
-            for (auto&& [namespace_, decl] : ns->second)
+            res.reserve(ns.data.size());
+            for (auto&& [namespace_, decl] : ns.data)
                 for (auto&& [tag, dec] : decl)
                     if (dec)
                         res[namespace_][tag] = dec->items;
@@ -646,11 +654,9 @@ namespace copper_server::api::tags {
                 entry_ptr = data.get([this](auto& tags) -> std::shared_ptr<tags_entry> {
                     static std::string_view block_entry = "minecraft:block";
                     auto actual_entry(entry != "minecraft:block_state" ? std::string_view(entry) : block_entry);
-                    auto ns = fixed_entry_map(actual_entry, tags);
-                    if (ns == tags.end())
-                        return nullptr;
-                    auto t = ns->second.find(namespace_);
-                    if (t == ns->second.end())
+                    auto& ns = tags.get_entry(actual_entry);
+                    auto t = ns.data.find(namespace_);
+                    if (t == ns.data.end())
                         return nullptr;
                     auto y = t->second.find(tag);
                     if (y == t->second.end())

@@ -348,11 +348,11 @@ namespace copper_server::api::ecs {
                 component_calculate_relations.reserve(component_ids.size());
                 for (auto& id : component_ids) {
                     auto& com_reg = detail::component_info_registry[id];
-                    if (com_reg.get_flat_relations)
+                    if (com_reg.get_relations)
                         component_calculate_relations.emplace_back(
                             layout.component_offsets[id],
                             com_reg.size,
-                            com_reg.get_flat_relations
+                            com_reg.get_relations
                         );
                 }
                 component_calculate_relations.shrink_to_fit();

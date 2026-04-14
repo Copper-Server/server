@@ -127,7 +127,7 @@ namespace copper_server::api::ecs {
             destructor_fn destroy = nullptr;
             move_fn move = nullptr;
             reset_fn reset = nullptr;
-            get_relations_fn get_flat_relations = nullptr;
+            get_relations_fn get_relations = nullptr;
             on_unlink_fn on_unlink = nullptr;
             bool is_trivial = false;
         };
@@ -182,21 +182,30 @@ namespace copper_server::api::ecs {
                         .is_trivial = std::is_trivial_v<T>
                     };
 
-                    if constexpr (has_relation_unlink<T>)
-                        info.on_unlink = [](void* mem, entity self, entity target) {
+                    if constexpr (has_relation_unlink<T>) {
+                        static auto on_unlink = [](void* mem, entity self, entity target) {
                             static_cast<T*>(mem)->on_unlink(self, target);
                         };
 
-                    if constexpr (has_relation_discovery<T>)
-                        info.get_flat_relations = [](void* mem, relation_visitor& v) {
-                            if constexpr (has_relation_unlink<T>) {
-                                v.context.on_unlink = info.on_unlink;
-                                v.context.component = mem;
-                            } else
-                                v.context.component = nullptr;
+                        info.on_unlink = on_unlink;
 
-                            static_cast<T*>(mem)->get_flat_relations(v);
+                        if constexpr (has_relation_discovery<T>) {
+                            info.get_relations = [](void* mem, relation_visitor& v) {
+                                if constexpr (has_relation_unlink<T>) {
+                                    v.context.on_unlink = on_unlink;
+                                    v.context.component = mem;
+                                } else
+                                    v.context.component = nullptr;
+
+                                static_cast<T*>(mem)->get_relations(v);
+                            };
+                        }
+                    } else if constexpr (has_relation_discovery<T>) {
+                        info.get_relations = [](void* mem, relation_visitor& v) {
+                            v.context.component = nullptr;
+                            static_cast<T*>(mem)->get_relations(v);
                         };
+                    }
                 }
             }
             return id;
@@ -735,7 +744,6 @@ namespace copper_server::api::ecs {
 
         template <class T>
         using to_deps = decltype(to_deps_tuple_help(std::declval<T>()));
-
 
         template <bool requires_shifting, class iterator_viewer, class... components>
         struct query_iterator {

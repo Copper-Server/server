@@ -77,6 +77,17 @@ void prepare_template_entry(const std::unordered_set<std::string>& concepts, std
             continue;
         }
 
+        // 0. Remove default values (anything after '=')
+        size_t equals_pos = param_view.find('=');
+        if (equals_pos != std::string_view::npos) {
+            param_view = trim_view(param_view.substr(0, equals_pos));
+        }
+
+        if (param_view.empty()) {
+            start_pos = end_pos + 1;
+            continue;
+        }
+
         // 1. Remove `class` or `typename` prefixes.
         // In C++20, this can be simplified with param_view.starts_with("...").
         if (param_view.rfind("class ", 0) == 0) {
@@ -133,9 +144,47 @@ void prepare_template_entry(const std::unordered_set<std::string>& concepts, std
     str = result;
 }
 
+void strip_template_defaults(std::string& str) {
+    if (str.empty())
+        return;
+
+    std::string result;
+    result.reserve(str.length());
+
+    size_t start_pos = 0;
+    while (start_pos < str.length()) {
+        size_t comma_pos = str.find(',', start_pos);
+        if (comma_pos == std::string::npos) {
+            comma_pos = str.length();
+        }
+
+        // Extract parameter segment
+        std::string_view param = trim_view(std::string_view(str).substr(start_pos, comma_pos - start_pos));
+
+        // Find and remove default value (everything from '=' onwards)
+        size_t equals_pos = param.find('=');
+        if (equals_pos != std::string_view::npos) {
+            param = trim_view(param.substr(0, equals_pos));
+        }
+
+        // Add to result with proper separator
+        if (!result.empty() && !param.empty()) {
+            result += ", ";
+        }
+        result += param;
+
+        start_pos = comma_pos + 1;
+    }
+
+    str = result;
+}
+
 void prepare_template_head(const std::unordered_set<std::string>& concepts, std::string& str) {
     if (str.empty())
         return;
+
+    // First, strip default values from template parameters
+    strip_template_defaults(str);
 
     std::vector<std::string_view> tokens;
     std::string_view full_view(str);
@@ -323,36 +372,53 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
 
             //visit_field(index)
             func << "template<class FN>static constexpr void visit_field(size_t index, [[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
-            func << "  switch(index) {\n";
-            for (size_t i = 0; i < fields.size(); ++i)
-                func << "    case " << i << ": fn(obj." << fields[i] << "); return;\n";
-            func << "  }\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i)
+                    func << "    case " << i << ": fn(obj." << fields[i] << "); return;\n";
+                func << "  }\n";
+            }
             func << "}\n";
 
             //visit_field const(index)
             func << "template<class FN>static constexpr void visit_field(size_t index, [[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
-            func << "  switch(index) {\n";
-            for (size_t i = 0; i < fields.size(); ++i)
-                func << "    case " << i << ": fn(obj." << fields[i] << "); return;\n";
-            func << "  }\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i)
+                    func << "    case " << i << ": fn(obj." << fields[i] << "); return;\n";
+                func << "  }\n";
+            }
             func << "}\n";
 
             //visit_field_with_name(index)
             func << "template<class FN>static constexpr void visit_field_with_name(size_t index, [[maybe_unused]] meta_type& obj, [[maybe_unused]] FN&& fn){\n";
-            func << "  switch(index) {\n";
-            for (size_t i = 0; i < fields.size(); ++i)
-                func << "    case " << i << ": fn(obj." << fields[i] << ", \"" << fields[i] << "\"); return;\n";
-            func << "  }\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i)
+                    func << "    case " << i << ": fn(obj." << fields[i] << ", \"" << fields[i] << "\"); return;\n";
+                func << "  }\n";
+            }
             func << "}\n";
 
             //visit_field_with_name const(index)
             func << "template<class FN>static constexpr void visit_field_with_name(size_t index, [[maybe_unused]] const meta_type& obj, [[maybe_unused]] FN&& fn){\n";
-            func << "  switch(index) {\n";
-            for (size_t i = 0; i < fields.size(); ++i)
-                func << "    case " << i << ": fn(obj." << fields[i] << ", \"" << fields[i] << "\"); return;\n";
-            func << "  }\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i)
+                    func << "    case " << i << ": fn(obj." << fields[i] << ", \"" << fields[i] << "\"); return;\n";
+                func << "  }\n";
+            }
             func << "}\n";
 
+            //visit_field(index)
+            func << "template<class FN>static constexpr void visit_field(size_t index,  [[maybe_unused]] FN&& fn){\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i)
+                    func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(); return;\n";
+                func << "  }\n";
+            }
+            func << "}\n";
 
             //visit_field(name)
             func << "template<class FN>static constexpr void visit_field([[maybe_unused]]std::string_view name, [[maybe_unused]] FN&& fn){\n";
@@ -363,11 +429,13 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
 
             //visit_field const(name)
             func << "template<class FN>static constexpr void visit(size_t index, [[maybe_unused]] FN&& fn){\n";
-            func << "  switch(index) {\n";
-            for (size_t i = 0; i < fields.size(); ++i) {
-                func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(); return;\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i) {
+                    func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(); return;\n";
+                }
+                func << "  }\n";
             }
-            func << "  }\n";
             func << "}\n";
 
             //visit_field_with_name (name)
@@ -379,11 +447,13 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
 
             //visit_field_with_name const (name)
             func << "template<class FN>static constexpr void visit_field_with_name(size_t index, [[maybe_unused]] FN&& fn){\n";
-            func << "  switch(index) {\n";
-            for (size_t i = 0; i < fields.size(); ++i) {
-                func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(\"" << fields[i] << "\"); return;\n";
+            if (fields.size()) {
+                func << "  switch(index) {\n";
+                for (size_t i = 0; i < fields.size(); ++i) {
+                    func << "    case " << i << ": fn.template operator()<decltype(std::declval<meta_type>()." << fields[i] << ")>(\"" << fields[i] << "\"); return;\n";
+                }
+                func << "  }\n";
             }
-            func << "  }\n";
             func << "}\n";
             //type_name
 
@@ -668,8 +738,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                         || line[name_end] == '>'
                         || (line[name_end] == ':'
                             && name_end + 1 < line.size()
-                            && line[name_end + 1] == ':'))
-                ) {
+                            && line[name_end + 1] == ':'))) {
                     if (line[name_end] == ':' && line[name_end + 1] == ':')
                         name_end += 2;
                     else

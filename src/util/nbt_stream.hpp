@@ -115,12 +115,13 @@ namespace copper_server::util {
         {
             nbt_convert temp;
             read_into(temp);
-            auto data = temp.take_data().to_container<std::vector>();
-            std::stringstream buf((const char*)data.data(), data.size());
+            std::stringstream buf(temp.take_data().to_container<std::string>());
             {
                 nbt_read_stream stream(buf);
                 first_pass(stream);
             }
+            buf.seekg(std::ios::beg);
+            buf.seekp(std::ios::beg);
             {
                 nbt_read_stream stream(buf);
                 second_pass(stream);
@@ -620,19 +621,20 @@ namespace copper_server::util {
         void write(const nbt_convert&);
         void write(nbt_convert&&);
         void write(const nbt&);
+        void write(const nbt_compound&);
         void write(base_objects::uuid res);
         void write(base_objects::uuid_hex res);
         void write(base_objects::uuid_flat_hex res);
 
         nbt_write_compound_stream write_compound();
         nbt_write_list_stream write_list();
-        nbt_write_list_stream write_list(int32_t fixed_size, nbt_type tag);
+        nbt_write_list_stream write_list(size_t fixed_size, nbt_type tag);
 
 
-        void write(const int8_t* arr, uint32_t size);
-        void write(const uint8_t* arr, uint32_t size);
-        void write(const int32_t* arr, uint32_t size);
-        void write(const int64_t* arr, uint32_t size);
+        void write(const int8_t* arr, size_t size);
+        void write(const uint8_t* arr, size_t size);
+        void write(const int32_t* arr, size_t size);
+        void write(const int64_t* arr, size_t size);
 
         nbt_write_stream(std::ostream& write_stream, std::string_view to_write_field_name = "", bool field_required = false, uint16_t depth = 0);
     };
@@ -675,6 +677,8 @@ namespace copper_server::util {
         nbt_write_list_stream& write(FN&& fn)
             requires(std::is_invocable_v<FN, nbt_write_stream&>)
         {
+            if (items == INT32_MAX)
+                throw std::runtime_error("Too much items, allowed only INT32_MAX items");
             nbt_write_stream inner(write_stream, "", false, depth + 1);
             fn(inner);
             items++;

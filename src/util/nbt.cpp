@@ -13,6 +13,7 @@
 #include <src/base_objects/uuid.hpp>
 #include <src/util/endian.hpp>
 #include <src/util/nbt.hpp>
+#include <src/util/snbt_stream.hpp>
 
 namespace copper_server::util {
     template <class T>
@@ -719,6 +720,7 @@ namespace copper_server::util {
     }
 
     nbt nbt::from_snbt(const std::string& snbt) {
+        return parse_snbt(snbt);
     }
 
 #pragma endregion

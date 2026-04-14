@@ -41,7 +41,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
-            requires std::is_same_v<base_objects::identifier, std::decay_t<T>>
+            requires std::is_same_v<api::packets::identifier, std::decay_t<T>>
         {
             value.value = stream.read_identifier();
         }
@@ -74,21 +74,21 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
-            requires std::is_same_v<base_objects::json_text_component, std::decay_t<T>>
+            requires std::is_same_v<api::packets::json_text_component, std::decay_t<T>>
         {
             value.value = stream.read_json_component();
         }
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
-            requires std::is_same_v<base_objects::var_int32, std::decay_t<T>>
+            requires std::is_same_v<api::packets::var_int32, std::decay_t<T>>
         {
             value.value = stream.read_var<int32_t>();
         }
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
-            requires std::is_same_v<base_objects::var_int64, std::decay_t<T>>
+            requires std::is_same_v<api::packets::var_int64, std::decay_t<T>>
         {
             value.value = stream.read_var<int64_t>();
         }
@@ -102,7 +102,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
-            requires std::is_same_v<base_objects::optional_var_int32, std::decay_t<T>>
+            requires std::is_same_v<api::packets::optional_var_int32, std::decay_t<T>>
         {
             if (auto res = stream.read_var<int32_t>())
                 value = base_objects::optional_var_int32(res - 1);
@@ -110,7 +110,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
-            requires std::is_same_v<base_objects::optional_var_int64, std::decay_t<T>>
+            requires std::is_same_v<api::packets::optional_var_int64, std::decay_t<T>>
         {
             if (auto res = stream.read_var<int64_t>())
                 value = base_objects::optional_var_int64(res - 1);
@@ -166,6 +166,13 @@ namespace copper_server::util::encoding::packet {
         }
 
         template <class T, class Prev_T>
+        void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<2>)
+            requires std::is_same_v<util::nbt_compound, std::decay_t<T>>
+        {
+            value = ReadNetworkNBT_nbt(stream);
+        }
+
+        template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream& stream, T& value, Prev_T*, priority_tag<1>)
             requires std::is_base_of_v<base_objects::palette_container, std::decay_t<T>>
         {
@@ -217,8 +224,8 @@ namespace copper_server::util::encoding::packet {
         }
 
         template <class T, class Prev_T>
-        void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::list_array_depend, std::decay_t<T>>
+        void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<2>)
+            requires is_template_base_of<api::packets::list_array_depend, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             bool has_next = false;
@@ -247,7 +254,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data&, ArrayStream&, T&, Prev_T*, priority_tag<1>)
-            requires is_template_base_of<base_objects::ignored, std::decay_t<T>>
+            requires is_template_base_of<api::packets::ignored, std::decay_t<T>>
         {
         }
 
@@ -264,7 +271,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::enum_as, std::decay_t<T>> || is_template_base_of<base_objects::enum_as_flag, std::decay_t<T>>
+            requires is_template_base_of<api::packets::enum_as, std::decay_t<T>> || is_template_base_of<api::packets::enum_as_flag, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             typename Type::encode_t val;
@@ -274,7 +281,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::or_, std::decay_t<T>>
+            requires is_template_base_of<api::packets::or_, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             if (const auto res = stream.read_var<int32_t>())
@@ -288,7 +295,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::bool_or, std::decay_t<T>>
+            requires is_template_base_of<api::packets::bool_or, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             if (stream.read_value<bool>()) {
@@ -304,7 +311,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::enum_switch, std::decay_t<T>>
+            requires is_template_base_of<api::packets::enum_switch, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             typename Type::encode_type id_check;
@@ -322,7 +329,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::partial_enum_switch, std::decay_t<T>>
+            requires is_template_base_of<api::packets::partial_enum_switch, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             typename Type::encode_type id_check;
@@ -349,21 +356,21 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::depends_next, std::decay_t<T>>
+            requires is_template_base_of<api::packets::depends_next, std::decay_t<T>>
         {
             decode_entry(context, stream, value.value, prev);
         }
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::any_of, std::decay_t<T>> || is_template_base_of<base_objects::packet_compress, std::decay_t<T>>
+            requires is_template_base_of<api::packets::any_of, std::decay_t<T>> || is_template_base_of<api::packets::packet_compress, std::decay_t<T>>
         {
             decode_entry(context, stream, value.value, prev);
         }
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::flags_list, std::decay_t<T>>
+            requires is_template_base_of<api::packets::flags_list, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             decode_entry(context, stream, value.flag, prev);
@@ -378,24 +385,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<std::unordered_map, std::decay_t<T>> && std::is_same_v<typename std::decay_t<T>::key_type, std::string>
-        {
-            using Type = std::decay_t<T>;
-            std::unordered_map<std::string, typename Type::mapped_type> res;
-            auto size = stream.read_var<int32_t>();
-            for (int32_t i = 0; i < size; i++) {
-                std::string key;
-                decode_entry(context, stream, key, prev);
-                typename Type::mapped_type val;
-                decode_entry(context, stream, val, prev);
-                res.emplace(std::move(key), std::move(val));
-            }
-            value = std::move(res);
-        }
-
-        template <class T, class Prev_T>
-        void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<std::unordered_map, std::decay_t<T>> && is_map_compatible<std::decay_t<T>>
+            requires is_template_base_of<std::unordered_map, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             Type res;
@@ -427,13 +417,13 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::id_set, std::decay_t<T>>
+            requires is_template_base_of<api::packets::id_set, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             base_objects::var_int32 size = 0;
             decode_entry(context, stream, size, prev);
             if (!size)
-                value = (base_objects::identifier)stream.read_identifier();
+                value = (api::packets::identifier)stream.read_identifier();
             else {
                 int32_t arr_size = size - 1;
                 list_array<typename Type::id_type> res;
@@ -446,7 +436,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::value_optional, std::decay_t<T>>
+            requires is_template_base_of<api::packets::value_optional, std::decay_t<T>>
         {
             decode_entry(context, stream, value.v, prev);
             if (value.v) {
@@ -458,7 +448,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::sized_entry, std::decay_t<T>>
+            requires is_template_base_of<api::packets::sized_entry, std::decay_t<T>>
         {
             using Type = std::decay_t<T>;
             typename Type::size_type size;
@@ -516,7 +506,7 @@ namespace copper_server::util::encoding::packet {
 
         template <class T, class Prev_T>
         void decode_impl(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev, priority_tag<1>)
-            requires is_template_base_of<base_objects::enum_set, std::decay_t<T>>
+            requires is_template_base_of<api::packets::enum_set, std::decay_t<T>>
         {
             using Tupple_T = std::decay_t<decltype(value.values)>;
             bit_list_array<uint8_t> bit(std::tuple_size_v<Tupple_T> - 1); //except header
@@ -561,7 +551,7 @@ namespace copper_server::util::encoding::packet {
                         value.*T::body_depend::value = {static_cast<bool>(tmp & T::depend_value::value)};
                     } else
                         decode_entry(context, stream, item, &value);
-                    if constexpr (is_template_base_of<base_objects::depends_next, std::decay_t<IT_T>>)
+                    if constexpr (is_template_base_of<api::packets::depends_next, std::decay_t<IT_T>>)
                         process_next = static_cast<bool>(item.value);
                 }
             });

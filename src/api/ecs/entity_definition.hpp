@@ -223,7 +223,7 @@ namespace copper_server::api::ecs {
             stripped_recipe.with<T>();
             auto id = detail::get_component_id<T>();
             auto res = rules.emplace_back(component_rule{id, component_remove_act::locked});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }
@@ -234,7 +234,7 @@ namespace copper_server::api::ecs {
             stripped_recipe.with_value<T>(value);
             auto id = detail::get_component_id<T>();
             auto res = rules.emplace_back(component_rule{id, component_remove_act::locked});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }
@@ -243,7 +243,7 @@ namespace copper_server::api::ecs {
         entity_definition& add_optional() {
             auto id = detail::get_component_id<T>();
             auto res = rules.emplace_back(component_rule{id, component_remove_act::optional});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }
@@ -254,7 +254,7 @@ namespace copper_server::api::ecs {
             stripped_recipe.with<T>();
             auto id = detail::get_component_id<T>();
             auto res = rules.emplace_back(component_rule{id, component_remove_act::reset_on_remove});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }
@@ -265,7 +265,7 @@ namespace copper_server::api::ecs {
             stripped_recipe.with_value<T>();
             auto id = detail::get_component_id<T>();
             auto res = rules.emplace_back(component_rule{id, component_remove_act::reset_on_remove});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }
@@ -290,7 +290,7 @@ namespace copper_server::api::ecs {
             auto id = detail::get_component_id<T>();
             stripped_ids.push_back(id);
             auto res = rules.emplace_back(component_rule{id, component_remove_act::optional});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }
@@ -301,7 +301,7 @@ namespace copper_server::api::ecs {
             auto id = detail::get_component_id<T>();
             stripped_ids.push_back(id);
             auto res = rules.emplace_back(component_rule{id, component_remove_act::optional});
-            rule_lookup[id] = &res;
+            rule_lookup[id] = rules.size() - 1;
             try_auto_map<T>();
             return *this;
         }

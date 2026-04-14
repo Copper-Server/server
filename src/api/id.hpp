@@ -277,10 +277,10 @@ namespace copper_server::api::id {
         list_array<int32_t> view_ids() const {
             return std::visit(
                 []<class T>(const T& it) -> list_array<int32_t> {
-                    if constexpr (std::is_same_v<int32_t, T>)
-                        return {it};
-                    else
+                    if constexpr (std::is_same_v<api::tags::tag_handle, T>)
                         return api::tags::unfold_tag_ids(it);
+                    else
+                        return {it};
                 },
                 value
             );
@@ -289,11 +289,12 @@ namespace copper_server::api::id {
         const list_array<int32_t>& view_ids_direct() const {
             return std::visit(
                 []<class T>(const T& it) -> const list_array<int32_t>& {
-                    if constexpr (std::is_same_v<int32_t, T>) {
+                    if constexpr (std::is_same_v<api::tags::tag_handle, T>) {
+                        return api::tags::unfold_tag_ids(it);
+                    } else {
                         static list_array<int32_t> empty;
                         return empty;
-                    } else
-                        return api::tags::unfold_tag_ids(it);
+                    }
                 },
                 value
             );
@@ -302,10 +303,10 @@ namespace copper_server::api::id {
         bool contains(int32_t id) const {
             return std::visit(
                 [id]<class T>(const T& it) {
-                    if constexpr (std::is_same_v<int32_t, T>) {
-                        return it == id;
-                    } else
+                    if constexpr (std::is_same_v<api::tags::tag_handle, T>) {
                         return api::tags::contains(it, id);
+                    } else
+                        return it == id;
                 },
                 value
             );
@@ -314,10 +315,10 @@ namespace copper_server::api::id {
         bool contains() const {
             return std::visit(
                 []<class T>(const T& it) {
-                    if constexpr (std::is_same_v<int32_t, T>) {
-                        return false;
-                    } else
+                    if constexpr (std::is_same_v<api::tags::tag_handle, T>) {
                         return api::tags::contains(it);
+                    } else
+                        return false;
                 },
                 value
             );
@@ -325,11 +326,11 @@ namespace copper_server::api::id {
 
         std::string to_string() const {
             return std::visit(
-                [](const auto& it) {
-                    if constexpr (std::is_same_v<int32_t, decltype(it)>) {
-                        return detail::from_registry_source_value(sourc, it);
-                    } else
+                []<class T>(const T& it) {
+                    if constexpr (std::is_same_v<api::tags::tag_handle, T>) {
                         return api::tags::get_full_name(it);
+                    } else
+                        return detail::from_registry_source_value(sourc, it);
                 },
                 value
             );

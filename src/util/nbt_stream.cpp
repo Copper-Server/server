@@ -1242,6 +1242,10 @@ namespace copper_server::util {
         write(nbt_convert::build(res));
     }
 
+    void nbt_write_stream::write(const nbt_compound& res) {
+        write(nbt_convert::build(nbt(res.get_map())));
+    }
+
     void nbt_write_stream::write(base_objects::uuid res) {
         write((int32_t*)res.data, 4);
     }
@@ -1280,9 +1284,13 @@ namespace copper_server::util {
         return nbt_write_list_stream(write_stream, depth + 1);
     }
 
-    nbt_write_list_stream nbt_write_stream::write_list(int32_t fixed_size, nbt_type tag) {
+    nbt_write_list_stream nbt_write_stream::write_list(size_t fixed_size, nbt_type tag) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
+        if (fixed_size > INT32_MAX)
+            throw std::runtime_error("Too much items, allowed only INT32_MAX items");
+        int32_t fixed_size_checked = (int32_t)fixed_size;
+
         already_written = true;
         written_type_id = nbt_type::tag_list;
         write_value(write_stream, written_type_id);
@@ -1290,49 +1298,61 @@ namespace copper_server::util {
             write_string(write_stream, to_write_field_name);
         if (depth == 512)
             throw std::runtime_error("Invalid format, the depth limit is 512");
-        return nbt_write_list_stream(write_stream, depth + 1, fixed_size, tag);
+        return nbt_write_list_stream(write_stream, depth + 1, fixed_size_checked, tag);
     }
 
-    void nbt_write_stream::write(const int8_t* arr, uint32_t size) {
+    void nbt_write_stream::write(const int8_t* arr, size_t size) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
+        if (size > INT32_MAX)
+            throw std::runtime_error("Too much items, allowed only INT32_MAX items");
+        int32_t size_checked = (int32_t)size;
         already_written = true;
         written_type_id = nbt_type::tag_byte_array;
         write_value(write_stream, written_type_id);
         write_value(write_stream, size);
-        write_stream.write((const char*)arr, size);
+        write_stream.write((const char*)arr, size_checked);
     }
 
-    void nbt_write_stream::write(const uint8_t* arr, uint32_t size) {
+    void nbt_write_stream::write(const uint8_t* arr, size_t size) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
+        if (size > INT32_MAX)
+            throw std::runtime_error("Too much items, allowed only INT32_MAX items");
+        int32_t size_checked = (int32_t)size;
         already_written = true;
         written_type_id = nbt_type::tag_byte_array;
         write_value(write_stream, written_type_id);
         write_value(write_stream, size);
-        write_stream.write((const char*)arr, size);
+        write_stream.write((const char*)arr, size_checked);
     }
 
-    void nbt_write_stream::write(const int32_t* arr, uint32_t size) {
+    void nbt_write_stream::write(const int32_t* arr, size_t size) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
+        if (size > INT32_MAX)
+            throw std::runtime_error("Too much items, allowed only INT32_MAX items");
+        int32_t size_checked = (int32_t)size;
         already_written = true;
         written_type_id = nbt_type::tag_int_array;
         write_value(write_stream, written_type_id);
-        write_value(write_stream, size);
+        write_value(write_stream, size_checked);
         while (size) {
             write_value(write_stream, *arr++);
             --size;
         }
     }
 
-    void nbt_write_stream::write(const int64_t* arr, uint32_t size) {
+    void nbt_write_stream::write(const int64_t* arr, size_t size) {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
+        if (size > INT32_MAX)
+            throw std::runtime_error("Too much items, allowed only INT32_MAX items");
+        int32_t size_checked = (int32_t)size;
         already_written = true;
         written_type_id = nbt_type::tag_long_array;
         write_value(write_stream, written_type_id);
-        write_value(write_stream, size);
+        write_value(write_stream, size_checked);
         while (size) {
             write_value(write_stream, *arr++);
             --size;

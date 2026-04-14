@@ -63,7 +63,7 @@ namespace copper_server::base_objects::network {
         if constexpr (sizeof(T) == 1) {
             data.push_back(reinterpret_cast<uint8_t*>(&val)[0]);
         } else {
-            val = util::convert_endian(endian, val);
+            val = copper_server::util::convert_endian(endian, val);
             for (size_t i = 0; i < sizeof(T); i++)
                 data.push_back(reinterpret_cast<uint8_t*>(&val)[i]);
         }
@@ -155,7 +155,7 @@ namespace copper_server::base_objects::network {
     void response_item::write_var32(int32_t value) {
         constexpr size_t buf_len = sizeof(int32_t) + (sizeof(int32_t) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = util::toVar(buf, buf_len, util::convert_endian(std::endian::little, value));
+        size_t len = util::toVar(buf, buf_len, copper_server::util::convert_endian(std::endian::little, value));
         for (size_t i = 0; i < len; i++)
             data.push_back(buf[i]);
     }
@@ -163,7 +163,7 @@ namespace copper_server::base_objects::network {
     void response_item::write_var64(int64_t value) {
         constexpr size_t buf_len = sizeof(int64_t) + (sizeof(int64_t) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = util::toVar(buf, buf_len, util::convert_endian(std::endian::little, value));
+        size_t len = util::toVar(buf, buf_len, copper_server::util::convert_endian(std::endian::little, value));
         for (size_t i = 0; i < len; i++)
             data.push_back(buf[i]);
     }

@@ -12,7 +12,7 @@
 #include <src/util/reflect.hpp>
 #include <src/util/reflect/api/packets/chat_type.hpp>
 #include <src/util/reflect/api/packets/client_bound/play.hpp>
-#include <src/util/reflect/api/packets/debug_sub_scription_type.hpp>
+#include <src/util/reflect/api/packets/debug_subscription_type.hpp>
 #include <src/util/reflect/api/packets/difficulty.hpp>
 #include <src/util/reflect/api/packets/gamemode.hpp>
 #include <src/util/reflect/api/packets/ops.hpp>

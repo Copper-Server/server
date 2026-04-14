@@ -189,9 +189,9 @@ namespace copper_server::api::world {
             auto [x, y, z] = rs.random_point();
             int64_t pos_y = 0;
             world->get_height_maps_at(x, z, [&](base_objects::world::height_maps& height_maps) {
-                auto mt = height_maps.motion_blocking[x % 16][z % 16];
-                auto oc_flor = height_maps.ocean_floor[x % 16][z % 16];
-                auto oc = height_maps.surface[x % 16][z % 16];
+                auto mt = height_maps.motion_blocking.get(x % 16, z % 16);
+                auto oc_flor = height_maps.ocean_floor.get(x % 16, z % 16);
+                auto oc = height_maps.surface.get(x % 16, z % 16);
                 pos_y = std::max(mt, std::max(oc_flor, oc));
             });
             pos_y -= world->get_world_y_offset();
@@ -200,7 +200,7 @@ namespace copper_server::api::world {
                 = get_worlds().get(id)->world_name;
 
             auto& ass_ent = client_ref.player_data.assigned_entity;
-            auto pos = ass_ent->modify<api::ecs::com::position>();
+            auto pos = ass_ent->modify<api::ecs::com::entities::position>();
             pos->x = 0.5 + (double)x;
             pos->y = (double)pos_y;
             pos->z = 0.5 + (double)z;

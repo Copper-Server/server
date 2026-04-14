@@ -79,7 +79,7 @@ namespace copper_server::util::encoding::nbt {
             return nbt_type::tag_string;
         else if constexpr (is_template_base_of<base_objects::pool, Type>)
             return nbt_type::tag_list;
-        else if constexpr (nbt_is_inline<Type> && reflect::fields_count<Type> == 1) {
+        else if constexpr (nbt_is_inline<Type> && reflect::fields_count<Type>() == 1) {
             nbt_type res;
             reflect::visit_field<Type>(0, [&res]<class inline_T>() {
                 res = get_nbt_type<inline_T>();

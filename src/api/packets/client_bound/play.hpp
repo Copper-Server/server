@@ -10,7 +10,7 @@
 #define SRC_API_PACKETS_CLIENT_BOUND_PLAY
 #include <optional>
 #include <src/api/packets/chat_type.hpp>
-#include <src/api/packets/debug_sub_scription_type.hpp>
+#include <src/api/packets/debug_subscription_type.hpp>
 #include <src/api/packets/difficulty.hpp>
 #include <src/api/packets/gamemode.hpp>
 #include <src/api/packets/ops.hpp>
@@ -419,22 +419,22 @@ namespace copper_server::api::packets::client_bound::play {
 
     struct debug__block_value : public packet<0x1A> {
         base_objects::position pos;
-        debug_sub_scription_type::optional data;
+        debug_subscription_type::optional data;
     };
 
     struct debug__chunk_value : public packet<0x1B> {
         int32_t z;
         int32_t x;
-        debug_sub_scription_type::optional data;
+        debug_subscription_type::optional data;
     };
 
     struct debug__entity_value : public packet<0x1C> {
         var_int32::entity_id id;
-        debug_sub_scription_type::optional data;
+        debug_subscription_type::optional data;
     };
 
     struct debug__event : public packet<0x1D> {
-        debug_sub_scription_type::value data;
+        debug_subscription_type::value data;
     };
 
     struct debug_sample : public packet<0x1E> {

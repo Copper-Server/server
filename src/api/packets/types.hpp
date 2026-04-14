@@ -1185,7 +1185,7 @@ namespace copper_server::api::packets {
         auto operator<=>(const Angle& other) const = default;
     };
 
-    template <class Enum, class T>
+    template <class Enum, class T = int>
     struct enum_as {
         using encode_t = T;
         using enum_t = Enum;
@@ -1604,7 +1604,7 @@ namespace copper_server::api::packets {
         auto operator<=>(const flags_list_from& other) const = default;
     };
 
-    template <class Enum, class T>
+    template <class Enum, class T = int>
     struct enum_as_flag {
         using encode_t = T;
         using enum_t = Enum;
@@ -1935,7 +1935,7 @@ namespace copper_server::base_objects {
 
     using Angle = api::packets::Angle;
 
-    template <class Enum, class T>
+    template <class Enum, class T = int>
     using enum_as = api::packets::enum_as<Enum, T>;
 
     template <class ValueType, class... Ty>
@@ -1950,7 +1950,7 @@ namespace copper_server::base_objects {
     template <class Source, class SourceType, SourceType Source::* source_name, class... Ty>
     using flags_list_from = api::packets::flags_list_from<Source, SourceType, source_name, Ty...>;
 
-    template <class Enum, class T>
+    template <class Enum, class T = int>
     using enum_as_flag = api::packets::enum_as_flag<Enum, T>;
 
     template <class base_type, class... Ty>
@@ -1970,4 +1970,20 @@ copper_server::base_objects::shared_client_data& operator<<(copper_server::base_
 copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::login);
 copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::config);
 copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::play);
+
+namespace std {
+    template <>
+    struct hash<copper_server::api::packets::var_int32> {
+        size_t operator()(const copper_server::api::packets::var_int32& value) const noexcept {
+            return hash<int32_t>()(value.value);
+        }
+    };
+
+    template <>
+    struct hash<copper_server::api::packets::var_int64> {
+        size_t operator()(const copper_server::api::packets::var_int64& value) const noexcept {
+            return hash<int64_t>()(value.value);
+        }
+    };
+}
 #endif /* SRC_API_PACKETS_TYPES */

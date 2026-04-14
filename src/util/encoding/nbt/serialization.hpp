@@ -104,7 +104,7 @@ namespace copper_server::util::encoding::nbt {
         void serialize_impl(util::nbt_write_stream& res, const Type& value, priority_tag<2>)
             requires std::is_same_v<base_objects::chat, Type>
         {
-            res.write(nbt_convert::build(value.to_nbt()), false);
+            res.write(value.to_nbt());
         }
 
         template <class Type>
@@ -196,7 +196,7 @@ namespace copper_server::util::encoding::nbt {
             std::visit(
                 [&](auto& it) {
                     using it_T = std::decay_t<decltype(it)>;
-                    if constexpr (nbt_is_inline<it_T> && reflect::fields_count<it_T> == 1 && enum_switch_is_inline_eligible<Type>) {
+                    if constexpr (nbt_is_inline<it_T> && reflect::fields_count<it_T>() == 1 && enum_switch_is_inline_eligible<Type>()) {
                         reflect::visit_field<Type>(0, [&]<class T>() {
                             serialize_entry(res, it);
                         });
@@ -265,6 +265,27 @@ namespace copper_server::util::encoding::nbt {
                     });
                 });
             });
+        }
+
+        template <class Type>
+        void serialize_impl(util::nbt_write_stream& res, const Type& value, priority_tag<1>)
+            requires std::is_same_v<util::nbt, std::decay_t<Type>>
+        {
+            res.write(value);
+        }
+
+        template <class Type>
+        void serialize_impl(util::nbt_write_stream& res, const Type& value, priority_tag<1>)
+            requires std::is_same_v<util::nbt_convert, std::decay_t<Type>>
+        {
+            res.write(value);
+        }
+
+        template <class Type>
+        void serialize_impl(util::nbt_write_stream& res, const Type& value, priority_tag<1>)
+            requires std::is_same_v<util::nbt_compound, std::decay_t<Type>>
+        {
+            res.write(value);
         }
 
         template <class Type>

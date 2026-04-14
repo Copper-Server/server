@@ -170,7 +170,15 @@ namespace copper_server::api::ecs {
     struct system_node {
         std::unique_ptr<system_interface> instance;
         const detail::system_info& info;
-        size_t in_degree = 0;
+        size_t in_degree;
+
+        system_node(std::unique_ptr<system_interface> instance, const detail::system_info& info, size_t in_degree = 0)
+            : instance(std::move(instance)), info(info), in_degree(in_degree) {}
+
+        system_node(system_node&&) = default;
+        system_node& operator=(system_node&&) = default;
+        system_node(const system_node&) = delete;
+        system_node& operator=(const system_node&) = delete;
     };
 
     struct scheduler::scheduler_data {
@@ -179,6 +187,12 @@ namespace copper_server::api::ecs {
             std::vector<system_node> systems;
             std::unordered_map<size_t, std::vector<size_t>> dependency_graph;
             bool graph_is_dirty = false;
+
+            tick_group() = default;
+            tick_group(tick_group&&) = default;
+            tick_group& operator=(tick_group&&) = default;
+            tick_group(const tick_group&) = delete;
+            tick_group& operator=(const tick_group&) = delete;
 
             void build_tree() {
                 dependency_graph.clear();
@@ -386,7 +400,7 @@ namespace copper_server::api::ecs {
                     groups[record.type].push_back(item.id);
                 }
             }
-            fast_task::future_tool::for_each_move(std::move(groups), [](std::pair<archetype*, std::unordered_set<uint32_t>>&& group) {
+            fast_task::future_tool::for_each_move(std::move(groups), [](std::pair<archetype*, std::vector<uint32_t>>&& group) {
                 auto& man = manager::instance();
                 for (auto& it : group.second)
                     man.deallocate_entity(it);
@@ -1152,7 +1166,8 @@ namespace copper_server::api::ecs {
 
         bool iteration_handle::is_end() const {
             if (data)
-                data->is_end(*topology);
+                return data->is_end(*topology);
+            return true;
         }
 
         void iteration_handle::mark_component_dirty(component_id component, size_t index) {

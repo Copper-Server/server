@@ -781,7 +781,6 @@ namespace copper_server::base_objects {
         if (extra.size()) {
             list_array<util::nbt> extra_nbt;
             extra_nbt.reserve(extra.size());
-            size_t i = 0;
             for (auto& it : extra)
                 extra_nbt.push_back(it.to_nbt());
             nbt["extra"] = std::move(extra_nbt);

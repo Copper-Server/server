@@ -124,20 +124,22 @@ namespace copper_server::base_objects {
                 return false;
         }
         if (count.has_value()) {
-            std::visit(
-                [this, &slot]<class T>(const T& count) {
-                    if constexpr (std::is_same_v<T, int32_t>) {
-                        if (slot.count != count)
-                            return false;
-                    } else {
-                        if (count.min.has_value() && slot.count < count.min.value())
-                            return false;
-                        if (count.max.has_value() && slot.count > count.max.value())
-                            return false;
-                    }
-                },
-                count.value()
-            );
+            if (!std::visit(
+                    [this, &slot]<class T>(const T& count) {
+                        if constexpr (std::is_same_v<T, int32_t>) {
+                            if (slot.count != count)
+                                return false;
+                        } else {
+                            if (count.min.has_value() && slot.count < count.min.value())
+                                return false;
+                            if (count.max.has_value() && slot.count > count.max.value())
+                                return false;
+                        }
+                        return true;
+                    },
+                    count.value()
+                ))
+                return false;
         }
         if (components.size()) {
             for (auto& [id, component] : components) {

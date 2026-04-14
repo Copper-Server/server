@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <library/enbt/senbt.hpp>
 #include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/id.hpp>
@@ -20,6 +19,7 @@
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/conversions.hpp>
+#include <src/util/snbt_stream.hpp>
 
 namespace copper_server::build_in_plugins::base {
     struct chunk_speed_data {
@@ -35,14 +35,18 @@ namespace copper_server::build_in_plugins::base {
         base_objects::client_data_holder executor
     ) {
         try {
-            enbt::fixed_array enbt_collected_data;
-            enbt_collected_data.reserve(collected_data.size());
-            for (const auto& tick : collected_data) {
-                enbt::fixed_array enbt_tick;
-                enbt_tick.reserve(tick.size());
-                for (const auto& chunk : tick)
-                    enbt_tick.push_back(enbt::fixed_array{chunk.x, chunk.z, chunk.tick_time.count()});
-                enbt_collected_data.push_back(std::move(enbt_tick));
+            util::snbt_write_stream nbt_collected_data;
+            {
+                auto list = nbt_collected_data.write_list();
+                for (const auto& tick : collected_data) {
+                    auto snbt_tick = list.write_list();
+                    for (const auto& chunk : tick) {
+                        auto item = snbt_tick.write_list();
+                        item.write(chunk.x);
+                        item.write(chunk.z);
+                        item.write(chunk.tick_time.count());
+                    }
+                }
             }
             auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             std::tm* timeinfo = std::localtime(&current_time);
@@ -55,7 +59,7 @@ namespace copper_server::build_in_plugins::base {
                                   + "_" + std::to_string(timeinfo->tm_hour)
                                   + "_" + std::to_string(timeinfo->tm_min)
                                   + "_" + std::to_string(timeinfo->tm_sec)
-                                  + ".senbt");
+                                  + ".snbt");
             std::filesystem::create_directories(report_path.parent_path());
             fast_task::files::async_iofstream report_file(
                 report_path,
@@ -69,8 +73,7 @@ namespace copper_server::build_in_plugins::base {
                 message.set_color("red");
                 *executor << api::packets::client_bound::play::system_chat{.content = message};
             }
-            report_file << senbt::serialize(enbt_collected_data);
-            //enbt::io_helper::write_token(report_file, enbt_collected_data);
+            report_file << nbt_collected_data.take_output();
 
             base_objects::chat message("Chunk tick speed report for world: " + world_name + " saved to: " + report_path.string());
             message.set_color("green");

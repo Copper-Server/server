@@ -16,7 +16,7 @@ namespace copper_server::util::encoding::nbt {
     template <class T>
     consteval bool has_flattened_fields() {
         bool res = false;
-        if constexpr (reflect::fields_count<T> > 0) {
+        if constexpr (reflect::fields_count<T>() > 0) {
             reflect::for_each_type<T>([&]<class FieldT>() {
                 if constexpr (is_flattened_type_v<FieldT>)
                     res = true;
@@ -93,7 +93,7 @@ namespace copper_server::util::encoding::nbt {
         {
             stream.iterate(
                 [&res, &prev](auto& key, auto& item_stream) {
-                    deserialize_entry(res[key.to_string()], item_stream, prev);
+                    deserialize_entry(res[key], item_stream, prev);
                 }
             );
         }
@@ -130,6 +130,31 @@ namespace copper_server::util::encoding::nbt {
             nbt_convert ss;
             stream.read_into(ss);
             res = base_objects::chat::from_nbt(ss.get_as_nbt());
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<util::nbt, Type>
+        {
+            nbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_nbt();
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<util::nbt_convert, Type>
+        {
+            stream.read_into(res);
+        }
+
+        template <class Type>
+        void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
+            requires std::is_same_v<util::nbt_compound, Type>
+        {
+            nbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_nbt();
         }
 
         template <class Type>
@@ -248,7 +273,7 @@ namespace copper_server::util::encoding::nbt {
         void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto& prev, priority_tag<3>)
             requires is_template_base_of<api::packets::enum_switch, Type>
         {
-            if constexpr (enum_switch_is_inline_eligible<Type>) {
+            if constexpr (enum_switch_is_inline_eligible<Type>()) {
                 Type::for_each([&res, &prev, &stream]<class Ty>() {
                     if (get_nbt_type<Ty>() == stream.get_type()) {
                         Ty it{};

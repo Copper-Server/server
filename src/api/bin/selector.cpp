@@ -305,14 +305,14 @@ namespace copper_server::api {
         list_array<api::ecs::entity> entities;
         api::ecs::entity self_entity;
         if (context.other_data.contains("entity_id"))
-            self_entity = *api::entity_id_map::get_entity((int32_t)context.other_data.at("entity_id"));
+            self_entity = *api::entity_id_map::get_entity(context.other_data.at("entity_id").as_int());
         else
             self_entity = *context.executor.player_data.assigned_entity;
 
         if (flags.nearest || distance || x || y || z) {
-            double check_x = context.other_data.at("x");
-            double check_y = context.other_data.at("y");
-            double check_z = context.other_data.at("z");
+            double check_x = context.other_data.at("x").as_double();
+            double check_y = context.other_data.at("y").as_double();
+            double check_z = context.other_data.at("z").as_double();
             if (x)
                 check_x = *x;
             if (y)
@@ -321,10 +321,10 @@ namespace copper_server::api {
                 check_z = *z;
 
             if (!flags.self)
-                api::world::get((int32_t)context.other_data.at("world_id"), [&](storage::world_data& world) {
+                api::world::get(context.other_data.at("world_id").as_int(), [&](storage::world_data& world) {
                     if (distance) {
                         if (distance->min <= 0) {
-                            base_objects::spherical_bounds_block bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius = (double)distance->max};
+                            base_objects::spherical_bounds_block bounds{.x = (int32_t)check_x, .y = (int32_t)check_y, .z = (int32_t)check_z, .radius = (double)distance->max};
                             world.for_each_entity(bounds, [&entities](auto entity) {
                                 entities.push_back(entity);
                             });
@@ -335,7 +335,7 @@ namespace copper_server::api {
                                 });
                             }
                         } else {
-                            base_objects::spherical_bounds_block_out bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius_begin = (double)distance->min, .radius_end = (double)distance->max};
+                            base_objects::spherical_bounds_block_out bounds{.x = (int32_t)check_x, .y = (int32_t)check_y, .z = (int32_t)check_z, .radius_begin = (double)distance->min, .radius_end = (double)distance->max};
                             world.for_each_entity(bounds, [&entities](auto entity) { entities.push_back(entity); });
                             if (distance->is_inverted) {
                                 world.for_each_entity([&entities, filter_entities = entities.take()](auto entity) {
@@ -544,9 +544,9 @@ namespace copper_server::api {
         if (sort) {
             switch (*sort) {
             case sort_t::nearest: {
-                double check_x = context.other_data.at("x");
-                double check_y = context.other_data.at("y");
-                double check_z = context.other_data.at("z");
+                double check_x = context.other_data.at("x").as_double();
+                double check_y = context.other_data.at("y").as_double();
+                double check_z = context.other_data.at("z").as_double();
                 if (x)
                     check_x = *x;
                 if (y)
@@ -561,9 +561,9 @@ namespace copper_server::api {
                 break;
             }
             case sort_t::furthest: {
-                double check_x = context.other_data.at("x");
-                double check_y = context.other_data.at("y");
-                double check_z = context.other_data.at("z");
+                double check_x = context.other_data.at("x").as_double();
+                double check_y = context.other_data.at("y").as_double();
+                double check_z = context.other_data.at("z").as_double();
                 if (x)
                     check_x = *x;
                 if (y)
