@@ -120,7 +120,7 @@ namespace copper_server {
             }
 
             //on tick checks `on_tick`, if undefined then do nothing, otherwise call the callback
-            std::function<void(storage::world_data&, world::sub_chunk_data&, block& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> on_tick;
+            std::function<void(storage::world_data&, world::sub_chunk_data&, block& data, int32_t chunk_x, uint32_t sub_chunk_y, int32_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> on_tick;
 
             //used to check properties usage
             std::vector<int32_t> allowed_properties;
@@ -293,7 +293,7 @@ namespace copper_server {
                 return id != b.id;
             }
 
-            void tick(storage::world_data&, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked);
+            void tick(storage::world_data&, base_objects::world::sub_chunk_data& sub_chunk, int32_t chunk_x, uint32_t sub_chunk_y, int32_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked);
 
             inline const std::vector<shape_data*>& collision_shapes() const {
                 return getStaticData().collision_shapes;

@@ -38,7 +38,12 @@ namespace copper_server::base_objects {
     struct slot;
     struct slot_data;
     struct component;
-    struct partial_component;
+
+    struct partial_component {
+        var_int32::data_component_type type;
+        util::nbt value;
+        bool operator==(const partial_component& other) const = default;
+    };
 
     struct item_firework_explosion {
         enum class shape_e : uint8_t {
@@ -117,7 +122,7 @@ namespace copper_server::base_objects {
         list_array<component> full_components_match;            //for block entity
         list_array<partial_component> partial_components_match; //for block entity
 
-        bool operator==(const block_predicate& other) const = default;
+        bool operator==(const block_predicate& other) const;
     };
 
     struct consume_effect {
@@ -158,11 +163,6 @@ namespace copper_server::base_objects {
         bool operator==(const consume_effect& other) const = default;
     };
 
-    struct partial_component {
-        var_int32::data_component_type type;
-        util::nbt value;
-        bool operator==(const partial_component& other) const = default;
-    };
 
     struct weak_slot {
         depends_next<var_int32> count;
@@ -573,6 +573,7 @@ namespace copper_server::base_objects {
                 float threshold = 1.0f;
                 float base = 0.0f;
                 float factor = 1.0f;
+                bool operator==(const item_damage_t& other) const = default;
             };
 
             float block_delay_seconds = 0.0f;

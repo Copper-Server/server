@@ -11,7 +11,7 @@
 
 namespace copper_server::build_in_plugins::light_processors {
     struct default_light_processor : public storage::chunk_light_processor {
-        void process_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
+        void process_chunk(storage::world_data& world, int32_t chunk_x, int32_t chunk_z) override {
             auto chunk_weak = world.request_chunk_data_weak(chunk_x, chunk_z);
             if (chunk_weak) {
                 auto& chunk = *chunk_weak;
@@ -29,9 +29,9 @@ namespace copper_server::build_in_plugins::light_processors {
             world.notify_chunk_light(chunk_x, chunk_z);
         }
 
-        void process_sub_chunk(storage::world_data&, int64_t, int64_t, int64_t) override {}
+        void process_sub_chunk(storage::world_data&, int32_t, int32_t, int32_t) override {}
 
-        void block_changed(storage::world_data&, int64_t, int64_t, int64_t) override {}
+        void block_changed(storage::world_data&, int32_t, int32_t, int32_t) override {}
     };
 
     struct default_processor : public plugin_auto_register<"light_processors/default_processor", default_processor> {

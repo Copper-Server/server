@@ -37,39 +37,76 @@ namespace copper_server::api::ecs::com::block_entity {
     };
 
     struct base_data {
-        std::unordered_map<int32_t, base_objects::component> components;
+        std::unique_ptr<std::unordered_map<int32_t, base_objects::component>> components;
         base_objects::block id;
         int32_t x, y, z;
         bool keep_packed = false;
 
+        base_data() : components(std::make_unique<std::unordered_map<int32_t, base_objects::component>>()),
+                      id(0),
+                      x(0),
+                      y(0),
+                      z(0) {}
+
+        base_data(base_data&&) noexcept = default;
+        base_data& operator=(base_data&&) noexcept = default;
+
+        base_data(const base_data& other) {
+            if (other.components)
+                components = std::make_unique<std::unordered_map<int32_t, base_objects::component>>(*components);
+            id = other.id;
+            x = other.x;
+            y = other.y;
+            z = other.z;
+            keep_packed = other.keep_packed;
+        }
+
+        base_data& operator=(const base_data& other) {
+            if (this != &other) {
+                if (other.components) {
+                    if (!components) {
+                        components = std::make_unique<std::unordered_map<int32_t, base_objects::component>>(*other.components);
+                    } else
+                        *components = *other.components;
+                } else
+                    components.reset();
+            }
+            id = other.id;
+            x = other.x;
+            y = other.y;
+            z = other.z;
+            keep_packed = other.keep_packed;
+            return *this;
+        }
+
         template <class T>
         T& get_component() {
-            return std::get<T>(components.at(T::item_id::value).type);
+            return std::get<T>(components->at(T::item_id::value).type);
         }
 
         template <class T>
         T& access_component() {
-            if (components.contains(T::item_id::value))
-                return std::get<T>(components[T::item_id::value].type);
+            if (components->contains(T::item_id::value))
+                return std::get<T>((*components)[T::item_id::value].type);
             else
-                return std::get<T>(components[T::item_id::value].type = T{});
+                return std::get<T>((*components)[T::item_id::value].type = T{});
         }
 
         template <class T>
         const T& get_component() const {
-            return std::get<T>(components.at(T::item_id::value).type);
+            return std::get<T>(components->at(T::item_id::value).type);
         }
 
         template <class T>
         void remove_component() {
-            components.erase(T::item_id::value);
+            components->erase(T::item_id::value);
         }
 
         void add_component(base_objects::component&& copy) {
             std::visit(
                 [this, &copy](auto& component) {
                     using T = std::decay_t<decltype(component)>;
-                    components[T::item_id::value] = std::move(copy);
+                    (*components)[T::item_id::value] = std::move(copy);
                 },
                 copy.type
             );
@@ -79,7 +116,7 @@ namespace copper_server::api::ecs::com::block_entity {
             std::visit(
                 [this, &copy](auto& component) {
                     using T = std::decay_t<decltype(component)>;
-                    components[T::item_id::value] = copy;
+                    (*components)[T::item_id::value] = copy;
                 },
                 copy.type
             );
@@ -87,17 +124,17 @@ namespace copper_server::api::ecs::com::block_entity {
 
         template <class T>
         void add_component(const T& copy) {
-            components[T::item_id::value].type = copy;
+            (*components)[T::item_id::value].type = copy;
         }
 
         template <class T>
         void add_component(T&& copy) {
-            components[T::item_id::value].type = std::move(copy);
+            (*components)[T::item_id::value].type = std::move(copy);
         }
 
         template <class T>
         bool has_component() const {
-            return components.contains(T::item_id::value);
+            return components->contains(T::item_id::value);
         }
 
         inline bool is_tickable() const {

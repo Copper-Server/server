@@ -50,6 +50,8 @@ namespace copper_server::base_objects {
         return *this;
     }
 
+    bool block_predicate::operator==(const block_predicate& other) const = default;
+
     bool component::can_place_on::operator==(const can_place_on& other) const = default;
 
     bool component::can_break::operator==(const can_break& other) const = default;

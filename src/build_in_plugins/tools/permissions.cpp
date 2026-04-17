@@ -158,7 +158,7 @@ namespace copper_server::build_in_plugins::tools {
                             buf += "...\n";
                         context.executor << api::packets::client_bound::play::system_chat{.content = std::move(buf)};
                     }
-                    return enumerate.size();
+                    return int32_t(enumerate.size());
                 });
                 list.add_child("permission").set_callback("command.permissions.list.permission", [](const list_array<predicate>&, base_objects::command_context& context) {
                     list_array<std::string> enumerate;
@@ -187,7 +187,7 @@ namespace copper_server::build_in_plugins::tools {
                             buf += "...\n";
                         context.executor << api::packets::client_bound::play::system_chat{.content = std::move(buf)};
                     }
-                    return enumerate.size() + overflow;
+                    return int32_t(enumerate.size() + overflow);
                 });
             }
             {

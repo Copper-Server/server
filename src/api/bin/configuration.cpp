@@ -403,7 +403,7 @@ namespace copper_server::api::configuration {
         return it.get_compound()[std::string(name)];
     }
 
-    auto server_configuration::plugin_actions::operator^(get_value) -> const util::nbt& {
+    auto server_configuration::plugin_actions::operator^(get_value_t) -> const util::nbt& {
         return it;
     }
 

@@ -381,7 +381,7 @@ namespace copper_server::api::ecs {
             std::shared_ptr<iteration_topology> topology;
             std::unique_ptr<iteration_data> data;
 
-            iteration_handle() = default;
+            iteration_handle();
             iteration_handle(const std::shared_ptr<iteration_topology>& topology);
             iteration_handle(const iteration_handle&) = delete;
             iteration_handle(iteration_handle&& other) noexcept;

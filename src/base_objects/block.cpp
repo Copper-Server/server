@@ -51,7 +51,7 @@ namespace copper_server::base_objects {
     list_array<uint8_t> block::cached_luminance;
     list_array<uint8_t> block::cached_opacity;
 
-    void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
+    void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int32_t chunk_x, uint32_t sub_chunk_y, int32_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
         auto& static_data = getStaticData();
         if (static_data.on_tick)
             static_data.on_tick(world, sub_chunk, *this, chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);

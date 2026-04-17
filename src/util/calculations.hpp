@@ -21,11 +21,11 @@ namespace copper_server::util {
         T z;
         T w;
 
-        bool operator==(const xyzw& comp) {
+        bool operator==(const xyzw& comp) const {
             return x == comp.x && y == comp.y && z == comp.z && w == comp.w;
         }
 
-        bool operator!=(const xyzw& comp) {
+        bool operator!=(const xyzw& comp) const {
             return x != comp.x || y != comp.y || z != comp.z || w != comp.w;
         }
 
@@ -68,11 +68,11 @@ namespace copper_server::util {
         T y;
         T z;
 
-        bool operator==(const xyz& comp) {
+        bool operator==(const xyz& comp) const {
             return x == comp.x && y == comp.y && z == comp.z;
         }
 
-        bool operator!=(const xyz& comp) {
+        bool operator!=(const xyz& comp) const {
             return x != comp.x || y != comp.y || z != comp.z;
         }
 
@@ -149,11 +149,11 @@ namespace copper_server::util {
         double pitch;
         double yaw;
 
-        bool operator==(const angle_deg& comp) {
+        bool operator==(const angle_deg& comp) const {
             return pitch == comp.pitch && yaw == comp.yaw;
         }
 
-        bool operator!=(const angle_deg& comp) {
+        bool operator!=(const angle_deg& comp) const {
             return pitch != comp.pitch || yaw != comp.yaw;
         }
 
@@ -186,33 +186,33 @@ namespace copper_server::util {
         double pitch;
         double yaw;
 
-        bool operator==(angle_rad comp) {
+        bool operator==(const angle_rad& comp) const {
             return pitch == comp.pitch && yaw == comp.yaw;
         }
 
-        bool operator!=(angle_rad comp) {
+        bool operator!=(const angle_rad& comp) const {
             return pitch != comp.pitch || yaw != comp.yaw;
         }
 
-        angle_rad& operator+=(angle_rad other) {
+        angle_rad& operator+=(const angle_rad& other) {
             pitch += other.pitch;
             yaw += other.yaw;
             return *this;
         }
 
-        angle_rad& operator-=(angle_rad other) {
+        angle_rad& operator-=(const angle_rad& other) {
             pitch -= other.pitch;
             yaw -= other.yaw;
             return *this;
         }
 
-        angle_rad& operator*=(angle_rad other) {
+        angle_rad& operator*=(const angle_rad& other) {
             pitch *= other.pitch;
             yaw *= other.yaw;
             return *this;
         }
 
-        angle_rad& operator/=(angle_rad other) {
+        angle_rad& operator/=(const angle_rad& other) {
             pitch /= other.pitch;
             yaw /= other.yaw;
             return *this;

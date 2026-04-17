@@ -55,7 +55,7 @@ namespace copper_server::api::screens {
         //the container should set items into the inventory map and receive the clicked slot in the menu_click or other specific overload
         template <size_t x, size_t y>
         struct _generic_custom_menu : public generic<x, y> {
-            std::unordered_map<int32_t, base_objects::slot_data&> inventory;
+            std::unordered_map<int32_t, base_objects::slot&> inventory;
 
             _generic_custom_menu(base_objects::shared_client_data& client) : generic<x, y>(client) {}
             virtual ~_generic_custom_menu() = default;
@@ -68,11 +68,11 @@ namespace copper_server::api::screens {
                 return inventory.contains(slot);
             }
 
-            base_objects::slot_data& get_slot(int32_t slot) override {
+            base_objects::slot& get_slot(int32_t slot) override {
                 return inventory.at(slot);
             }
 
-            void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override {
+            void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override {
                 for (auto& [slot, data] : inventory)
                     fn(data, slot);
             }
@@ -129,8 +129,8 @@ namespace copper_server::api::screens {
         bool valid_slot(int32_t) const override;
         bool has_item(int32_t) const override;
         int32_t max_size() const override;
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -157,8 +157,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
         void set_repair_cost(int16_t);
@@ -184,8 +184,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         //the client uses separate packet for buttons
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -215,8 +215,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -256,8 +256,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -287,8 +287,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -317,8 +317,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
 
@@ -345,8 +345,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
 
@@ -372,8 +372,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void enchant_first();  //button 0
         virtual void enchant_second(); //button 1
@@ -410,8 +410,8 @@ namespace copper_server::api::screens {
 
     public:
         bool has_item(int32_t) const override;
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -426,8 +426,8 @@ namespace copper_server::api::screens {
 
     public:
         bool has_item(int32_t) const override;
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
 
@@ -440,8 +440,8 @@ namespace copper_server::api::screens {
 
     public:
         bool has_item(int32_t) const override;
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
 
@@ -452,8 +452,8 @@ namespace copper_server::api::screens {
     class ender_chest : public generic_9x3 {
     public:
         bool has_item(int32_t) const override;
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
 
@@ -466,8 +466,8 @@ namespace copper_server::api::screens {
 
     public:
         bool has_item(int32_t) const override;
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
         virtual void clicked(const click_data&);
         virtual void closed();
 
@@ -493,8 +493,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -518,8 +518,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -544,8 +544,8 @@ namespace copper_server::api::screens {
             return 1; // player inventory is disabled
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void previous_page_button_clicked(); //button_click == 1
         virtual void next_page_button_clicked();     //button_click == 2
@@ -599,8 +599,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -624,8 +624,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -653,8 +653,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void clicked(const click_data&);
         virtual void closed();
@@ -686,8 +686,8 @@ namespace copper_server::api::screens {
             return player_inventory_offset + 36; // + player_inventory
         }
 
-        base_objects::slot_data& get_slot(int32_t) override;
-        void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override;
+        base_objects::slot& get_slot(int32_t) override;
+        void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override;
 
         virtual void select_recipe(int32_t);
         virtual void clicked(const click_data&);

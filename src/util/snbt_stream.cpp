@@ -419,7 +419,7 @@ namespace copper_server::util {
                 if (last == 'b' || last == 'B' || last == 's' || last == 'S' ||
                     last == 'i' || last == 'I' || last == 'l' || last == 'L' ||
                     last == 'f' || last == 'F' || last == 'd' || last == 'D') {
-                    type_suffix = std::tolower(last);
+                    type_suffix = (char)std::tolower(last);
                     num = num.substr(0, num.size() - 1);
                 }
             }
@@ -928,6 +928,15 @@ namespace copper_server::util {
     }
 
     snbt_read_stream& snbt_read_stream::read_into(base_objects::uuid& res) {
+        detect_value_type();
+        if (current_token.type == snbt_detail::token_type::string || current_token.type == snbt_detail::token_type::key) {
+            std::string str = current_token.value;
+            base_objects::uuid::from_uuid_string(res, str, true);
+            advance_token();
+        } else {
+            int32_t* data = (int32_t*)res.data;
+            read_list().read_one_into(data[0]).read_one_into(data[1]).read_one_into(data[2]).read_one_into(data[3]);
+        }
         return *this;
     }
 
@@ -1316,6 +1325,19 @@ namespace copper_server::util {
     void snbt_write_stream::write(const nbt& res) { output.append(res.as_snbt()); }
     void snbt_write_stream::write(const nbt_compound& res) { output.append(((nbt)res).as_snbt()); }
 
+    void snbt_write_stream::write(const base_objects::uuid& res) {
+        int32_t* data = (int32_t*)res.data;
+        write_list().write(data[0]).write(data[1]).write(data[2]).write(data[3]);
+    }
+
+    void snbt_write_stream::write(const base_objects::uuid_hex& res) {
+        write_escaped_string(res.to_string());
+    }
+
+    void snbt_write_stream::write(const base_objects::uuid_flat_hex& res) {
+        write_escaped_string(res.to_string_flat());
+    }
+
     void snbt_write_stream::write_array(const int8_t* arr, size_t size) {
         output.append("[B;");
         for (size_t i = 0; i < size; ++i) {
@@ -1550,6 +1572,25 @@ namespace copper_server::util {
         return write((nbt)res);
     }
 
+    snbt_write_list_stream& snbt_write_list_stream::write(const base_objects::uuid& res) {
+        if (!first_item)
+            output.push_back(',');
+        if (pretty_print && !first_item)
+            write_indent();
+        first_item = false;
+        int32_t* data = (int32_t*)res.data;
+        write_list().write(data[0]).write(data[1]).write(data[2]).write(data[3]);
+        return *this;
+    }
+
+    snbt_write_list_stream& snbt_write_list_stream::write(const base_objects::uuid_hex& res) {
+        write_escaped_string(res.to_string());
+    }
+
+    snbt_write_list_stream& snbt_write_list_stream::write(const base_objects::uuid_flat_hex& res) {
+        write_escaped_string(res.to_string_flat());
+    }
+
     snbt_write_compound_stream snbt_write_list_stream::write_compound() {
         if (!first_item) output.push_back(',');
         if (pretty_print && !first_item) write_indent();
@@ -1780,7 +1821,16 @@ namespace copper_server::util {
         return write(key, (nbt)res);
     }
 
-    snbt_write_compound_stream& snbt_write_compound_stream::write(std::string_view key, base_objects::uuid res) {
+    snbt_write_compound_stream& snbt_write_compound_stream::write(std::string_view key, const base_objects::uuid& res) {
+        if (!first_item) output.push_back(',');
+        if (pretty_print) write_indent();
+        first_item = false;
+        int32_t* data = (int32_t*)res.data;
+        write_list(key).write(data[0]).write(data[1]).write(data[2]).write(data[3]);
+        return *this;
+    }
+
+    snbt_write_compound_stream& snbt_write_compound_stream::write(std::string_view key, const base_objects::uuid_hex& res) {
         if (!first_item) output.push_back(',');
         if (pretty_print) write_indent();
         first_item = false;
@@ -1789,16 +1839,7 @@ namespace copper_server::util {
         return *this;
     }
 
-    snbt_write_compound_stream& snbt_write_compound_stream::write(std::string_view key, base_objects::uuid_hex res) {
-        if (!first_item) output.push_back(',');
-        if (pretty_print) write_indent();
-        first_item = false;
-        write_key(key);
-        write_escaped_string(res.to_string());
-        return *this;
-    }
-
-    snbt_write_compound_stream& snbt_write_compound_stream::write(std::string_view key, base_objects::uuid_flat_hex res) {
+    snbt_write_compound_stream& snbt_write_compound_stream::write(std::string_view key, const base_objects::uuid_flat_hex& res) {
         if (!first_item) output.push_back(',');
         if (pretty_print) write_indent();
         first_item = false;
@@ -1807,7 +1848,7 @@ namespace copper_server::util {
         return *this;
     }
 
-    snbt_write_compound_stream& snbt_write_compound_stream::write_compound(std::string_view key) {
+    snbt_write_compound_stream snbt_write_compound_stream::write_compound(std::string_view key) {
         if (!first_item) output.push_back(',');
         if (pretty_print) write_indent();
         first_item = false;
@@ -1816,13 +1857,13 @@ namespace copper_server::util {
         return *this;
     }
 
-    snbt_write_compound_stream& snbt_write_compound_stream::write_list(std::string_view key) {
+    snbt_write_list_stream snbt_write_compound_stream::write_list(std::string_view key) {
         if (!first_item) output.push_back(',');
         if (pretty_print) write_indent();
         first_item = false;
         write_key(key);
         output.push_back('[');
-        return *this;
+        return snbt_write_list_stream(output, depth + 1, pretty_print);
     }
 
     // ============================================================================
@@ -1856,70 +1897,19 @@ namespace copper_server::util {
 
 #undef SNBT_COLLECT_INTO_IMPL_RELAXED
 
-#define SNBT_COLLECT_AS_IMPL_RELAXED(TypeName)                                               \
-    compound_relaxed& compound_relaxed::collect_as(const std::string& name, TypeName& res) { \
-        return collect(name, [&res](snbt_read_stream& stream) { stream.read_as(res); });     \
-    }
-
-        SNBT_COLLECT_AS_IMPL_RELAXED(bool)
-        SNBT_COLLECT_AS_IMPL_RELAXED(uint8_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(uint16_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(uint32_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(uint64_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(int8_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(int16_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(int32_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(int64_t)
-        SNBT_COLLECT_AS_IMPL_RELAXED(float)
-        SNBT_COLLECT_AS_IMPL_RELAXED(double)
-        SNBT_COLLECT_AS_IMPL_RELAXED(std::string)
-        SNBT_COLLECT_AS_IMPL_RELAXED(nbt_convert)
-        SNBT_COLLECT_AS_IMPL_RELAXED(nbt)
-        SNBT_COLLECT_AS_IMPL_RELAXED(nbt_compound)
-        SNBT_COLLECT_AS_IMPL_RELAXED(base_objects::uuid)
-        SNBT_COLLECT_AS_IMPL_RELAXED(base_objects::uuid_hex)
-        SNBT_COLLECT_AS_IMPL_RELAXED(base_objects::uuid_flat_hex)
-
-#undef SNBT_COLLECT_AS_IMPL_RELAXED
-
         compound_relaxed& compound_relaxed::force_all_collect(snbt_read_stream& stream) {
-            std::unordered_set<std::string> collected;
-            stream.iterate([this, &collected](auto& name, auto& item_stream) {
+            std::unordered_set<std::string> collected_items;
+            collected_items.reserve(automated_collector.size());
+            stream.iterate([this, &collected_items](auto& name, auto& stream) {
                 if (auto it = automated_collector.find(name); it != automated_collector.end()) {
-                    it->second(item_stream);
-                    collected.insert(name);
-                } else {
-                    throw std::runtime_error("Uncollected: " + name);
-                }
+                    it->second(stream);
+                    collected_items.emplace(name);
+                } else
+                    throw std::runtime_error("Not all elements is collected, skipped item: " + name);
             });
-            for (auto& [name, _] : automated_collector) {
-                if (!collected.count(name))
-                    throw std::runtime_error("Missing: " + name);
-            }
-            return *this;
-        }
-
-        // compound_strict stubs (can be completed similarly)
-        compound_strict& compound_strict::collect_into(const std::string& name, bool& res) {
-            return collect(name, [&res](snbt_read_stream& stream) { stream.read_into(res); });
-        }
-
-        compound_strict& compound_strict::make_collect(snbt_read_stream& stream) {
-            return make_collect(stream, [](auto&, auto&) {});
-        }
-
-        compound_strict& compound_strict::force_all_collect(snbt_read_stream& stream) {
-            std::unordered_set<std::string> collected;
-            stream.iterate([this, &collected](auto& name, auto& item_stream) {
-                if (auto it = automated_collector.find(name); it != automated_collector.end()) {
-                    it->second(item_stream);
-                    collected.insert(name);
-                }
-            });
-            for (auto& name : collector_strict_order_data) {
-                if (!collected.count(name))
-                    throw std::runtime_error("Missing strict: " + name);
-            }
+            for (auto& [it, _] : automated_collector)
+                if (!collected_items.contains(it))
+                    throw std::runtime_error("Not all elements is collected, invalid format");
             return *this;
         }
 
@@ -1949,31 +1939,27 @@ namespace copper_server::util {
 
 #undef SNBT_COLLECT_INTO_IMPL_STRICT
 
-#define SNBT_COLLECT_AS_IMPL_STRICT(TypeName)                                             \
-    compound_strict& compound_strict::collect_as(const std::string& name, TypeName& res) { \
-        return collect(name, [&res](snbt_read_stream& stream) { stream.read_as(res); });   \
-    }
+        compound_strict& compound_strict::make_collect(snbt_read_stream& stream) {
+            return make_collect(stream, [](auto&, auto&) {});
+        }
 
-        SNBT_COLLECT_AS_IMPL_STRICT(bool)
-        SNBT_COLLECT_AS_IMPL_STRICT(uint8_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(uint16_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(uint32_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(uint64_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(int8_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(int16_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(int32_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(int64_t)
-        SNBT_COLLECT_AS_IMPL_STRICT(float)
-        SNBT_COLLECT_AS_IMPL_STRICT(double)
-        SNBT_COLLECT_AS_IMPL_STRICT(std::string)
-        SNBT_COLLECT_AS_IMPL_STRICT(nbt_convert)
-        SNBT_COLLECT_AS_IMPL_STRICT(nbt)
-        SNBT_COLLECT_AS_IMPL_STRICT(nbt_compound)
-        SNBT_COLLECT_AS_IMPL_STRICT(base_objects::uuid)
-        SNBT_COLLECT_AS_IMPL_STRICT(base_objects::uuid_hex)
-        SNBT_COLLECT_AS_IMPL_STRICT(base_objects::uuid_flat_hex)
+        compound_strict& compound_strict::force_all_collect(snbt_read_stream& stream) {
+            std::unordered_set<std::string> collected_items;
+            collected_items.reserve(automated_collector.size());
+            stream.iterate([this, &collected_items, order = size_t(0)](auto& name, auto& stream) mutable {
+                if (order == collector_strict_order_data.size())
+                    throw std::runtime_error("Too much elements");
+                if (auto& excepted = collector_strict_order_data.at(order++); excepted != name)
+                    throw std::runtime_error("Invalid order, excepted: " + excepted + ", but got: " + name);
+                automated_collector.at(name)(stream);
+                collected_items.emplace(name);
+            });
 
-#undef SNBT_COLLECT_AS_IMPL_STRICT
+            for (auto& [it, _] : automated_collector)
+                if (!collected_items.contains(it))
+                    throw std::runtime_error("Not all elements is collected, invalid format");
+            return *this;
+        }
 
 #define SNBT_COLLECT_INTO_IMPL_FLEX(TypeName)                                                   \
     compound_flex& compound_flex::collect_into(const std::string& name, TypeName& res) {   \
@@ -2000,83 +1986,6 @@ namespace copper_server::util {
         SNBT_COLLECT_INTO_IMPL_FLEX(base_objects::uuid_flat_hex)
 
 #undef SNBT_COLLECT_INTO_IMPL_FLEX
-
-#define SNBT_COLLECT_AS_IMPL_FLEX(TypeName)                                              \
-    compound_flex& compound_flex::collect_as(const std::string& name, TypeName& res) {   \
-        return collect(name, [&res](snbt_read_stream& stream) { stream.read_as(res); }); \
-    }
-
-        SNBT_COLLECT_AS_IMPL_FLEX(bool)
-        SNBT_COLLECT_AS_IMPL_FLEX(uint8_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(uint16_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(uint32_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(uint64_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(int8_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(int16_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(int32_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(int64_t)
-        SNBT_COLLECT_AS_IMPL_FLEX(float)
-        SNBT_COLLECT_AS_IMPL_FLEX(double)
-        SNBT_COLLECT_AS_IMPL_FLEX(std::string)
-        SNBT_COLLECT_AS_IMPL_FLEX(nbt_convert)
-        SNBT_COLLECT_AS_IMPL_FLEX(nbt)
-        SNBT_COLLECT_AS_IMPL_FLEX(nbt_compound)
-        SNBT_COLLECT_AS_IMPL_FLEX(base_objects::uuid)
-        SNBT_COLLECT_AS_IMPL_FLEX(base_objects::uuid_hex)
-        SNBT_COLLECT_AS_IMPL_FLEX(base_objects::uuid_flat_hex)
-
-#undef SNBT_COLLECT_AS_IMPL_FLEX
-#define SNBT_COLLECT_INTO_IMPL(TypeName)                                                            \
-    compound_flex& compound_flex::collect_into_required(const std::string& name, TypeName& res) {   \
-        return collect_required(name, [&res](snbt_read_stream& stream) { stream.read_into(res); }); \
-    }
-
-        SNBT_COLLECT_INTO_IMPL(bool)
-        SNBT_COLLECT_INTO_IMPL(uint8_t)
-        SNBT_COLLECT_INTO_IMPL(uint16_t)
-        SNBT_COLLECT_INTO_IMPL(uint32_t)
-        SNBT_COLLECT_INTO_IMPL(uint64_t)
-        SNBT_COLLECT_INTO_IMPL(int8_t)
-        SNBT_COLLECT_INTO_IMPL(int16_t)
-        SNBT_COLLECT_INTO_IMPL(int32_t)
-        SNBT_COLLECT_INTO_IMPL(int64_t)
-        SNBT_COLLECT_INTO_IMPL(float)
-        SNBT_COLLECT_INTO_IMPL(double)
-        SNBT_COLLECT_INTO_IMPL(std::string)
-        SNBT_COLLECT_INTO_IMPL(nbt_convert)
-        SNBT_COLLECT_INTO_IMPL(nbt)
-        SNBT_COLLECT_INTO_IMPL(nbt_compound)
-        SNBT_COLLECT_INTO_IMPL(base_objects::uuid)
-        SNBT_COLLECT_INTO_IMPL(base_objects::uuid_hex)
-        SNBT_COLLECT_INTO_IMPL(base_objects::uuid_flat_hex)
-
-#undef SNBT_COLLECT_INTO_IMPL
-
-#define SNBT_COLLECT_AS_IMPL(TypeName)                                                            \
-    compound_flex& compound_flex::collect_as_required(const std::string& name, TypeName& res) {   \
-        return collect_required(name, [&res](snbt_read_stream& stream) { stream.read_as(res); }); \
-    }
-
-        SNBT_COLLECT_AS_IMPL(bool)
-        SNBT_COLLECT_AS_IMPL(uint8_t)
-        SNBT_COLLECT_AS_IMPL(uint16_t)
-        SNBT_COLLECT_AS_IMPL(uint32_t)
-        SNBT_COLLECT_AS_IMPL(uint64_t)
-        SNBT_COLLECT_AS_IMPL(int8_t)
-        SNBT_COLLECT_AS_IMPL(int16_t)
-        SNBT_COLLECT_AS_IMPL(int32_t)
-        SNBT_COLLECT_AS_IMPL(int64_t)
-        SNBT_COLLECT_AS_IMPL(float)
-        SNBT_COLLECT_AS_IMPL(double)
-        SNBT_COLLECT_AS_IMPL(std::string)
-        SNBT_COLLECT_AS_IMPL(nbt_convert)
-        SNBT_COLLECT_AS_IMPL(nbt)
-        SNBT_COLLECT_AS_IMPL(nbt_compound)
-        SNBT_COLLECT_AS_IMPL(base_objects::uuid)
-        SNBT_COLLECT_AS_IMPL(base_objects::uuid_hex)
-        SNBT_COLLECT_AS_IMPL(base_objects::uuid_flat_hex)
-
-#undef SNBT_COLLECT_AS_IMPL
 
         compound_flex& compound_flex::make_collect(snbt_read_stream& stream) {
             return make_collect(stream, [](auto&, auto&) {});
@@ -2107,5 +2016,4 @@ namespace copper_server::util {
             return *this;
         }
     }
-
 }

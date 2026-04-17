@@ -22,7 +22,7 @@ namespace copper_server::util {
 
     template <class T>
     static void write_value(std::ostream& write_stream, T value) {
-        convert_endian(std::endian::big, &value, sizeof(T));
+        value = convert_endian(std::endian::big, value);
         write_stream.write(reinterpret_cast<const char*>(&value), sizeof(T));
     }
 
@@ -234,6 +234,7 @@ namespace copper_server::util {
 
     nbt_read_stream& nbt_read_stream::read_into(base_objects::uuid& res) {
         iterate_into((int32_t*)res.data, 4);
+        return *this;
     }
 
     nbt_read_stream& nbt_read_stream::read_into(base_objects::uuid_hex& res) {
@@ -349,6 +350,7 @@ namespace copper_server::util {
 
     nbt_read_stream& nbt_read_stream::read_as(base_objects::uuid& res) {
         iterate_into((int32_t*)res.data, 4);
+        return *this;
     }
 
     nbt_read_stream& nbt_read_stream::read_as(base_objects::uuid_hex& res) {

@@ -18,7 +18,7 @@ namespace copper_server::build_in_plugins::tools {
         void on_initialization(const plugin_registration_ptr&) override {
             if (fast_task::debug::is_debug_enabled()) {
                 api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" |= false;
-                fast_task::debug::enable_init_stack_trace(api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" ^ get_conf);
+                fast_task::debug::enable_init_stack_trace(api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" | api::configuration::as_byte());
             }
         }
 
@@ -49,7 +49,7 @@ namespace copper_server::build_in_plugins::tools {
 
         void on_config_reload(const plugin_registration_ptr& _) override {
             if (fast_task::debug::is_debug_enabled())
-                fast_task::debug::enable_init_stack_trace(api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" ^ get_conf);
+                fast_task::debug::enable_init_stack_trace(api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" | api::configuration::as_byte());
         }
     };
 }

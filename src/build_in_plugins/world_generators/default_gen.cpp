@@ -16,14 +16,15 @@ namespace copper_server::build_in_plugins::world_generators {
             config = {{0, preset_mode::parallel}};
         }
 
-        void process_chunk([[maybe_unused]] storage::world_data& world, storage::chunk_data& chunk, uint8_t preset_stage) override {
+        void process_chunk([[maybe_unused]] storage::world_data& world, base_objects::world::chunk_data& chunk, uint8_t preset_stage) override {
             auto& bottom = chunk.sub_chunks.front();
 
-            for (uint8_t x = 0; x < 16; x++) 
+            auto& wr = world.current_world_reg;
+            for (uint8_t x = 0; x < 16; x++)
                 for (uint8_t y = 0; y < 16; y++)
                     for (uint8_t z = 0; z < 16; z++)
                         if (y == 0)
-                            bottom.set_block_gen(x, y, z, api::collection::block::stone);
+                            bottom.set_block_gen(x, y, z, api::collection::block::stone, wr);
 
             process_complete(world, chunk);
         }

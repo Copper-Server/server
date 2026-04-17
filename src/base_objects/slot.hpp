@@ -156,9 +156,9 @@ namespace copper_server::base_objects {
         std::optional<int32_t> spawns_entity_type() const;
 
         static slot_data create_item(const std::string& id, int32_t count = 1);
-        static slot_data create_item(uint32_t id, int32_t count = 1);
+        static slot_data create_item(int32_t id, int32_t count = 1);
         static static_slot_data& get_slot_data(const std::string& id);
-        static static_slot_data& get_slot_data(uint32_t id);
+        static static_slot_data& get_slot_data(int32_t id);
 
         static void add_slot_data(static_slot_data&& move);
 

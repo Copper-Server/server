@@ -109,7 +109,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
             api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_status_only&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
-                    client.player_data.assigned_entity->modify<api::ecs::com::on_ground>()->value = packet.flags | api::packets::server_bound::play::move_player_status_only::flags_f::on_ground;
+                    client.player_data.assigned_entity->template modify<api::ecs::com::entities::on_ground>()->value = packet.flags | api::packets::server_bound::play::move_player_status_only::flags_f::on_ground;
             });
 
             api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_vehicle&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
@@ -120,11 +120,11 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     return;
 
                 auto& entity = *client.player_data.assigned_entity;
-                if (entity.has<api::ecs::com::ride_entity>()) {
-                    if (entity.get<api::ecs::com::ride_entity>().other) {
-                        api::entity_proxy::oak_boat boat(*entity.get<api::ecs::com::ride_entity>().other);
-                        boat.set_left_paddle_moving(packet.left_paddle_turning);
-                        boat.set_right_paddle_moving(packet.left_paddle_turning);
+                if (entity.template has<api::ecs::com::entities::ride_entity>()) {
+                    if (entity.template get<api::ecs::com::entities::ride_entity>().other) {
+                        api::entity_proxy::oak_boat boat(entity.template get<api::ecs::com::entities::ride_entity>().other->get_entity());
+                        boat.left_paddle_moving() = packet.left_paddle_turning;
+                        boat.right_paddle_moving() = packet.left_paddle_turning;
                     }
                 }
             });

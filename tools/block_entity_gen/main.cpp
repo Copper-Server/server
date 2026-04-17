@@ -593,19 +593,19 @@ int main(int argc, char* argv[]) {
                 << "\n#include \""
                 << out_header << "\"\n"
                                  "\n"
-                                 "#include <src/util/reflect.hpp>\n"
-                                 "#include <src/util/reflect/api/packets/slot.hpp>\n"
-                                 "#include <src/util/reflect/api/packets/types.hpp>\n"
-                                 "#include <src/util/reflect/base_objects/component.hpp>\n"
-                                 "#include <src/util/reflect/base_objects/dye_color.hpp>\n"
-
-
-                                 "\n"
                                  "#include <src/api/ecs/entity_definition.hpp>\n"
                                  "#include <src/api/ecs/block_entity_components.hpp>\n"
                                  "#include <src/util/nbt_stream.hpp>\n"
                                  "#include <src/util/encoding/nbt/serialization.hpp>\n"
                                  "#include <src/util/encoding/nbt/deserialization.hpp>\n"
+                                 "#include <src/api/packets/slot.hpp>\n"
+
+                                 "\n"
+                                 "#include <src/util/reflect.hpp>\n"
+                                 "#include <src/util/reflect/api/packets/slot.hpp>\n"
+                                 "#include <src/util/reflect/api/packets/types.hpp>\n"
+                                 "#include <src/util/reflect/base_objects/component.hpp>\n"
+                                 "#include <src/util/reflect/base_objects/dye_color.hpp>\n"
 
                                  "\n"
                                  "namespace copper_server::generated::block_entity {\n\n";

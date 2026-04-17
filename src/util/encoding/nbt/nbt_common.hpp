@@ -1,5 +1,6 @@
 #ifndef SRC_UTIL_ENCODING_NBT_NBT_COMMON
 #define SRC_UTIL_ENCODING_NBT_NBT_COMMON
+#include <src/base_objects/velocity.hpp>
 #include <src/util/nbt_stream.hpp>
 
 namespace copper_server::util::encoding::nbt {

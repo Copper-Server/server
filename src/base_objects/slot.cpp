@@ -107,7 +107,9 @@ namespace copper_server::base_objects {
         }
     }
 
-    slot_data slot_data::create_item(uint32_t id, int32_t count) {
+    slot_data slot_data::create_item(int32_t id, int32_t count) {
+        if (id < 0 || id >= static_cast<int32_t>(full_item_data_.size()))
+            throw std::runtime_error("Item not found: " + std::to_string(id));
         auto res = full_item_data_.at(id);
         return slot_data{
             res->default_components,
@@ -120,7 +122,9 @@ namespace copper_server::base_objects {
         return *named_full_item_data.at(id);
     }
 
-    static_slot_data& slot_data::get_slot_data(uint32_t id) {
+    static_slot_data& slot_data::get_slot_data(int32_t id) {
+        if (id < 0 || id >= static_cast<int32_t>(full_item_data_.size()))
+            throw std::runtime_error("Item not found: " + std::to_string(id));
         return *full_item_data_.at(id);
     }
 
@@ -223,6 +227,7 @@ namespace copper_server::base_objects {
                 res.components[com.get_id()] = std::move(com);
             })
             .force_all_collect(stream);
+        return res;
     }
 
     void slot_data::to_nbt_base(util::nbt_write_compound_stream& stream) const {

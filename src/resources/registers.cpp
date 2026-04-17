@@ -952,15 +952,15 @@ namespace copper_server::resources {
                 if (!entity.contains("id"))
                     entity.parsing_error("Entity type must be defined");
                 int32_t weight = obj.at("weight");
-                api::registers::trial_spawner_config::spawn_data data;
+                api::registers::trial_spawner_config::spawn_data spawn_data;
                 if (data_js.contains("custom_spawn_rules")) {
                     auto rules = util::js_object::get_object(data_js.at("custom_spawn_rules"));
                     auto block_light_limit = read_number_provider(rules.at("block_light_limit"));
                     auto sky_light_limit = read_number_provider(rules.at("sky_light_limit"));
-                    data.custom_spawn_rules = {block_light_limit, sky_light_limit};
+                    spawn_data.custom_spawn_rules = {block_light_limit, sky_light_limit};
                 }
-                data.entity = util::conversions::json::from_json(entity.get());
-                config.spawn_potentials.add(weight, std::move(data));
+                spawn_data.entity = util::conversions::json::from_json(entity.get());
+                config.spawn_potentials.add(weight, std::move(spawn_data));
             }
         }
 

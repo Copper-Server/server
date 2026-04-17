@@ -147,24 +147,24 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     .add_child("gamemode")
                     .add_child("gamemode", cmd_pred_gamemode{})
                     .set_callback("command.gamemode", [](const list_array<predicate>& args, base_objects::command_context& context) {
-                        return (uint32_t)change_player_gamemode(context.executor, (uint8_t)std::get<pred_gamemode>(args[0]));
+                        return (int32_t)change_player_gamemode(context.executor, (uint8_t)std::get<pred_gamemode>(args[0]));
                     })
                     .add_child("target", cmd_pred_entity{.flag = cmd_pred_entity::only_player_entity})
-                    .set_callback("command.gamemode.target", [](const list_array<predicate>& args, base_objects::command_context& context) -> uint32_t {
+                    .set_callback("command.gamemode.target", [](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto gamemode = (uint8_t)std::get<pred_gamemode>(args[0]);
                         auto selector = std::get<pred_entity>(args[1]);
                         switch (selector.type) {
                         case pred_entity::type_t::name: {
                             auto player_ref = api::players::get_player(base_objects::shared_client_data::packets_state_t::protocol_state::play, selector.value);
                             if (player_ref)
-                                return change_player_gamemode(*player_ref, gamemode);
+                                return (int32_t)change_player_gamemode(*player_ref, gamemode);
                             break;
                         }
                         case pred_entity::type_t::selector: {
-                            uint32_t count = 0;
+                            int32_t count = 0;
                             api::selector(selector.value).select(context, [&count, gamemode](api::ecs::entity entity) {
-                                if (entity.has<api::ecs::com::assigned_player>()) {
-                                    auto player_hold = entity.modify<api::ecs::com::assigned_player>();
+                                if (entity.template has<api::ecs::com::entities::assigned_player>()) {
+                                    auto player_hold = entity.template modify<api::ecs::com::entities::assigned_player>();
                                     auto player_ref = player_hold->player;
                                     if (player_ref)
                                         count += change_player_gamemode(*player_ref, gamemode);
@@ -177,11 +177,11 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             base_objects::uuid::from_uuid_string(uuid, selector.value);
                             auto entity = api::entity_id_map::get_entity(uuid);
                             if (entity) {
-                                if (entity->has<api::ecs::com::assigned_player>()) {
-                                    auto player_hold = entity->modify<api::ecs::com::assigned_player>();
+                                if (entity->template has<api::ecs::com::entities::assigned_player>()) {
+                                    auto player_hold = entity->template modify<api::ecs::com::entities::assigned_player>();
                                     auto player_ref = player_hold->player;
                                     if (player_ref)
-                                        return change_player_gamemode(*player_ref, gamemode);
+                                        return (int32_t)change_player_gamemode(*player_ref, gamemode);
                                 }
                             }
                             break;

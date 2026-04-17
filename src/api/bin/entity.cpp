@@ -711,13 +711,13 @@ namespace copper_server {
         void entity::attack_from_this([[maybe_unused]] ecs::entity entity) {
         }
 
-        void entity::breaking_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] uint32_t time) {
+        void entity::breaking_block([[maybe_unused]] int32_t global_x, [[maybe_unused]] int32_t global_y, [[maybe_unused]] int32_t global_z, [[maybe_unused]] uint32_t time) {
         }
 
-        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] const base_objects::block&) {
+        void entity::place_block([[maybe_unused]] int32_t global_x, [[maybe_unused]] int32_t global_y, [[maybe_unused]] int32_t global_z, [[maybe_unused]] const base_objects::block&) {
         }
 
-        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] ecs::entity) {
+        void entity::place_block([[maybe_unused]] int32_t global_x, [[maybe_unused]] int32_t global_y, [[maybe_unused]] int32_t global_z, [[maybe_unused]] ecs::entity) {
         }
 
 

@@ -163,11 +163,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 auto [world_id, world_name] = api::world::prepare_world(client);
 
                 api::world::get(world_id, [&](storage::world_data& data) {
-                    world_debug = data.world_generator_data.contains("debug") ? (bool)data.world_generator_data["debug"] : false;
-                    world_flat = data.world_generator_data.contains("flat") ? (bool)data.world_generator_data["flat"] : false;
-                    enable_respawn_screen = !(data.world_game_rules.contains("doImmediateRespawn") ? (bool)data.world_game_rules["doImmediateRespawn"] : false);
-                    reduced_debug_info = data.world_game_rules.contains("reducedDebugInfo") ? (bool)data.world_game_rules["reducedDebugInfo"] : false;
-                    do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
+                    world_debug = data.world_generator_data.contains("debug") ? (bool)data.world_generator_data["debug"].as_byte() : false;
+                    world_flat = data.world_generator_data.contains("flat") ? (bool)data.world_generator_data["flat"].as_byte() : false;
+                    enable_respawn_screen = !(data.world_game_rules.contains("doImmediateRespawn") ? (bool)data.world_game_rules["doImmediateRespawn"].as_byte() : false);
+                    reduced_debug_info = data.world_game_rules.contains("reducedDebugInfo") ? (bool)data.world_game_rules["reducedDebugInfo"].as_byte() : false;
+                    do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"].as_byte() : false;
                     difficulty = data.difficulty;
                     difficulty_locked = data.difficulty_locked;
                     world_type = api::registers::dimension_types.at(data.get_world_type()).id;
@@ -258,14 +258,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 if (client.player_data.assigned_entity)
                     if (client.player_data.assigned_entity->get_assigned_world_id()) {
                         client.player_data.assigned_entity->get<api::ecs::com::entities::world_syncing>().world->get_block(
-                            packet.location.x,
-                            packet.location.y,
-                            packet.location.z,
+                            (int32_t)packet.location.x,
+                            (int32_t)packet.location.y,
+                            (int32_t)packet.location.z,
                             [](auto) {},
-                            [&](auto, auto& nbt) {
+                            [&](auto block_entity) {
                                 client << api::packets::client_bound::play::tag_query{
                                     .tag_query_id = packet.tag_query_id,
-                                    .nbt = nbt
+                                    .nbt = block_entity.get_nbt()
                                 };
                             }
                         );
@@ -312,7 +312,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 if (entity)
                     client << api::packets::client_bound::play::tag_query{
                         .tag_query_id = packet.tag_query_id,
-                        .nbt = entity->get<api::ecs::com::entities::nbt>().get() //TODO check if required adding more info to nbt
+                        .nbt = util::nbt(entity->get<api::ecs::com::entities::nbt>().get().get_map()) //TODO check if required adding more info to nbt
                     };
             });
 

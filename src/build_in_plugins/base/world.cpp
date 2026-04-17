@@ -8,12 +8,16 @@
  */
 #include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/ecs/entity_construction.hpp>
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/id.hpp>
 #include <src/api/internal/world.hpp>
 #include <src/api/log.hpp>
 #include <src/api/packets/client_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/any_block.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
@@ -23,8 +27,8 @@
 
 namespace copper_server::build_in_plugins::base {
     struct chunk_speed_data {
-        int64_t x;
-        int64_t z;
+        int32_t x;
+        int32_t z;
         std::chrono::milliseconds tick_time;
     };
 
@@ -90,7 +94,7 @@ namespace copper_server::build_in_plugins::base {
             = [start_time = std::chrono::high_resolution_clock::now(),
                collected_data = list_array<list_array<chunk_speed_data>>(),
                current_tick = list_array<chunk_speed_data>(),
-               executor = api::players::get_player(context.executor)](storage::world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time) mutable {
+               executor = api::players::get_player(context.executor)](storage::world_data& world, int32_t chunk_x, int32_t chunk_z, std::chrono::milliseconds tick_time) mutable {
                   if (chunk_x == INT64_MAX && chunk_z == INT64_MAX && tick_time.count() == 0) {
                       collected_data.push_back(std::move(current_tick));
                       if (start_time + std::chrono::milliseconds(10000) < std::chrono::high_resolution_clock::now()) {
@@ -111,7 +115,7 @@ namespace copper_server::build_in_plugins::base {
         api::log::info("World", "Profiling TPS for world " + world.world_name + ": " + std::to_string(world.profiling.tps_for_world));
     }
 
-    void world_slow_chunk_notify_profiling(storage::world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time) {
+    void world_slow_chunk_notify_profiling(storage::world_data& world, int32_t chunk_x, int32_t chunk_z, std::chrono::milliseconds tick_time) {
         std::string message = "Got slow chunk tick for world " + world.world_name + " chunk " + std::to_string(chunk_x) + " " + std::to_string(chunk_z) + " in " + std::to_string(tick_time.count()) + "ms";
         api::log::warn("World", message);
     }
@@ -335,7 +339,7 @@ namespace copper_server::build_in_plugins::base {
         using pred_resource_key = base_objects::parsers::resource_key;
         using cmd_pred_resource_key = base_objects::parsers::command::resource_key;
 
-        static base_objects::full_block_data extract_block(const pred_block& block_data) {
+        static base_objects::any_block extract_block(const pred_block& block_data) {
             auto& static_block_data = base_objects::block::get_block(block_data.block_id);
             auto states = static_block_data.assigned_states_to_properties->left.at(static_block_data.default_state);
             for (auto& [state, value] : block_data.states) {
@@ -344,8 +348,12 @@ namespace copper_server::build_in_plugins::base {
             base_objects::block block(static_block_data.assigned_states_to_properties->right.at(states));
             if (block_data.data_tags.is_end())
                 return block;
-            else
-                return base_objects::block_entity(block, block_data.data_tags);
+            else {
+                api::ecs::entity_construction construct;
+                construct.template set<api::ecs::com::block_entity_tag>();
+                construct.template emplace<api::ecs::com::block_entity::block_id>(block.id);
+                return std::move(construct).create_and_wait(api::ecs::get_block_entity_definition(block.name()).get_recipe());
+            }
         }
 
         static void OnCommandsLoad_world_pre_gen(base_objects::command_browser& worlds) {
@@ -353,20 +361,20 @@ namespace copper_server::build_in_plugins::base {
             auto world_id = pre_gen.add_child("world_id", cmd_pred_int());
             auto world_name = pre_gen.add_child("world_name", cmd_pred_string());
 
-            auto x0 = world_id.add_child("x0", cmd_pred_long());
+            auto x0 = world_id.add_child("x0", cmd_pred_int());
             world_name.add_child(x0);
-            auto z0 = x0.add_child("z0", cmd_pred_long());
-            auto x1 = z0.add_child("x1", cmd_pred_long());
-            auto z1 = x1.add_child("z1", cmd_pred_long());
+            auto z0 = x0.add_child("z0", cmd_pred_int());
+            auto x1 = z0.add_child("x1", cmd_pred_int());
+            auto z1 = x1.add_child("z1", cmd_pred_int());
 
             z1.set_callback("command.world.pre_gen", [](const list_array<predicate>& args, base_objects::command_context&) {
                 base_objects::cubic_bounds_chunk bound(
-                    std::get<pred_long>(args[1]).value,
-                    std::get<pred_long>(args[2]).value,
-                    std::get<pred_long>(args[3]).value,
-                    std::get<pred_long>(args[4]).value
+                    std::get<pred_int>(args[1]).value,
+                    std::get<pred_int>(args[2]).value,
+                    std::get<pred_int>(args[3]).value,
+                    std::get<pred_int>(args[4]).value
                 );
-                size_t count = 0;
+                int64_t count = 0;
                 std::visit(
                     [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
@@ -729,11 +737,11 @@ namespace copper_server::build_in_plugins::base {
                 auto block = extract_block(std::get<pred_block>(args[2]));
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
                 bool res = false;
 
                 std::visit(
@@ -765,11 +773,11 @@ namespace copper_server::build_in_plugins::base {
                 auto block = extract_block(std::get<pred_block>(args[2]));
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
                 bool res = false;
 
                 std::visit(
@@ -798,11 +806,11 @@ namespace copper_server::build_in_plugins::base {
                 auto block = extract_block(std::get<pred_block>(args[2]));
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
                 bool res = false;
 
                 std::visit(
@@ -1134,7 +1142,7 @@ namespace copper_server::build_in_plugins::base {
 
                     api::world::get(world_id.value, [&](storage::world_data& world) {
                         if (world.profiling.enable_world_profiling) {
-                            if (*world.profiling.slow_chunk_tick_callback.target<void (*)(storage::world_data&, int64_t, int64_t, std::chrono::milliseconds)>() == world_slow_chunk_notify_profiling) {
+                            if (*world.profiling.slow_chunk_tick_callback.target<void (*)(storage::world_data&, int32_t, int32_t, std::chrono::milliseconds)>() == world_slow_chunk_notify_profiling) {
                                 world.profiling.slow_chunk_tick_callback = nullptr;
                                 base_objects::chat message("Slow chunk profiling enabled for world: " + world.world_name);
                                 message.set_color("green");
@@ -1162,7 +1170,7 @@ namespace copper_server::build_in_plugins::base {
 
                     api::world::get(world_id.value, [&](storage::world_data& world) {
                         if (world.profiling.enable_world_profiling) {
-                            if (*world.profiling.slow_chunk_tick_callback.target<void (*)(storage::world_data&, int64_t, int64_t, std::chrono::milliseconds)>() == world_slow_chunk_notify_profiling) {
+                            if (*world.profiling.slow_chunk_tick_callback.target<void (*)(storage::world_data&, int32_t, int32_t, std::chrono::milliseconds)>() == world_slow_chunk_notify_profiling) {
                                 world.profiling.slow_chunk_tick_callback = nullptr;
                                 base_objects::chat message("Slow chunk profiling enabled for world: " + world.world_name);
                                 message.set_color("green");
@@ -1418,13 +1426,13 @@ namespace copper_server::build_in_plugins::base {
                       auto block = extract_block(std::get<pred_block>(args[1]));
 
                       if (pos.x_relative)
-                          pos.x += (int32_t)context.other_data["x"];
+                          pos.x += context.other_data["x"].as_int();
                       if (pos.y_relative)
-                          pos.y += (int32_t)context.other_data["y"];
+                          pos.y += context.other_data["y"].as_int();
                       if (pos.z_relative)
-                          pos.z += (int32_t)context.other_data["z"];
+                          pos.z += context.other_data["z"].as_int();
 
-                      api::world::get((int32_t)context.other_data["world_id"], [pos, &block](storage::world_data& world) {
+                      api::world::get(context.other_data["world_id"].as_int(), [pos, &block](storage::world_data& world) {
                           world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
                       });
                       return true;
@@ -1437,13 +1445,13 @@ namespace copper_server::build_in_plugins::base {
                 auto block = extract_block(std::get<pred_block>(args[1]));
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
 
-                api::world::get((int32_t)context.other_data["world_id"], [pos, &block](storage::world_data& world) {
+                api::world::get(context.other_data["world_id"].as_int(), [pos, &block](storage::world_data& world) {
                     world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
                 });
                 return true;
@@ -1454,13 +1462,13 @@ namespace copper_server::build_in_plugins::base {
                 auto block = extract_block(std::get<pred_block>(args[1]));
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
 
-                api::world::get((int32_t)context.other_data["world_id"], [pos, &block](storage::world_data& world) {
+                api::world::get(context.other_data["world_id"].as_int(), [pos, &block](storage::world_data& world) {
                     world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::keep);
                 });
                 return true;
@@ -1480,13 +1488,13 @@ namespace copper_server::build_in_plugins::base {
                 api::id::worldgen__biome real_biome = biome;
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
 
-                api::world::get((int32_t)context.other_data["world_id"], [pos, real_biome](storage::world_data& world) {
+                api::world::get(context.other_data["world_id"].as_int(), [pos, real_biome](storage::world_data& world) {
                     world.set_biome(pos.x, pos.y, pos.z, real_biome);
                 });
                 return true;
@@ -1498,21 +1506,21 @@ namespace copper_server::build_in_plugins::base {
                 api::id::worldgen__biome real_biome = biome;
 
                 if (pos.x_relative)
-                    pos.x += (int32_t)context.other_data["x"];
+                    pos.x += context.other_data["x"].as_int();
                 if (pos.y_relative)
-                    pos.y += (int32_t)context.other_data["y"];
+                    pos.y += context.other_data["y"].as_int();
                 if (pos.z_relative)
-                    pos.z += (int32_t)context.other_data["z"];
+                    pos.z += context.other_data["z"].as_int();
 
                 if (pos_2.x_relative)
-                    pos_2.x += (int32_t)context.other_data["x"];
+                    pos_2.x += context.other_data["x"].as_int();
                 if (pos_2.y_relative)
-                    pos_2.y += (int32_t)context.other_data["y"];
+                    pos_2.y += context.other_data["y"].as_int();
                 if (pos_2.z_relative)
-                    pos_2.z += (int32_t)context.other_data["z"];
+                    pos_2.z += context.other_data["z"].as_int();
                 base_objects::cubic_bounds_block bounds{pos.x, pos.y, pos.z, pos_2.x, pos_2.y, pos_2.z};
 
-                api::world::get((int32_t)context.other_data["world_id"], [bounds, real_biome](storage::world_data& world) {
+                api::world::get(context.other_data["world_id"].as_int(), [bounds, real_biome](storage::world_data& world) {
                     world.set_biome_range(bounds, {(int32_t)real_biome});
                 });
                 return true;

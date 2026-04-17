@@ -113,8 +113,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 api::packets::client_bound::config::registry_data::entry entry;
                 entry.entry_id = name;
                 if (!data.is_end())
-                    if (data.size())
-                        entry.data = std::move(data);
+                    entry.data = std::move(data);
                 res.entries.push_back(std::move(entry));
             });
             return api::packets::encode(std::move(res));

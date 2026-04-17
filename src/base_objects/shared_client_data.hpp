@@ -159,8 +159,8 @@ namespace copper_server {
 
                         virtual bool has_item(int32_t) const = 0;
                         virtual int32_t max_size() const = 0;
-                        virtual base_objects::slot_data& get_slot(int32_t) = 0;
-                        virtual void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) = 0;
+                        virtual base_objects::slot& get_slot(int32_t) = 0;
+                        virtual void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) = 0;
 
                         virtual void event_anvil_set_name(std::string& new_name) {}
 

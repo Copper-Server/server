@@ -8,6 +8,7 @@
  */
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/entity_proxy.hpp>
@@ -62,6 +63,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
                     if (e.current_world()) {
                         int32_t item_id = 0;
+                        int32_t block_entity_id = 0;
                         util::nbt data;
                         e.current_world()->get_block(
                             packet.location.x,
@@ -71,16 +73,20 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 item_id = block.getStaticData().item_id;
                             },
                             [&](auto eblock) {
-                                data = eblock.get
-                                           item_id
-                                    = block.getStaticData().item_id;
-                                if (packet.include_data)
-                                    data = edata;
+                                auto& sdata = base_objects::block(eblock.template get<api::ecs::com::block_entity::block_id>().id).getStaticData();
+                                item_id = sdata.item_id;
+                                if (packet.include_data) {
+                                    block_entity_id = sdata.block_entity_id;
+                                    std::stringstream ss;
+                                    util::nbt_write_stream stream(ss);
+                                    eblock.template get<api::ecs::com::type_definition>().type->to_nbt(stream, eblock);
+                                    data = util::nbt_convert::build(list_array<uint8_t>(ss.str())).get_as_nbt();
+                                }
                             }
                         );
                         auto item = base_objects::slot_data::create_item(item_id);
                         if (packet.include_data)
-                            item.add_component(base_objects::component::block_entity_data{.data = std::move(data)});
+                            item.add_component(base_objects::component::block_entity_data{.type = block_entity_id, .nbt = std::move(data)});
 
                         player.inventory().at(36 + player.held_slot()) = std::move(item);
                     }
@@ -228,12 +234,12 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 return 46;
             }
 
-            virtual base_objects::slot_data& get_slot(int32_t slot) override {
+            virtual base_objects::slot& get_slot(int32_t slot) override {
                 auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
                 return player.inventory().at(slot);
             }
 
-            void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override {
+            void iterate(std::move_only_function<void(base_objects::slot&, int32_t)>&& fn) override {
                 auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
                 for (auto& [slot, data] : player.inventory())
                     fn(data, slot);
@@ -245,17 +251,19 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 if (item) {
                     for (uint32_t i = 9; i <= 44; i++) {
                         if (inv.find((int32_t)i) != inv.end()) {
-                            if (inv[i].is_same_def(*item)) {
-                                auto max_stack = inv[i].access_component<base_objects::component::max_stack_size>().size;
-                                if (inv[i].count + item->count <= max_stack.value) {
-                                    inv[i].count += item->count;
-                                    item = std::nullopt;
-                                    break;
-                                } else {
-                                    item->count -= (max_stack - inv[i].count);
-                                    inv[i].count = max_stack;
+                            if (auto& it = inv[i]; it) {
+                                if (it->is_same_def(*item)) {
+                                    auto max_stack = it->template access_component<base_objects::component::max_stack_size>().size;
+                                    if (it->count + item->count <= max_stack.value.value) {
+                                        it->count += item->count;
+                                        item = std::nullopt;
+                                        break;
+                                    } else {
+                                        item->count -= (max_stack.value.value - it->count);
+                                        it->count = max_stack.value.value;
+                                    }
+                                    set_slot(i, it);
                                 }
-                                set_slot(i, inv[i]);
                             }
                         }
                     }
@@ -315,17 +323,17 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     // Click inside inventory
                     if (data.button == 0) { // Left click
                         if (carry_item) {
-                            if (inv.count(data.slot)) { // Slot has an item
-                                if (inv[data.slot].is_same_def(*carry_item)) {
+                            if (inv.count(data.slot) && inv[data.slot]) { // Slot has an item
+                                if (inv[data.slot]->is_same_def(*carry_item)) {
                                     auto max_stack = carry_item->access_component<base_objects::component::max_stack_size>().size.value;
-                                    int32_t can_add = max_stack - inv[data.slot].count;
+                                    int32_t can_add = max_stack - inv[data.slot]->count;
                                     int32_t to_add = std::min(can_add, carry_item->count);
-                                    inv[data.slot].count += to_add;
+                                    inv[data.slot]->count += to_add;
                                     carry_item->count -= to_add;
                                     if (carry_item->count == 0)
                                         carry_item = std::nullopt;
                                 } else {
-                                    std::swap(inv[data.slot], *carry_item);
+                                    std::swap(inv[data.slot], carry_item);
                                 }
                             } else { // Slot is empty
                                 inv[data.slot] = *carry_item;
@@ -339,32 +347,32 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         }
                     } else if (data.button == 1) { // Right click
                         if (carry_item) {
-                            if (inv.count(data.slot)) {
-                                if (inv[data.slot].is_same_def(*carry_item)) {
-                                    auto max_stack = carry_item->access_component<base_objects::component::max_stack_size>().size.value;
-                                    if (inv[data.slot].count < max_stack) {
-                                        inv[data.slot].count++;
+                            if (inv.count(data.slot) && inv[data.slot]) {
+                                if (inv[data.slot]->is_same_def(*carry_item)) {
+                                    auto max_stack = carry_item->access_component<base_objects::component::max_stack_size>().size.value.value;
+                                    if (inv[data.slot]->count < max_stack) {
+                                        inv[data.slot]->count++;
                                         carry_item->count--;
                                         if (carry_item->count == 0)
                                             carry_item = std::nullopt;
                                     }
                                 } else {
-                                    std::swap(inv[data.slot], *carry_item);
+                                    std::swap(inv[data.slot], carry_item);
                                 }
                             } else {
                                 inv[data.slot] = *carry_item;
-                                inv[data.slot].count = 1;
+                                inv[data.slot]->count = 1;
                                 carry_item->count--;
                                 if (carry_item->count == 0)
                                     carry_item = std::nullopt;
                             }
                         } else { // Not carrying an item
-                            if (inv.count(data.slot)) {
-                                int32_t half = (inv[data.slot].count + 1) / 2;
+                            if (inv.count(data.slot) && inv[data.slot]) {
+                                int32_t half = (inv[data.slot]->count + 1) / 2;
                                 carry_item = inv[data.slot];
                                 carry_item->count = half;
-                                inv[data.slot].count -= half;
-                                if (inv[data.slot].count == 0)
+                                inv[data.slot]->count -= half;
+                                if (inv[data.slot]->count == 0)
                                     inv.erase(data.slot);
                             }
                         }
@@ -428,12 +436,12 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 }
                 case 4: {                   // drop
                     if (data.button == 0) { // Drop single item
-                        if (inv.count(data.slot)) {
+                        if (inv.count(data.slot) && inv[data.slot]) {
                             base_objects::slot single_item = inv[data.slot];
                             single_item->count = 1;
                             drop_item(*single_item);
-                            inv[data.slot].count--;
-                            if (inv[data.slot].count == 0) {
+                            inv[data.slot]->count--;
+                            if (inv[data.slot]->count == 0) {
                                 inv.erase(data.slot);
                                 set_slot(data.slot, std::nullopt);
                             } else {
@@ -481,10 +489,9 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 for (int32_t slot_id : drag_slots) {
                                     if (!inv.count(slot_id)) {
                                         inv[slot_id] = *carry_item;
-                                        inv[slot_id].count = 0;
-                                    }
-                                    if (inv[slot_id].is_same_def(*carry_item)) {
-                                        inv[slot_id].count += per_slot;
+                                        inv[slot_id]->count = 0;
+                                    } else if (inv[data.slot] && inv[slot_id]->is_same_def(*carry_item)) {
+                                        inv[slot_id]->count += per_slot;
                                         set_slot(slot_id, inv[slot_id]);
                                     }
                                 }
@@ -502,10 +509,9 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 if (carry_item->count > 0) {
                                     if (!inv.count(slot_id)) {
                                         inv[slot_id] = *carry_item;
-                                        inv[slot_id].count = 0;
-                                    }
-                                    if (inv[slot_id].is_same_def(*carry_item)) {
-                                        inv[slot_id].count++;
+                                        inv[slot_id]->count = 0;
+                                    } else if (inv[data.slot] && inv[slot_id]->is_same_def(*carry_item)) {
+                                        inv[slot_id]->count++;
                                         carry_item->count--;
                                         set_slot(slot_id, inv[slot_id]);
                                     }
@@ -522,7 +528,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             for (int32_t slot_id : drag_slots) {
                                 if (!inv.count(slot_id)) {
                                     inv[slot_id] = *carry_item;
-                                    inv[slot_id].count = inv[slot_id].access_component<base_objects::component::max_stack_size>().size.value;
+                                    inv[slot_id]->count = inv[slot_id]->template access_component<base_objects::component::max_stack_size>().size.value;
                                     set_slot(slot_id, inv[slot_id]);
                                 }
                             }
@@ -536,16 +542,16 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 case 6: { // double click
                     if (carry_item) {
                         auto& item_to_collect = *carry_item;
-                        auto max_stack = item_to_collect.access_component<base_objects::component::max_stack_size>().size.value;
+                        auto max_stack = item_to_collect.template access_component<base_objects::component::max_stack_size>().size.value.value;
                         for (uint32_t i = 9; i <= 44; ++i) {
                             if (item_to_collect.count >= max_stack)
                                 break;
-                            if (inv.count(i) && inv[i].is_same_def(item_to_collect)) {
+                            if (inv.count(i) && inv[data.slot] && inv[i]->is_same_def(item_to_collect)) {
                                 int32_t can_add = max_stack - item_to_collect.count;
-                                int32_t to_move = std::min(can_add, inv[i].count);
+                                int32_t to_move = std::min(can_add, inv[i]->count);
                                 item_to_collect.count += to_move;
-                                inv[i].count -= to_move;
-                                if (inv[i].count == 0) {
+                                inv[i]->count -= to_move;
+                                if (inv[i]->count == 0) {
                                     inv.erase(i);
                                     set_slot(i, std::nullopt);
                                 } else {
@@ -568,8 +574,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
                     auto& inv = player.inventory();
                     if (auto bundle_slot = inv.find(bundle_slot_id); bundle_slot != inv.end()) {
-                        if (bundle_slot->second.has_component<base_objects::component::bundle_contents>()) {
-                            auto& bundle = bundle_slot->second.get_component<base_objects::component::bundle_contents>();
+                        if (bundle_slot->second && bundle_slot->second->template has_component<base_objects::component::bundle_contents>()) {
+                            auto& bundle = bundle_slot->second->template get_component<base_objects::component::bundle_contents>();
                             if (bundle.content.size() < in_bundle_slot_id) {
                                 auto item = bundle.content.take((size_t)in_bundle_slot_id);
                                 add_item(item);
@@ -586,17 +592,17 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
                     auto& inv = player.inventory();
                     if (auto book_slot = inv.find(slot_id); book_slot != inv.end()) {
-                        if (book_slot->second.has_component<base_objects::component::writable_book_content>()) {
-                            auto& book = book_slot->second.get_component<base_objects::component::writable_book_content>();
+                        if (book_slot->second && book_slot->second->template has_component<base_objects::component::writable_book_content>()) {
+                            auto& book = book_slot->second->template get_component<base_objects::component::writable_book_content>();
                             book.pages.clear();
                             for (auto& it : text)
                                 book.pages.push_back(base_objects::component::writable_book_content::page{.raw = std::string(it)});
 
                             if (title) {
-                                auto& written_book_content = book_slot->second.access_component<base_objects::component::written_book_content>();
+                                auto& written_book_content = book_slot->second->template access_component<base_objects::component::written_book_content>();
                                 written_book_content.author = client.name;
                                 written_book_content.generation = 0;
-                                written_book_content.raw_title = std::string(*title);
+                                written_book_content.title = std::string(*title);
                                 written_book_content.resolved = false;
                                 written_book_content.pages = book.pages.take().convert_fn([](base_objects::component::writable_book_content::page&& page) {
                                     return base_objects::component::written_book_content::page{
@@ -604,7 +610,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                         .filtered = std::move(page.filtered)
                                     };
                                 });
-                                book_slot->second.remove_component<base_objects::component::writable_book_content>();
+                                book_slot->second->template remove_component<base_objects::component::writable_book_content>();
                             }
                             set_slot(slot_id, book_slot->second);
                         }

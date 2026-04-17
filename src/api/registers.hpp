@@ -636,6 +636,8 @@ namespace copper_server::api::registers {
         };
 
         uint32_t id = 0;
+        bool allow_override = false;
+        //bool send_via_network_body = true;
     };
 
     //CLIENT/SERVER

@@ -75,7 +75,7 @@ namespace copper_server::storage {
                             palette_build.palette = std::move(block_pallete);
                         })
                         .collect("data", [&palette_build](auto& it) {
-                            palette_build.data.get() = it.iterate_into<uint64_t>();
+                            palette_build.data.get() = it.template iterate_into<uint64_t>();
                         })
                         .force_all_collect();
 
@@ -99,7 +99,7 @@ namespace copper_server::storage {
                             palette_build.palette = std::move(block_pallete);
                         })
                         .collect("data", [&palette_build](auto& it) {
-                            palette_build.data.get() = it.iterate_into<uint64_t>();
+                            palette_build.data.get() = it.template iterate_into<uint64_t>();
                         })
                         .force_all_collect();
 

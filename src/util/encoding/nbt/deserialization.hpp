@@ -181,13 +181,18 @@ namespace copper_server::util::encoding::nbt {
         void deserialize_impl(Type& res, util::nbt_read_stream& stream, auto&, priority_tag<4>)
             requires std::is_same_v<base_objects::position, Type>
         {
-            stream.iterate([&res](auto& name, auto& value) {
-                if (name == "x")
-                    value.read_into(res.x);
-                else if (name == "y")
-                    value.read_into(res.y);
-                else if (name == "z")
-                    value.read_into(res.z);
+            stream.iterate([&res](std::string_view name, auto& value) {
+                int64_t temp = 0;
+                if (name == "x") {
+                    value.read_as(temp);
+                    res.x = temp;
+                } else if (name == "y") {
+                    value.read_as(temp);
+                    res.x = temp;
+                } else if (name == "z") {
+                    value.read_as(temp);
+                    res.x = temp;
+                }
             });
         }
 

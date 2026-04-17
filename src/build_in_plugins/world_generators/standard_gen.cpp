@@ -28,7 +28,7 @@ namespace copper_server::build_in_plugins::world_generators {
             };
         }
 
-        void process_chunk([[maybe_unused]] storage::world_data& world, storage::chunk_data& chunk, uint8_t preset_stage) override {
+        void process_chunk([[maybe_unused]] storage::world_data& world, base_objects::world::chunk_data& chunk, uint8_t preset_stage) override {
             switch (preset_stage) {
             case 0:
                 chunk.generator_stage = 1;

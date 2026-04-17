@@ -25,7 +25,7 @@ namespace copper_server::util {
             T res;
             read_stream.read(reinterpret_cast<char*>(&res), sizeof(T));
             if constexpr (sizeof(T) != 1)
-                return std::byteswap(res);
+                return convert_endian(std::endian::big, res);
             else
                 return res;
         }

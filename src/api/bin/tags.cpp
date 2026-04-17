@@ -323,7 +323,7 @@ namespace copper_server::api::tags {
 
     struct entry_map {
         mutable std::atomic_int32_t next_entry_id = 0;
-        mutable std::unordered_map<std::string, entry_handle, string_hash, string_eq> map;
+        mutable std::unordered_map<std::string, std::shared_ptr<entry_handle>, string_hash, string_eq> map;
 
         entry_map() {}
 
@@ -331,17 +331,19 @@ namespace copper_server::api::tags {
         entry_map(const entry_map&) = delete;
 
         entry_handle& get_entry_raw(std::string_view entry) {
-            if (auto it = map.find(entry); it != map.end())
-                return it->second;
+            auto it = map.find(entry);
+            if (it != map.end())
+                return *it->second;
             else
-                return map.emplace(entry, next_entry_id++).first->second;
+                return *map.emplace(entry, std::make_shared<entry_handle>(next_entry_id++)).first->second;
         }
 
         const entry_handle& get_entry_raw(std::string_view entry) const {
-            if (auto it = map.find(entry); it != map.end())
-                return it->second;
+            auto it = map.find(entry);
+            if (it != map.end())
+                return *it->second;
             else
-                return map.emplace(entry, next_entry_id++).first->second;
+                return *map.emplace(entry, std::make_shared<entry_handle>(next_entry_id++)).first->second;
         }
 
         entry_handle& get_entry(std::string_view entry) {
@@ -603,13 +605,16 @@ namespace copper_server::api::tags {
 
     static void resolve_cross_references(bool secold_preset) {
         return data.set([&](auto& tags) {
-            decltype(tags.map) tmp_obj = tags.map;
-            for (auto&& [entry, decl] : tmp_obj) {
-                for (auto&& [namespace_, dec] : decl.data) {
+            list_array<std::string> resolved_items;
+            for (auto&& [entry, decl] : tags.map) {
+                for (auto&& [namespace_, dec] : decl->data) {
                     for (auto&& [tag, de] : dec) {
-                        list_array<std::string> resolved_items;
                         if (!de)
-                            de = std::make_shared<tags_entry>(decl.get_or_create_id(namespace_ + ":" + tag), decl.id);
+                            de = std::make_shared<tags_entry>(decl->get_or_create_id(namespace_ + ":" + tag), decl->id);
+
+                        resolved_items.resize(0);
+                        resolved_items.reserve(de->items.size());
+
                         for (auto& item : de->items) {
                             if (item.starts_with("#")) {
                                 if (secold_preset)
@@ -625,7 +630,6 @@ namespace copper_server::api::tags {
                     }
                 }
             }
-            tags.map = std::move(tmp_obj);
         });
     }
 
@@ -635,7 +639,7 @@ namespace copper_server::api::tags {
         return data.set([&](auto& tags) {
             ++tags_version;
             for (auto& _entry : tags.map)
-                for (auto& _namespace : _entry.second.data)
+                for (auto& _namespace : _entry.second->data)
                     for (auto& _tag : _namespace.second) {
                         _tag.second->items.unify();
                         _tag.second->items.commit();
@@ -757,7 +761,7 @@ namespace copper_server::api::tags {
         return handle->namespace_;
     }
 
-    const std::string& get_full_name(const tag_handle& handle) {
+    std::string get_full_name(const tag_handle& handle) {
         return handle->namespace_ + ":" + handle->tag;
     }
 

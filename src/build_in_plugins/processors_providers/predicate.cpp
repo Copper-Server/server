@@ -26,7 +26,10 @@ namespace copper_server::build_in_plugins::processors_providers {
         auto com = val.get_compound();
         if (!com.contains("min") || !com.contains("max"))
             return false;
-        return value >= (T)com.at("min") && value <= (T)com.at("max");
+        if constexpr (std::is_integral_v<T>)
+            return value >= (T)com.at("min").as_long() && value <= (T)com.at("max").as_long();
+        else
+            return value >= (T)com.at("min").as_double() && value <= (T)com.at("max").as_double();
     }
 
     bool __item_check([[maybe_unused]] const std::unordered_map<std::string, util::nbt>& predicate, [[maybe_unused]] const std::unordered_map<std::string, util::nbt>& item) {
@@ -101,11 +104,11 @@ namespace copper_server::build_in_plugins::processors_providers {
                             return false;
 
                     if (conditions.contains("ambient"))
-                        if (conditions.at("ambient").as_byte() != effect.ambient)
+                        if ((bool)conditions.at("ambient").as_byte() != effect.ambient)
                             return false;
 
                     if (conditions.contains("visible"))
-                        if (conditions.at("visible").as_byte() != effect.particles)
+                        if ((bool)conditions.at("visible").as_byte() != effect.particles)
                             return false;
                 } else
                     return false;
@@ -390,7 +393,7 @@ namespace copper_server::build_in_plugins::processors_providers {
             //if (!predicate["nbt"].size())
             //    return true;
             //api::world::get(world_id, [&](storage::world_data& data) {
-            //    data.get_block((int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z, [](auto) {}, [&](auto, const util::nbt& ex_data) { pass = ex_data != predicate["nbt"]; });
+            //    data.get_block((int32_t)pos.x, (int32_t)pos.y, (int32_t)pos.z, [](auto) {}, [&](auto, const util::nbt& ex_data) { pass = ex_data != predicate["nbt"]; });
             //});
             return pass;
         }

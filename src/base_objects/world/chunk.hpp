@@ -25,7 +25,7 @@ namespace copper_server::storage {
 
 namespace copper_server::base_objects::world {
     struct chunk_data {
-        base_objects::world::height_maps height_maps;
+        base_objects::world::height_maps height_maps; //stores the world absolute block positions(local_y + world_y_offset) this done to optimize the packet serialization
         std::vector<base_objects::world::sub_chunk_data> sub_chunks;
         boost::unordered_flat_map<uint64_t, api::ecs::entity> stored_entities; //uses id from world
 
@@ -38,10 +38,10 @@ namespace copper_server::base_objects::world {
 
         chunk_data(int32_t chunk_x, int32_t chunk_z);
 
-        void update_height_map_on(uint8_t local_x, uint32_t local_y_block, uint8_t local_z);
-        void update_height_map();
+        void update_height_map_on(uint8_t local_x, uint32_t local_y_block, uint8_t local_z, int32_t y_offset);
+        void update_height_map(int32_t y_offset);
         void calculate_active();
-        void update_metadata(); //update_height_map + calculate_active (called automatically)
+        void update_metadata(int32_t y_offset); //update_height_map + calculate_active (called automatically)
 
         void for_each_block_entity(const std::function<void(api::ecs::entity block_entity)>& func);
         void for_each_block_entity(uint32_t local_y, const std::function<void(api::ecs::entity block_entity)>& func);

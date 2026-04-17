@@ -42,25 +42,26 @@ namespace copper_server::base_objects::world {
     chunk_data::chunk_data(int32_t chunk_x, int32_t chunk_z)
         : chunk_x(chunk_x), chunk_z(chunk_z) {}
 
-    void chunk_data::update_height_map_on(uint8_t local_x, uint32_t local_y_block, uint8_t local_z) {
+    void chunk_data::update_height_map_on(uint8_t local_x, uint32_t local_y_block, uint8_t local_z, int32_t y_offset) {
         if (local_y_block == 0)
             return;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto bloc = get_block(local_x, local_y_block, local_z);
         if (!bloc.is_air()) {
-            if (height_maps.ocean_floor.get(local_x, local_z) < local_y_block)
-                height_maps.ocean_floor.set(local_x, local_z, local_y_block);
+            auto y_pos = int32_t(local_y_block + y_offset);
+            if (height_maps.ocean_floor.get(local_x, local_z) < y_pos)
+                height_maps.ocean_floor.set(local_x, local_z, y_pos);
             if (bloc.is_liquid()) {
-                if (height_maps.surface.get(local_x, local_z) < local_y_block)
-                    height_maps.surface.set(local_x, local_z, local_y_block);
+                if (height_maps.surface.get(local_x, local_z) < y_pos)
+                    height_maps.surface.set(local_x, local_z, y_pos);
             }
             if (bloc.is_solid()) {
-                if (height_maps.motion_blocking.get(local_x, local_z) < local_y_block)
-                    height_maps.motion_blocking.set(local_x, local_z, local_y_block);
+                if (height_maps.motion_blocking.get(local_x, local_z) < y_pos)
+                    height_maps.motion_blocking.set(local_x, local_z, y_pos);
 
                 if (!leaves.contains(bloc.general_block_id()))
-                    if (height_maps.motion_blocking_no_leaves.get(local_x, local_z) < local_y_block)
-                        height_maps.motion_blocking_no_leaves.set(local_x, local_z, local_y_block);
+                    if (height_maps.motion_blocking_no_leaves.get(local_x, local_z) < y_pos)
+                        height_maps.motion_blocking_no_leaves.set(local_x, local_z, y_pos);
             }
 
         } else {
@@ -76,7 +77,7 @@ namespace copper_server::base_objects::world {
                 for (int8_t y = 15; y >= 0; y--) {
                     auto block = schunk.get_block(local_x, y, local_z);
                     if (!block.is_air()) {
-                        auto y_pos = y + local_y_block;
+                        auto y_pos = int32_t(y + local_y_block + y_offset);
 
                         if (!height_maps.ocean_floor.get(local_x, local_z))
                             height_maps.ocean_floor.set(local_x, local_z, y_pos);
@@ -100,9 +101,9 @@ namespace copper_server::base_objects::world {
         }
     }
 
-    void chunk_data::update_height_map() {
+    void chunk_data::update_height_map(int32_t y_offset) {
         height_maps.make_zero();
-        uint32_t local_y_block = (sub_chunks.size() - 1) * 16;
+        uint32_t local_y_block = uint32_t(sub_chunks.size() - 1) * 16;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
         for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
@@ -112,7 +113,7 @@ namespace copper_server::base_objects::world {
                     for (uint8_t z = 0; z < 16; z++) {
                         auto block = schunk.get_block(x, y, z);
                         if (!block.is_air()) {
-                            auto y_pos = y + local_y_block;
+                            auto y_pos = int32_t(y + local_y_block + y_offset);
 
                             if (!height_maps.ocean_floor.get(x, z))
                                 height_maps.ocean_floor.set(x, z, y_pos);
@@ -147,9 +148,9 @@ namespace copper_server::base_objects::world {
         }
     }
 
-    void chunk_data::update_metadata() {
+    void chunk_data::update_metadata(int32_t y_offset) {
         height_maps.make_zero();
-        uint32_t local_y_block = (sub_chunks.size() - 1) * 16;
+        uint32_t local_y_block = uint32_t(sub_chunks.size() - 1) * 16;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
         for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
@@ -161,7 +162,7 @@ namespace copper_server::base_objects::world {
                         auto block = schunk.get_block(x, y, z);
                         if (!block.is_air()) {
                             schunk.active_blocks += 1;
-                            auto y_pos = y + local_y_block;
+                            auto y_pos = int32_t(y + local_y_block) + y_offset;
 
                             if (!height_maps.ocean_floor.get(x, z))
                                 height_maps.ocean_floor.set(x, z, y_pos);
@@ -391,10 +392,10 @@ namespace copper_server::base_objects::world {
                             api::configuration::get().game_play.entity.despawn_mobs_outside
                         },
                         [&pos, t_m_r = api::configuration::get().game_play.entity.squared_values.tick_mobs_in_range](auto mark_entity) {
-                            auto& mark_pos = mark_entity.get<api::ecs::com::entities::position>();
-                            if (mark_entity.has<api::ecs::com::entities::assigned_player>())
+                            auto& mark_pos = mark_entity.template get<api::ecs::com::entities::position>();
+                            if (mark_entity.template has<api::ecs::com::entities::assigned_player>())
                                 return;
-                            auto sd = mark_entity.modify<api::ecs::com::entities::world_syncing>();
+                            auto sd = mark_entity.template modify<api::ecs::com::entities::world_syncing>();
                             if (sd->despawn_immune || sd->inactivity_immune)
                                 return;
                             switch (sd->state) {

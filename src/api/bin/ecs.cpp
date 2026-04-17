@@ -1138,6 +1138,7 @@ namespace copper_server::api::ecs {
             }
         };
 
+        iteration_handle::iteration_handle() = default;
         iteration_handle::iteration_handle(const std::shared_ptr<iteration_topology>& topology)
             : topology(topology),
               data(std::make_unique<iteration_data>(manager::instance().manager_mutex)) {}
@@ -1472,6 +1473,14 @@ namespace copper_server::api::ecs {
         return detail::copy_entity(std::nullopt, *this)->take();
     }
 
+    util::nbt entity::get_nbt() const {
+        std::stringstream ss;
+        util::nbt_write_stream nws(ss);
+        get<api::ecs::com::type_definition>().type->to_nbt(nws, *this);
+        size_t res_size = 0;
+        return util::nbt_convert::readNBT((uint8_t*)ss.view().data(), ss.view().size(), res_size).get_as_nbt();
+    }
+
     bool entity_ref::try_resolve() {
         return std::visit(
             [this](auto& it) {
@@ -1503,7 +1512,19 @@ namespace copper_server::api::ecs {
         );
     }
 
-    base_objects::uuid entity_ref::get_uuid() {
+    entity entity_ref::get_entity() const {
+        return std::visit(
+            [this](auto& it) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
+                    return *api::entity_id_map::get_entity(it);
+                } else
+                    return it;
+            },
+            value
+        );
+    }
+
+    base_objects::uuid entity_ref::get_uuid() const {
         return std::visit(
             [this](auto& it) {
                 if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {

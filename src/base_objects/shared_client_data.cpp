@@ -42,7 +42,7 @@ namespace copper_server::base_objects {
             .inventory_data = [&]() {
                 api::packets::list_array_no_size<api::packets::slot> res;
                 res.resize(max_size());
-                iterate([&](base_objects::slot_data& data, int32_t slot) {
+                iterate([&](base_objects::slot& data, int32_t slot) {
                     if (slot >= 0 && slot < (int32_t)res.size())
                         res[slot] = data.to_packet();
                 });

@@ -21,8 +21,16 @@
 #include <unordered_set>
 #include <vector>
 
+namespace copper_server::base_objects {
+    struct uuid;
+    struct uuid_hex;
+    struct uuid_flat_hex;
+}
+
 namespace copper_server::util {
     class nbt;
+    class nbt_convert;
+    class nbt_compound;
     class snbt_read_stream;
     class snbt_read_compound_stream;
     class snbt_read_list_stream;
@@ -385,7 +393,7 @@ colon,         // :
                     throw std::runtime_error("Expected ':' after key");
                 advance_token();
 
-                snbt_read_stream value_stream(std::string(tokenizer.input.substr(tokenizer.pos)));
+                snbt_read_stream value_stream(tokenizer.get_remaining_input());
                 callback(key, value_stream);
 
                 // Advance past the value
@@ -530,6 +538,10 @@ colon,         // :
         void write(const nbt& res);
         void write(const nbt_compound& res);
 
+        void write(const base_objects::uuid& res);
+        void write(const base_objects::uuid_hex& res);
+        void write(const base_objects::uuid_flat_hex& res);
+
         void write_array(const int8_t* arr, size_t size);
         void write_array(const uint8_t* arr, size_t size);
         void write_array(const int32_t* arr, size_t size);
@@ -569,6 +581,10 @@ colon,         // :
         snbt_write_list_stream& write(const nbt& res);
         snbt_write_list_stream& write(const nbt_compound& res);
 
+        snbt_write_list_stream& write(const base_objects::uuid& res);
+        snbt_write_list_stream& write(const base_objects::uuid_hex& res);
+        snbt_write_list_stream& write(const base_objects::uuid_flat_hex& res);
+
         snbt_write_compound_stream write_compound();
         snbt_write_list_stream write_list();
 
@@ -604,12 +620,12 @@ colon,         // :
         snbt_write_compound_stream& write(std::string_view key, const nbt& res);
         snbt_write_compound_stream& write(std::string_view key, const nbt_compound& res);
 
-        snbt_write_compound_stream& write(std::string_view key, base_objects::uuid res);
-        snbt_write_compound_stream& write(std::string_view key, base_objects::uuid_hex res);
-        snbt_write_compound_stream& write(std::string_view key, base_objects::uuid_flat_hex res);
+        snbt_write_compound_stream& write(std::string_view key, const base_objects::uuid& res);
+        snbt_write_compound_stream& write(std::string_view key, const base_objects::uuid_hex& res);
+        snbt_write_compound_stream& write(std::string_view key, const base_objects::uuid_flat_hex& res);
 
-        snbt_write_compound_stream& write_compound(std::string_view key);
-        snbt_write_compound_stream& write_list(std::string_view key);
+        snbt_write_compound_stream write_compound(std::string_view key);
+        snbt_write_list_stream write_list(std::string_view key);
 
     private:
         void write_indent();
@@ -676,7 +692,7 @@ colon,         // :
             compound_relaxed& make_collect(snbt_read_stream& stream, FN&& on_uncollected)
                 requires(std::is_invocable_v<FN, const std::string&, snbt_read_stream&>)
             {
-                stream.iterate([this, &on_uncollected](auto name, auto& item_stream) {
+                stream.iterate([this, &on_uncollected](const std::string& name, auto& item_stream) {
                     if (auto it = automated_collector.find(name); it != automated_collector.end())
                         it->second(item_stream);
                     else
@@ -751,7 +767,7 @@ colon,         // :
             compound_strict& make_collect(snbt_read_stream& stream, FN&& on_uncollected)
                 requires(std::is_invocable_v<FN, const std::string&, snbt_read_stream&>)
             {
-                stream.iterate([this, &on_uncollected](auto name, auto& item_stream) {
+                stream.iterate([this, &on_uncollected](const std::string& name, auto& item_stream) {
                     if (auto it = automated_collector.find(name); it != automated_collector.end())
                         it->second(item_stream);
                     else

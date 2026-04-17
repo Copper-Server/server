@@ -15,6 +15,10 @@
 #include <src/util/cts.hpp>
 #include <variant>
 
+namespace copper_server::util {
+    class nbt;
+}
+
 //entity component system
 namespace copper_server::api::ecs {
     //Low level api, use entity_definition instead of this
@@ -205,12 +209,15 @@ namespace copper_server::api::ecs {
             } else
                 return true;
         }
+
+        util::nbt get_nbt() const; //requires copper_server::api::ecs::com::type_definition
     };
 
     struct entity_ref {
         std::variant<base_objects::uuid, entity> value;
         entity get_entity();
-        base_objects::uuid get_uuid();
+        entity get_entity() const;
+        base_objects::uuid get_uuid() const;
 
         bool is_resolved();
         bool is_valid() const;

@@ -11,8 +11,9 @@ namespace copper_server::base_objects::world {
     }
 
     const std::shared_ptr<chunk_data>& chunk_region::get_unsafe(int32_t local_x, int32_t local_z) const {
+        static std::shared_ptr<chunk_data> null_chunk;
         size_t idx = (static_cast<uint8_t>(local_x) & MASK) | ((static_cast<uint8_t>(local_z) & MASK) << WIDTH_SHIFT);
-        return active_mask.test(idx) ? chunks[idx] : nullptr;
+        return active_mask.test(idx) ? chunks[idx] : null_chunk;
     }
 
     const std::shared_ptr<chunk_data>& chunk_region::get(int32_t local_x, int32_t local_z) const {

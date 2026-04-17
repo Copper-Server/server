@@ -517,6 +517,16 @@ namespace copper_server::util {
         }
     }
 
+    template <class T>
+    std::string to_chars_inl(T value) {
+        char buffer[64];
+        auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), value);
+        if (ec == std::errc())
+            return std::string(buffer, ptr);
+        else
+            throw std::runtime_error("Conversion to chars failed");
+    }
+
     std::string nbt::as_string() const {
         switch (type) {
         case nbt_type::tag_byte:
@@ -629,16 +639,6 @@ namespace copper_server::util {
         }
     }
 
-    template <class T>
-    std::string to_chars_inl(T value) {
-        char buffer[64];
-        auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), value);
-        if (ec == std::errc())
-            return std::string(buffer, ptr);
-        else
-            throw std::runtime_error("Conversion to chars failed");
-    }
-
     std::string nbt::as_snbt() const {
         switch (type) {
         case nbt_type::tag_end:
@@ -715,7 +715,7 @@ namespace copper_server::util {
             return result;
         }
         default:
-            break;
+            return "";
         }
     }
 
@@ -945,7 +945,7 @@ namespace copper_server::util {
             insertString(str.data(), str.size() - negate_zero);
             break;
         }
-        case nbt_type::tag_list:
+        case nbt_type::tag_list: {
             if (insert_type)
                 nbt_data.push_back(9);
             auto& arr = comp.get_list();
@@ -957,7 +957,8 @@ namespace copper_server::util {
             for (auto& it : arr)
                 RecursiveBuilder(it, false, "", false);
             break;
-        case nbt_type::tag_compound:
+        }
+        case nbt_type::tag_compound: {
             if (insert_type)
                 nbt_data.push_back(10);
             auto& components = comp.get_compound();
@@ -969,11 +970,12 @@ namespace copper_server::util {
                 insertString(name.data(), name.size() - negate_zero);
             }
 
-            for (const auto& [name, tmp] : components)
-                BuildCompoundItem(name, tmp);
+            for (const auto& [tmp_name, tmp] : components)
+                BuildCompoundItem(tmp_name, tmp);
             insertValue(nbt_type::tag_end);
             break;
-        case nbt_type::tag_int_array:
+        }
+        case nbt_type::tag_int_array: {
             if (insert_type)
                 nbt_data.push_back(11);
             auto& arr = comp.get_int_array();
@@ -981,7 +983,8 @@ namespace copper_server::util {
             for (auto& it : arr)
                 insertValue(it);
             break;
-        case nbt_type::tag_long_array:
+        }
+        case nbt_type::tag_long_array: {
             if (insert_type)
                 nbt_data.push_back(12);
             auto& arr = comp.get_long_array();
@@ -989,6 +992,7 @@ namespace copper_server::util {
             for (auto& it : arr)
                 insertValue(it);
             break;
+        }
         default:
             throw std::runtime_error("Unsupported tag");
         }
@@ -1023,7 +1027,7 @@ namespace copper_server::util {
         case 6: //double
             return nbt(extractValue<double>(data, i, max_size));
         case 7: //byte array
-            return extractArray_NBT<int8_t>(data, i, max_size);
+            return extractArray_NBT<uint8_t>(data, i, max_size);
         case 8: { //string
             uint16_t length = extractValue<uint16_t>(data, i, max_size);
             if (i + length > max_size)
@@ -1057,20 +1061,10 @@ namespace copper_server::util {
             }
             return compound;
         }
-        case 11: { //int array
-            int32_t length = extractValue<int32_t>(data, i, max_size);
-            if (i + length * 4 >= max_size)
-                throw std::out_of_range("Out of bounds");
-            i += length * 4;
-            return nbt(list_array<int32_t>((const int32_t*)data, length));
-        }
-        case 12: { //long array
-            int32_t length = extractValue<int32_t>(data, i, max_size);
-            if (i + length * 8 >= max_size)
-                throw std::out_of_range("Out of bounds");
-            i += length * 8;
-            return nbt(list_array<int64_t>((const int64_t*)data, length));
-        }
+        case 11: //int array
+            return extractArray_NBT<int32_t>(data, i, max_size);
+        case 12: //long array
+            return extractArray_NBT<int64_t>(data, i, max_size);
         default:
             throw std::runtime_error("Invalid type");
         }
@@ -1159,12 +1153,12 @@ namespace copper_server::util {
         case nbt_type::tag_list: {
             if (insert_type)
                 nbt_data.push_back(9);
-            auto type = read_value<nbt_type>(stream);
-            insertValue(type);
+            auto list_type = read_value<nbt_type>(stream);
+            insertValue(list_type);
             int32_t size = read_value<int32_t>(stream);
             insertValue(size);
             for (int32_t i = 0; i < size; i++)
-                RecursiveBuilder(type, stream, false);
+                RecursiveBuilder(list_type, stream, false);
             break;
         }
         case nbt_type::tag_compound: {
@@ -1180,12 +1174,12 @@ namespace copper_server::util {
             while ((curr_type = read_value<nbt_type>(stream)) != nbt_type::tag_end) {
                 insertValue(curr_type);
 
-                uint16_t size = read_value<uint16_t>(stream);
-                insertValue(size);
-                list_array<uint8_t> arr;
-                arr.resize(size);
-                stream.read((char*)arr.data(), size);
-                nbt_data.push_back(arr);
+                uint16_t name_size = read_value<uint16_t>(stream);
+                insertValue(name_size);
+                list_array<uint8_t> name_arr;
+                name_arr.resize(name_size);
+                stream.read((char*)name_arr.data(), name_size);
+                nbt_data.push_back(name_arr);
 
                 RecursiveBuilder(curr_type, stream, false);
             }

@@ -418,14 +418,8 @@ void generate_factory_cpp_file(const std::string& components_path, const std::st
     out << "#include <optional>\n";
     out << "#include <src/api/ecs/base_components.hpp>\n";
     out << "#include <src/base_objects/shared_client_data.hpp>\n\n";
-    out << "#include <src/util/reflect/api/packets/chat_type.hpp>\n";
-    out << "#include <src/util/reflect/base_objects/block_entity.hpp>\n";
-    out << "#include <src/util/reflect/base_objects/component.hpp>\n";
-    out << "#include <src/util/reflect/base_objects/dye_color.hpp>\n";
+    out << "#include <src/util/reflect.hpp>\n";
     out << "#include <src/util/reflect/base_objects/entity/metadata.hpp>\n";
-    out << "#include <src/util/reflect/base_objects/parsers.hpp>\n";
-    out << "#include <src/util/reflect/base_objects/particle_data.hpp>\n";
-    out << "#include <src/util/reflect/calculations.hpp>\n\n";
     out << "#include <src/api/ecs/entity_definition.hpp>\n\n";
 
     out << "namespace copper_server::generated::entity {\n\n";

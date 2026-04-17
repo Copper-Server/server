@@ -13,7 +13,7 @@ namespace copper_server::api::ecs::com::block_entity {
         stream
             .write("components", [this](util::nbt_write_stream& components_stream) {
                 auto compound = components_stream.write_compound();
-                for (auto& [_, component] : components)
+                for (auto& [_, component] : (*components))
                     component.encode_component(component, compound);
             });
     }
@@ -28,7 +28,7 @@ namespace copper_server::api::ecs::com::block_entity {
             .collect_iterate_required("components", [this](const std::string& name, util::nbt_read_stream& component_stream) {
                 base_objects::component tmp;
                 base_objects::component::parse_component(tmp, name, component_stream);
-                components[tmp.get_id()] = std::move(tmp);
+                (*components)[tmp.get_id()] = std::move(tmp);
             });
     }
 }

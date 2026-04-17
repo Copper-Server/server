@@ -116,7 +116,7 @@ namespace copper_server::build_in_plugins::tools {
                     auto players = ban_list.add_child({"players", "list all banned players", "/banlist players"});
 
 
-                    players.set_callback("command.banlist.players", [this](const list_array<predicate>&, base_objects::command_context& context) -> size_t {
+                    players.set_callback("command.banlist.players", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         bool max_reached = false;
                         auto banned = banned_players.entrys(100, max_reached);
                         if (banned.size() == 0) {
@@ -138,7 +138,7 @@ namespace copper_server::build_in_plugins::tools {
                             } else
                                 message += last_item + ", ...";
                             context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
-                            return banned.size() + 1;
+                            return int32_t(banned.size() + 1);
                         }
                     });
 
@@ -146,11 +146,11 @@ namespace copper_server::build_in_plugins::tools {
                         .add_child({"detailed", "list all banned players with reasons", "/banlist players detailed"})
                         .set_callback("command.banlist.players.detailed", [this](const list_array<predicate>&, base_objects::command_context& context) {
                             std::string message = "List of banned players:\n";
-                            size_t count = 0;
+                            int32_t count = 0;
                             banned_players.for_each(
                                 100,
                                 [&message, &count](auto& it) {
-                                    message += ("\t" + it.first + (it.second.is_none() ? "\n" : ("\n\t\tReason: " + (std::string)it.second + "\n")));
+                                    message += "\t" + it + "\n";
                                     ++count;
                                 },
                                 [&message, &count]() {
@@ -176,21 +176,26 @@ namespace copper_server::build_in_plugins::tools {
                 {
                     auto ips = ban_list.add_child({"ips", "list all banned ips", "/banlist ips"});
 
-                    ips.set_callback("command.banlist.ips", [this](const list_array<predicate>&, base_objects::command_context& context) -> size_t {
+                    ips.set_callback("command.banlist.ips", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         bool max_reached = false;
                         auto banned = banned_ips.entrys(100, max_reached);
                         if (banned.size() == 0) {
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"There are no banned ips."}};
                             return 0;
                         } else if (banned.size() == 1) {
-                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There is only one banned ip:" + banned.back()}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There is only one banned ip:" + *banned.begin()}};
                             return 1;
                         } else {
-                            std::string last_item = banned.back();
-                            banned.pop_back();
-                            std::string message = "There a total of " + std::to_string(banned.size() + 1) + " banned IPs:\n";
-                            for (auto& player : banned)
+                            std::string last_item;
+                            size_t last_index = banned.size();
+                            size_t index = 0;
+                            std::string message = "There a total of " + std::to_string(banned.size()) + " banned IPs:\n";
+                            for (auto& player : banned) {
                                 message += player + ", ";
+                                ++index;
+                                if (index == last_index)
+                                    last_item = player;
+                            }
 
                             if (!max_reached) {
                                 message.erase(message.size() - 2, 2);
@@ -198,7 +203,7 @@ namespace copper_server::build_in_plugins::tools {
                             } else
                                 message += last_item + ", ...";
                             context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
-                            return banned.size() + 1;
+                            return int32_t(banned.size() + 1);
                         }
                     });
                     ips
@@ -209,7 +214,7 @@ namespace copper_server::build_in_plugins::tools {
                             banned_ips.for_each(
                                 100,
                                 [&message, &count](auto& it) {
-                                    message += "\t" + it.first + (it.second.is_none() ? "\n" : ("\n\t\tReason: " + (std::string)it.second + "\n"));
+                                    message += "\t" + it + "\n";
                                     ++count;
                                 },
                                 [&message, &count]() {
@@ -218,7 +223,7 @@ namespace copper_server::build_in_plugins::tools {
                                 }
                             );
                             context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
-                            return count;
+                            return int32_t(count);
                         });
 
                     ips

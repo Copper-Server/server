@@ -32,14 +32,13 @@ namespace copper_server::base_objects::world {
             motion_blocking_no_leaves = palette_data_height_map(height);
         }
 
-        void set_height(int64_t new_height) {
-            auto set_new_height = (int32_t)std::min<int64_t>(new_height, INT32_MAX);
-            surface.set_height(set_new_height);
-            surface_wg.set_height(set_new_height);
-            ocean_floor.set_height(set_new_height);
-            ocean_floor_wg.set_height(set_new_height);
-            motion_blocking.set_height(set_new_height);
-            motion_blocking_no_leaves.set_height(set_new_height);
+        void set_height(int32_t new_height) {
+            surface.set_height(new_height);
+            surface_wg.set_height(new_height);
+            ocean_floor.set_height(new_height);
+            ocean_floor_wg.set_height(new_height);
+            motion_blocking.set_height(new_height);
+            motion_blocking_no_leaves.set_height(new_height);
         }
     };
 }

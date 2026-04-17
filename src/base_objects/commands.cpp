@@ -141,26 +141,26 @@ namespace copper_server::base_objects {
             parsers::block_pos res;
             if (part.starts_with('~')) {
                 res.x_relative = true;
-                res.x = part.empty() ? 0 : std::stoll(part.substr(1));
+                res.x = part.empty() ? 0 : std::stoi(part.substr(1));
             } else if (part.size())
-                res.x = std::stoll(part);
+                res.x = std::stoi(part);
             else
                 return std::nullopt;
 
             next_token(part, path);
             if (part.starts_with('~')) {
                 res.y_relative = true;
-                res.y = part.empty() ? 0 : std::stoll(part.substr(1));
+                res.y = part.empty() ? 0 : std::stoi(part.substr(1));
             } else if (part.size())
-                res.y = std::stoll(part);
+                res.y = std::stoi(part);
             else
                 return std::nullopt;
             next_token(part, path);
             if (part.starts_with('~')) {
                 res.z_relative = true;
-                res.z = part.empty() ? 0 : std::stoll(part.substr(1));
+                res.z = part.empty() ? 0 : std::stoi(part.substr(1));
             } else if (part.size())
-                res.z = std::stoll(part);
+                res.z = std::stoi(part);
             else
                 return std::nullopt;
             return res;

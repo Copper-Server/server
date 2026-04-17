@@ -249,9 +249,9 @@ namespace copper_server::base_objects {
         };
 
         struct block_pos {
-            int64_t x;
-            int64_t y;
-            int64_t z;
+            int32_t x;
+            int32_t y;
+            int32_t z;
             bool x_relative = false;
             bool y_relative = false;
             bool z_relative = false;

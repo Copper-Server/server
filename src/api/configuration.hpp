@@ -11,16 +11,61 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <library/list_array.hpp>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <src/base_objects/events/event.hpp>
 #include <src/util/nbt.hpp>
 
+struct get_value_t {};
+
+static constexpr get_value_t get_conf{};
+
 namespace copper_server::api::configuration {
+    template <auto Method, class... Args>
+    struct nbt_method_call {
+        std::tuple<Args...> args;
+    };
+
+    template <auto Method>
+    struct nbt_method_call_builder {
+        template <class... Args>
+        constexpr auto operator()(Args&&... args) const -> nbt_method_call<Method, std::decay_t<Args>...> {
+            return {std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...)};
+        }
+    };
+
+    template <auto Method>
+    static constexpr inline nbt_method_call_builder<Method> nbt_call{};
+    static constexpr inline auto as_byte = nbt_call<&util::nbt::as_byte>;
+    static constexpr inline auto as_short = nbt_call<&util::nbt::as_short>;
+    static constexpr inline auto as_int = nbt_call<&util::nbt::as_int>;
+    static constexpr inline auto as_long = nbt_call<&util::nbt::as_long>;
+    static constexpr inline auto as_float = nbt_call<&util::nbt::as_float>;
+    static constexpr inline auto as_double = nbt_call<&util::nbt::as_double>;
+    static constexpr inline auto as_string = nbt_call<&util::nbt::as_string>;
+    static constexpr inline auto is_end = nbt_call<&util::nbt::is_end>;
+    static constexpr inline auto is_byte = nbt_call<&util::nbt::is_byte>;
+    static constexpr inline auto is_short = nbt_call<&util::nbt::is_short>;
+    static constexpr inline auto is_int = nbt_call<&util::nbt::is_int>;
+    static constexpr inline auto is_long = nbt_call<&util::nbt::is_long>;
+    static constexpr inline auto is_float = nbt_call<&util::nbt::is_float>;
+    static constexpr inline auto is_double = nbt_call<&util::nbt::is_double>;
+    static constexpr inline auto is_byte_array = nbt_call<&util::nbt::is_byte_array>;
+    static constexpr inline auto is_string = nbt_call<&util::nbt::is_string>;
+    static constexpr inline auto is_list = nbt_call<&util::nbt::is_list>;
+    static constexpr inline auto is_compound = nbt_call<&util::nbt::is_compound>;
+    static constexpr inline auto is_int_array = nbt_call<&util::nbt::is_int_array>;
+    static constexpr inline auto is_long_array = nbt_call<&util::nbt::is_long_array>;
+    static constexpr inline auto contains = nbt_call<static_cast<bool (util::nbt::*)(const std::string&) const>(&util::nbt::contains)>;
+
     struct server_configuration {
         struct World {
             std::string name = "overworld";
@@ -34,9 +79,9 @@ namespace copper_server::api::configuration {
             size_t auto_save = 6000;  //0 to disable
 
             struct {
-                int64_t x = 0;
-                int64_t y = 64;
-                int64_t z = 0;
+                int32_t x = 0;
+                int32_t y = 64;
+                int32_t z = 0;
                 float yaw = 0;
             } spawn;
 
@@ -108,7 +153,7 @@ namespace copper_server::api::configuration {
 
             bool prevent_proxy_connections = false; //	If the ISP/AS sent from the server is different from the one from Mojang Studios' authentication server, the player is kicked.
             bool enable_encryption = true;
-            bool send_nbt_data_in_chunk = true; //enabled by default to be same as vanilla server, this option exists to allow 'fix' chunk ban and reduce network consumption, should not affect gameplay for regular players
+            bool send_nbt_data_in_chunk = true;     //enabled by default to be same as vanilla server, this option exists to allow 'fix' chunk ban and reduce network consumption, should not affect gameplay for regular players
             bool skip_unregistered_packets = false; //if set, the player could send packets and would'nt be kicked, could be useful for disabling some functionality. For example disabling specific base/play_engine/* plugin
 
             enum class connection_conflict_t {
@@ -118,13 +163,12 @@ namespace copper_server::api::configuration {
                 = connection_conflict_t::kick_connected;
         } protocol;
 
-
         struct Mojang {
             static constexpr std::string_view session_server = "sessionserver.mojang.com";
             static constexpr std::string_view services_server = "api.minecraftservices.com";
             static constexpr std::string_view snoop_server = "snoop.minecraft.net";
-            bool enforce_secure_profile = true; //enables signature signing for chat messages using mojang's service
-            bool enable_snoop_stats = false;    //should server send server stats
+            bool enforce_secure_profile = true;     //enables signature signing for chat messages using mojang's service
+            bool enable_snoop_stats = false;        //should server send server stats
             bool prevent_proxy_connections = false; //sends player ip to session server to verify ip
         } mojang;
 
@@ -151,11 +195,10 @@ namespace copper_server::api::configuration {
             uint32_t max_players = 0;     //0 for unlimited
             uint16_t port = 25565;
             bool offline_mode : 1 = false;
-            bool prevent_chat_reports : 1 = false; //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
-            bool world_debug_mode : 1 = false;     //disables disk usage for worlds
-            bool frozen_config : 1 = false;        //disables the config file and uses default values set at compile time(still modifable on runtime)
+            bool prevent_chat_reports : 1 = false;            //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
+            bool world_debug_mode : 1 = false;                //disables disk usage for worlds
+            bool frozen_config : 1 = false;                   //disables the config file and uses default values set at compile time(still modifable on runtime)
             bool enable_debug_task_thread_naming : 1 = false; //optional
-
 
             std::filesystem::path get_storage_path() const {
                 return (base_path / storage_folder).lexically_normal();
@@ -165,7 +208,6 @@ namespace copper_server::api::configuration {
                 return (base_path / worlds_folder).lexically_normal();
             }
         } server;
-
 
         std::unordered_set<std::string> disabled_plugins;
 
@@ -179,12 +221,21 @@ namespace copper_server::api::configuration {
             friend struct server_configuration;
 
         public:
-            struct get_value {};
-
             plugin_actions operator^(std::string_view name);
-            const util::nbt& operator^(get_value);
+            const util::nbt& operator^(get_value_t);
             plugin_actions& operator^=(const util::nbt& value);
             plugin_actions& operator|=(const util::nbt& value);
+
+            template <auto Method, class... Args>
+            auto operator|(nbt_method_call<Method, Args...> call) const -> std::invoke_result_t<decltype(Method), const util::nbt&, const Args&...> {
+                return std::apply(
+                    [this](const auto&... unpacked) -> std::invoke_result_t<decltype(Method), const util::nbt&, const Args&...> {
+                        return std::invoke(Method, static_cast<const util::nbt&>(it), unpacked...);
+                    },
+                    call.args
+                );
+            }
+
             operator const util::nbt&() const;
         };
 
@@ -209,7 +260,5 @@ namespace copper_server::api::configuration {
 
     extern base_objects::events::event<void> updated;
 }
-
-static constexpr inline auto get_conf = copper_server::api::configuration::server_configuration::plugin_actions::get_value{};
 
 #endif /* SRC_API_CONFIGURATION */

@@ -156,9 +156,9 @@ namespace copper_server::base_objects::world {
         }
         if (block.is_block_entity()) {
             api::ecs::entity_construction construct;
-            construct.set<api::ecs::com::block_entity_tag>();
-            construct.emplace<api::ecs::com::block_entity::block_id>(block.id);
-            auto entity_dat = std::move(construct).create_and_wait(api::ecs::get_block_entity_definition(block.name()).get_recipe(), world.get_id());
+            construct.template set<api::ecs::com::block_entity_tag>();
+            construct.template emplace<api::ecs::com::block_entity::block_id>(block.id);
+            auto entity_dat = std::move(construct).create_and_wait(api::ecs::get_block_entity_definition(block.name()).get_recipe(), world.get_ecs_world_ref());
             block_entities[local_z | (local_y << 4) | (local_x << 8)] = entity_dat;
         }
     }

@@ -206,33 +206,33 @@ namespace copper_server::api::ecs::com {
             } state : 3
                 = state_e::init;
 
-            bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
+            bool mark_chunk(int32_t pos_x, int32_t pos_z, bool loaded) {
                 if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
                     return false;
                 if (!processing_region.in_bounds((int32_t)pos_x, (int32_t)pos_z))
                     return false;
 
-                int64_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
-                int64_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
+                uint32_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
+                uint32_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
                 size_t index = offset_z * (processing_region.radius + processing_region.radius + 1) + offset_x;
                 processed_chunks.set(index, loaded);
                 return true;
             }
 
-            bool chunk_in_bounds(int64_t pos_x, int64_t pos_z) const {
+            bool chunk_in_bounds(int32_t pos_x, int32_t pos_z) const {
                 if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
                     return false;
                 return processing_region.in_bounds((int32_t)pos_x, (int32_t)pos_z);
             }
 
-            bool chunk_processed(int64_t pos_x, int64_t pos_z) const {
+            bool chunk_processed(int32_t pos_x, int32_t pos_z) const {
                 if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
                     return false;
 
                 if (!processing_region.in_bounds((int32_t)pos_x, (int32_t)pos_z))
                     return false;
-                uint64_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
-                uint64_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
+                uint32_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
+                uint32_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
 
 
                 size_t index = offset_z * (processing_region.radius + processing_region.radius + 1) + offset_x;
@@ -255,8 +255,8 @@ namespace copper_server::api::ecs::com {
                         int32_t chunk_z = center_z - new_radius + dz;
 
                         // Map to old area offsets
-                        int64_t old_offset_x = chunk_x - (processing_region.center_x - processing_region.radius);
-                        int64_t old_offset_z = chunk_z - (processing_region.center_z - processing_region.radius);
+                        int32_t old_offset_x = chunk_x - (processing_region.center_x - processing_region.radius);
+                        int32_t old_offset_z = chunk_z - (processing_region.center_z - processing_region.radius);
 
                         // If the chunk was loaded in the old area, copy its bit
                         if (old_offset_x >= 0 && old_offset_x < processing_diameter && old_offset_z >= 0 && old_offset_z < processing_diameter) {
